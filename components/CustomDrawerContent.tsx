@@ -12,7 +12,7 @@ const allNavItems = [
   { href: '/(admin)/classleader/class-leader-dashboard', label: 'Dashboard', icon: BookUser, roles: ['class-leader'] },
   { href: '/(student)/student-dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['student'] },
   { href: '/(admin)/manage-students', label: 'Students', icon: Users, roles: ['officer', 'class'] },
-  { href: '/(admin)/officer/manage-staff', label: 'Staff', icon: UserCheck, roles: ['officer'] },
+  { href: '/(admin)/manage-staff', label: 'Staff', icon: UserCheck, roles: ['officer'] },
   { href: '/(admin)/officer/staffregister', label: 'Staff Register', icon: Book, roles: ['officer'] },
   { href: '/(admin)/classroom/notifications', label: 'Notifications', icon: Bell, roles: ['class'] },
 ];
@@ -24,10 +24,15 @@ export default function CustomDrawerContent(props: any) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.replace('/(auth)/login');
+    router.replace('/(auth)/login' as any);
   };
 
   const accessibleNavItems = allNavItems.filter(item => item.roles.includes(role || ''));
+
+  // Dynamically determine the correct settings path based on role
+  const settingsRoute = role === 'student' ? '/(student)/settings' : '/(admin)/settings';
+  // Check if current path ends with settings so the highlight works in both admin and student routes
+  const isSettingsActive = pathname.endsWith('/settings');
 
   return (
     <View className="flex-1 bg-zinc-900">
@@ -38,34 +43,45 @@ export default function CustomDrawerContent(props: any) {
           <View className="bg-blue-600 p-2 rounded-xl">
             <GraduationCap size={24} color="white" />
           </View>
-          <Text className="text-white text-xl font-bold ml-3">PMSA Wafy</Text>
+          <Text className="text-white text-xl font-bold ml-3 font-heading">PMSA Wafy</Text>
         </View>
 
         {/* Links */}
-        <View className="p-4 space-y-2 mt-2">
+        <View className="p-4 mt-2">
           {accessibleNavItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
+
+            // Strict NativeWind strings
+            const touchableClass = isActive
+              ? "flex-row items-center p-3 rounded-xl mb-2 bg-blue-600"
+              : "flex-row items-center p-3 rounded-xl mb-2 bg-transparent";
+
+            const textClass = isActive
+              ? "ml-3 font-semibold text-white"
+              : "ml-3 font-semibold text-zinc-400";
+
             return (
               <TouchableOpacity
                 key={item.href}
                 onPress={() => router.push(item.href as any)}
-                className={`flex-row items-center p-3 rounded-xl mb-2 ${isActive ? 'bg-blue-600' : 'bg-transparent'}`}
+                className={touchableClass}
               >
                 <Icon size={20} color={isActive ? 'white' : '#a1a1aa'} />
-                <Text className={`ml-3 font-semibold ${isActive ? 'text-white' : 'text-zinc-400'}`}>
+                <Text className={textClass}>
                   {item.label}
                 </Text>
               </TouchableOpacity>
             );
           })}
 
+          {/* Dynamic Settings Link */}
           <TouchableOpacity
-            onPress={() => router.push('/settings')}
-            className={`flex-row items-center p-3 rounded-xl mb-2 ${pathname === '/settings' ? 'bg-blue-600' : 'bg-transparent'}`}
+            onPress={() => router.push(settingsRoute as any)}
+            className={isSettingsActive ? "flex-row items-center p-3 rounded-xl mb-2 bg-blue-600" : "flex-row items-center p-3 rounded-xl mb-2 bg-transparent"}
           >
-            <Settings size={20} color={pathname === '/settings' ? 'white' : '#a1a1aa'} />
-            <Text className={`ml-3 font-semibold ${pathname === '/settings' ? 'text-white' : 'text-zinc-400'}`}>Settings</Text>
+            <Settings size={20} color={isSettingsActive ? 'white' : '#a1a1aa'} />
+            <Text className={isSettingsActive ? "ml-3 font-semibold text-white" : "ml-3 font-semibold text-zinc-400"}>Settings</Text>
           </TouchableOpacity>
         </View>
       </DrawerContentScrollView>
@@ -77,16 +93,16 @@ export default function CustomDrawerContent(props: any) {
             {details?.img_url ? (
               <Image source={{ uri: details.img_url }} className="h-full w-full" />
             ) : (
-              <Text className="text-white font-bold">{details?.name?.charAt(0)}</Text>
+              <Text className="text-white font-bold">{details?.name?.charAt(0) || 'U'}</Text>
             )}
           </View>
           <View className="ml-3 flex-1">
             <Text className="text-white font-semibold truncate" numberOfLines={1}>{details?.name}</Text>
-            <Text className="text-zinc-400 text-xs capitalize">{details?.role}</Text>
+            <Text className="text-zinc-400 text-xs capitalize">{details?.role || role}</Text>
           </View>
         </View>
 
-        <TouchableOpacity onPress={handleLogout} className="flex-row items-center p-3 bg-zinc-800 rounded-xl">
+        <TouchableOpacity onPress={handleLogout} className="flex-row items-center p-3 bg-red-500/10 rounded-xl border border-red-500/20">
           <LogOut size={18} color="#ef4444" />
           <Text className="ml-3 font-semibold text-red-500">Sign Out</Text>
         </TouchableOpacity>
