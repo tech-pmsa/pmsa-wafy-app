@@ -1,3 +1,6 @@
+import "../global.css";
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
@@ -15,6 +18,8 @@ async function getUserRole(uid: string): Promise<string | null> {
   return null;
 }
 
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [session, setSession] = useState<any>(null);
@@ -22,6 +27,20 @@ export default function RootLayout() {
 
   const segments = useSegments();
   const router = useRouter();
+
+  const [fontsLoaded] = useFonts({
+    'AnekMalayalam': require('../assets/fonts/AnekMalayalam-Variable.ttf'),
+    'MullerBold': require('../assets/fonts/MullerBold.ttf'),
+    'MullerMedium': require('../assets/fonts/MullerMedium.ttf'),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null; // Keep splash screen visible while loading
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -64,7 +83,7 @@ export default function RootLayout() {
 
       const targetRoute = roleRedirects[role];
       if (inAuthGroup && targetRoute) {
-        router.replace(targetRoute);
+        router.replace(targetRoute as any);
       }
     }
   }, [session, isInitialized, segments, role]);

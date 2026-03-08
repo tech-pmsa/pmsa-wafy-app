@@ -20,7 +20,7 @@ export default function OfficerDashboardPage() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-zinc-100" edges={['top']}>
+    <SafeAreaView className="flex-1 font-muller bg-zinc-100" edges={['top']}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}

@@ -86,7 +86,7 @@ export default function LoginScreen() {
           {/* Dark overlay for readability */}
           <View className="absolute inset-0 bg-black/60" />
 
-          <View className="p-6 relative z-10">
+          <View className="p-6 font-muller-bold relative z-10">
             <View className="flex-row items-center gap-3 mb-2">
               <GraduationCap size={32} color="white" />
               <Text className="text-white text-2xl font-bold">PMSA Wafy College</Text>
@@ -98,7 +98,7 @@ export default function LoginScreen() {
         </ImageBackground>
 
         {/* Bottom Form Section */}
-        <View className="flex-1 px-6 pt-8 pb-12 bg-white rounded-t-3xl -mt-6">
+        <View className="flex-1 px-6 pt-8 pb-12 font-muller bg-white rounded-t-3xl -mt-6">
 
           {view === 'login' ? (
             <View>
