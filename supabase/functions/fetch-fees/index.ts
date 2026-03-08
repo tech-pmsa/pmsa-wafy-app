@@ -1,28 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { google } from "npm:googleapis"
 
-// CORS headers are required so your mobile app can talk to the function
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req) => {
-  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // In Edge Functions, we get env variables using Deno.env
     const SHEET_ID = Deno.env.get('SHEET_FEES_ID')!
-    const GOOGLE_CLIENT_EMAIL = Deno.env.get('GOOGLE_CLIENT_EMAIL')!
-    const GOOGLE_PRIVATE_KEY = Deno.env.get('GOOGLE_PRIVATE_KEY')!.replace(/\\n/g, '\n')
+
+    // Parse the ENTIRE JSON object directly from the new secret!
+    const credentialsRaw = Deno.env.get('GOOGLE_CREDENTIALS')!
+    const credentials = JSON.parse(credentialsRaw)
 
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        client_email: GOOGLE_CLIENT_EMAIL,
-        private_key: GOOGLE_PRIVATE_KEY,
+        client_email: credentials.client_email,
+        private_key: credentials.private_key, // JSON parsing natively handles all the \n line breaks!
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     })
@@ -56,13 +55,12 @@ serve(async (req) => {
       }
     }
 
-    // Return the JSON response
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[FEES_FETCH_ERROR]', error)
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
