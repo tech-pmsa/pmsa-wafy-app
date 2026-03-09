@@ -4,6 +4,7 @@ import { Slot, useRouter, useSegments, useRootNavigationState } from 'expo-route
 import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabaseClient';
+import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
@@ -121,6 +122,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar style="dark" backgroundColor="#ffffff" />
       <Slot />
     </GestureHandlerRootView>
   );
