@@ -26,39 +26,39 @@ export function useUserData(): UserData {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (sessionError || !session) return; // Will skip to the 'finally' block
+        if (sessionError || !session) return;
 
         finalUser = session.user;
 
-        // Try profiles table first
-        const { data: profile, error: profileError } = await supabase
+        // Try profiles table first safely
+        const { data: profile } = await supabase
           .from('profiles')
           .select('*')
           .eq('uid', finalUser.id)
-          .single();
+          .maybeSingle();
 
-        if (profile && !profileError) {
-          finalRole = profile.role;
+        if (profile) {
+          finalRole = profile.role?.toLowerCase().trim() || null;
           finalDetails = profile;
-          return; // Skip to 'finally' block
-        }
+        } else {
+          // If not in profiles, try students table
+          const { data: student } = await supabase
+            .from('students')
+            .select('*')
+            .eq('uid', finalUser.id)
+            .maybeSingle();
 
-        // Then try students table
-        const { data: student, error: studentError } = await supabase
-          .from('students')
-          .select('*')
-          .eq('uid', finalUser.id)
-          .single();
-
-        if (student && !studentError) {
-          finalRole = student.role;
-          finalDetails = student;
+          if (student) {
+            // Guarantee they get the student role if column is blank
+            finalRole = student.role?.toLowerCase().trim() || 'student';
+            finalDetails = student;
+          }
         }
 
       } catch (err) {
         console.error('Error fetching user data in hook:', err);
       } finally {
-        // This is guaranteed to run, hiding your loading spinners!
+        // Run this no matter what, hiding the spinner
         setData({
           loading: false,
           user: finalUser,
