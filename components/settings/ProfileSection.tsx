@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   Alert as NativeAlert,
+  Switch,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -28,13 +29,14 @@ import {
   Camera,
   Save,
   X,
+  PlusCircle,
+  Trash2,
 } from 'lucide-react-native';
 
 import { ProfileInfoLine } from './profile/ProfileInfoLine';
 import { FamilyDataTab } from './profile/FamilyDataTab';
 import { AcademicsTab } from './profile/AcademicsTab';
 import { MarkEditorModal } from './profile/MarkEditorModal';
-import { EmailChangeModal } from './profile/EmailChangeModal';
 
 function cardShadow() {
   return {
@@ -68,11 +70,161 @@ function TabButton({
   );
 }
 
+function InputField({
+  label,
+  value,
+  onChangeText,
+  multiline = false,
+  keyboardType = 'default',
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  multiline?: boolean;
+  keyboardType?: 'default' | 'numeric' | 'phone-pad' | 'email-address';
+}) {
+  return (
+    <View className="mb-4">
+      <Text className="text-sm font-medium text-zinc-700 mb-1">{label}</Text>
+      <TextInput
+        className={`bg-white border border-zinc-200 rounded-xl p-4 text-base ${multiline ? 'h-24' : ''}`}
+        value={value}
+        onChangeText={onChangeText}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : 'center'}
+        keyboardType={keyboardType}
+      />
+    </View>
+  );
+}
+
+function SiblingCard({
+  title,
+  siblings,
+  onChange,
+  showResponsibilities,
+}: {
+  title: 'brothers' | 'sisters';
+  siblings: any[];
+  onChange: (next: any[]) => void;
+  showResponsibilities: boolean;
+}) {
+  const addSibling = () => {
+    onChange([
+      ...siblings,
+      {
+        name: '',
+        education: [],
+        occupation: '',
+        responsibilities: [],
+      },
+    ]);
+  };
+
+  const updateSibling = (index: number, field: string, value: any) => {
+    const next = [...siblings];
+    next[index] = { ...next[index], [field]: value };
+    onChange(next);
+  };
+
+  const removeSibling = (index: number) => {
+    onChange(siblings.filter((_: any, i: number) => i !== index));
+  };
+
+  return (
+    <View
+      className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+      style={cardShadow()}
+    >
+      <View className="flex-row justify-between items-center mb-4">
+        <Text className="text-lg font-bold text-zinc-900 capitalize">{title}</Text>
+
+        <TouchableOpacity
+          onPress={addSibling}
+          className="bg-zinc-900 px-3 py-2 rounded-xl flex-row items-center"
+        >
+          <View style={{ marginRight: 6 }}>
+            <PlusCircle size={16} color="white" />
+          </View>
+          <Text className="text-white font-bold text-xs">Add</Text>
+        </TouchableOpacity>
+      </View>
+
+      {siblings.length > 0 ? (
+        siblings.map((sib: any, index: number) => (
+          <View
+            key={index}
+            className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 mb-3"
+          >
+            <View className="flex-row justify-between items-center mb-2">
+              <Text className="font-bold text-zinc-900">
+                {title === 'brothers' ? 'Brother' : 'Sister'} {index + 1}
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => removeSibling(index)}
+                className="p-2 bg-red-50 rounded-lg"
+              >
+                <Trash2 size={18} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
+
+            <InputField
+              label="Name"
+              value={sib.name || ''}
+              onChangeText={(t) => updateSibling(index, 'name', t)}
+            />
+
+            <InputField
+              label="Education (comma separated)"
+              value={Array.isArray(sib.education) ? sib.education.join(', ') : sib.education || ''}
+              onChangeText={(t) =>
+                updateSibling(
+                  index,
+                  'education',
+                  t.split(',').map((s) => s.trim()).filter(Boolean)
+                )
+              }
+            />
+
+            <InputField
+              label="Occupation"
+              value={sib.occupation || ''}
+              onChangeText={(t) => updateSibling(index, 'occupation', t)}
+            />
+
+            {showResponsibilities && (
+              <InputField
+                label="Responsibilities (comma separated)"
+                value={
+                  Array.isArray(sib.responsibilities)
+                    ? sib.responsibilities.join(', ')
+                    : sib.responsibilities || ''
+                }
+                onChangeText={(t) =>
+                  updateSibling(
+                    index,
+                    'responsibilities',
+                    t.split(',').map((s) => s.trim()).filter(Boolean)
+                  )
+                }
+              />
+            )}
+          </View>
+        ))
+      ) : (
+        <Text className="text-sm text-zinc-500">No {title} added.</Text>
+      )}
+    </View>
+  );
+}
+
 export default function ProfileSection() {
   const { user, details, role, loading } = useUserData();
   const isStudent = role === 'student';
 
   const [activeTab, setActiveTab] = useState<'personal' | 'academics' | 'family'>('personal');
+  const [editModalTab, setEditModalTab] = useState<'personal' | 'family'>('personal');
 
   const [editOpen, setEditOpen] = useState(false);
   const [isMarkModalOpen, setIsMarkModalOpen] = useState(false);
@@ -82,6 +234,7 @@ export default function ProfileSection() {
 
   const [personalForm, setPersonalForm] = useState<any>({});
   const [familyData, setFamilyData] = useState<any>({});
+  const [fatherResponsibilitiesText, setFatherResponsibilitiesText] = useState('');
   const [academicEntries, setAcademicEntries] = useState<any[]>([]);
 
   const fetchExtraData = useCallback(async () => {
@@ -97,7 +250,18 @@ export default function ProfileSection() {
     ]);
 
     if (academicRes.data) setAcademicEntries(academicRes.data);
-    if (familyRes.data) setFamilyData(familyRes.data);
+    if (familyRes.data) {
+      setFamilyData(familyRes.data);
+      setFatherResponsibilitiesText(
+        Array.isArray(familyRes.data.father_responsibilities)
+          ? familyRes.data.father_responsibilities.join(', ')
+          : ''
+      );
+    }
+    if (!familyRes.data) {
+      setFamilyData({});
+      setFatherResponsibilitiesText('');
+    }
   }, [user, isStudent]);
 
   useEffect(() => {
@@ -106,6 +270,11 @@ export default function ProfileSection() {
     }
     fetchExtraData();
   }, [details, fetchExtraData]);
+
+  const openEditModal = (tab: 'personal' | 'family') => {
+    setEditModalTab(tab);
+    setEditOpen(true);
+  };
 
   const handleAvatarUpdate = async () => {
     try {
@@ -163,7 +332,15 @@ export default function ProfileSection() {
 
     try {
       const table = isStudent ? 'students' : 'profiles';
-      const { name, phone, guardian, g_phone, address, designation, batch } = personalForm;
+      const {
+        name,
+        phone,
+        guardian,
+        g_phone,
+        address,
+        designation,
+        batch,
+      } = personalForm;
 
       const updatedData = isStudent
         ? { name, phone, guardian, g_phone, address }
@@ -176,8 +353,24 @@ export default function ProfileSection() {
 
       if (updateError) throw updateError;
 
+      if (isStudent) {
+        const familyPayload = {
+          ...familyData,
+          father_responsibilities: fatherResponsibilitiesText
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          student_uid: user.id,
+        };
+
+        const { error: familyError } = await supabase.from('family_data').upsert(familyPayload);
+
+        if (familyError) throw familyError;
+      }
+
       NativeAlert.alert('Success', 'Profile updated successfully.');
       setEditOpen(false);
+      fetchExtraData();
     } catch (error: any) {
       NativeAlert.alert('Error', error.message || 'Failed to update profile.');
     } finally {
@@ -194,6 +387,14 @@ export default function ProfileSection() {
     } else {
       NativeAlert.alert('Error', 'Failed to delete record.');
     }
+  };
+
+  const handleFamilyChange = (field: string, value: any) => {
+    setFamilyData((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSiblingsUpdate = (type: 'brothers' | 'sisters', updated: any[]) => {
+    setFamilyData((prev: any) => ({ ...prev, [type]: updated }));
   };
 
   if (loading || !details) {
@@ -274,13 +475,13 @@ export default function ProfileSection() {
             {activeTab === 'personal'
               ? 'Personal Details'
               : activeTab === 'academics'
-              ? 'Academic Records'
-              : 'Family Data'}
+                ? 'Academic Records'
+                : 'Family Data'}
           </Text>
 
-          {activeTab === 'personal' && (
+          {(activeTab === 'personal' || (isStudent && activeTab === 'family')) && (
             <TouchableOpacity
-              onPress={() => setEditOpen(true)}
+              onPress={() => openEditModal(activeTab === 'family' ? 'family' : 'personal')}
               className="bg-zinc-100 p-2.5 rounded-full"
             >
               <Pencil size={18} color="#09090b" />
@@ -341,83 +542,186 @@ export default function ProfileSection() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-            <View>
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Full Name</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={personalForm.name}
+          {isStudent && (
+            <View className="flex-row bg-zinc-200 p-1 rounded-xl mb-4">
+              <TabButton
+                label="Personal"
+                active={editModalTab === 'personal'}
+                onPress={() => setEditModalTab('personal')}
+              />
+              <TabButton
+                label="Family"
+                active={editModalTab === 'family'}
+                onPress={() => setEditModalTab('family')}
+              />
+            </View>
+          )}
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 40 }}
+          >
+            {(!isStudent || editModalTab === 'personal') && (
+              <View>
+                <InputField
+                  label="Full Name"
+                  value={personalForm.name || ''}
                   onChangeText={(t) => setPersonalForm({ ...personalForm, name: t })}
                 />
-              </View>
 
-              {isStudent ? (
-                <>
-                  <View className="mb-4">
-                    <Text className="text-sm font-medium text-zinc-700 mb-1">Phone Number</Text>
-                    <TextInput
-                      className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                      value={personalForm.phone}
+                {isStudent ? (
+                  <>
+                    <InputField
+                      label="Phone Number"
+                      value={personalForm.phone || ''}
                       keyboardType="phone-pad"
                       onChangeText={(t) => setPersonalForm({ ...personalForm, phone: t })}
                     />
-                  </View>
 
-                  <View className="mb-4">
-                    <Text className="text-sm font-medium text-zinc-700 mb-1">Guardian Name</Text>
-                    <TextInput
-                      className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                      value={personalForm.guardian}
+                    <InputField
+                      label="Guardian Name"
+                      value={personalForm.guardian || ''}
                       onChangeText={(t) => setPersonalForm({ ...personalForm, guardian: t })}
                     />
-                  </View>
 
-                  <View className="mb-4">
-                    <Text className="text-sm font-medium text-zinc-700 mb-1">Guardian Phone</Text>
-                    <TextInput
-                      className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                      value={personalForm.g_phone}
+                    <InputField
+                      label="Guardian Phone"
+                      value={personalForm.g_phone || ''}
                       keyboardType="phone-pad"
                       onChangeText={(t) => setPersonalForm({ ...personalForm, g_phone: t })}
                     />
-                  </View>
 
-                  <View className="mb-4">
-                    <Text className="text-sm font-medium text-zinc-700 mb-1">Address</Text>
-                    <TextInput
-                      className="bg-white border border-zinc-200 rounded-xl p-4 text-base h-24"
+                    <InputField
+                      label="Address"
+                      value={personalForm.address || ''}
                       multiline
-                      textAlignVertical="top"
-                      value={personalForm.address}
                       onChangeText={(t) => setPersonalForm({ ...personalForm, address: t })}
                     />
-                  </View>
-                </>
-              ) : (
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-zinc-700 mb-1">Designation</Text>
-                  <TextInput
-                    className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                    value={personalForm.designation}
+                  </>
+                ) : (
+                  <InputField
+                    label="Designation"
+                    value={personalForm.designation || ''}
                     onChangeText={(t) => setPersonalForm({ ...personalForm, designation: t })}
                   />
-                </View>
-              )}
-
-              <TouchableOpacity
-                onPress={handleSaveProfile}
-                disabled={isSaving}
-                className="w-full py-4 rounded-xl flex-row justify-center items-center bg-zinc-900 mt-4"
-              >
-                {isSaving ? (
-                  <ActivityIndicator color="white" style={{ marginRight: 8 }} />
-                ) : (
-                  <Save size={20} color="white" />
                 )}
-                <Text className="text-white font-bold text-lg ml-2">Save Changes</Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+            )}
+
+            {isStudent && editModalTab === 'family' && (
+              <View>
+                <View
+                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  style={cardShadow()}
+                >
+                  <Text className="text-lg font-bold text-zinc-900 mb-4">Household</Text>
+
+                  <InputField
+                    label="Total Family Members"
+                    value={familyData.total_family_members?.toString() || ''}
+                    keyboardType="numeric"
+                    onChangeText={(t) =>
+                      handleFamilyChange(
+                        'total_family_members',
+                        t ? parseInt(t, 10) || null : null
+                      )
+                    }
+                  />
+
+                  <InputField
+                    label="House Type"
+                    value={familyData.house_type || ''}
+                    onChangeText={(t) => handleFamilyChange('house_type', t)}
+                  />
+
+                  <View className="mb-2">
+                    <Text className="text-sm font-medium text-zinc-700 mb-2">
+                      Are there chronically ill members in the house?
+                    </Text>
+                    <View className="flex-row items-center justify-between bg-white border border-zinc-200 rounded-xl p-4">
+                      <Text className="text-base text-zinc-900">
+                        {familyData.chronically_ill_members ? 'Yes' : 'No'}
+                      </Text>
+                      <Switch
+                        value={!!familyData.chronically_ill_members}
+                        onValueChange={(v) => handleFamilyChange('chronically_ill_members', v)}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View
+                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  style={cardShadow()}
+                >
+                  <Text className="text-lg font-bold text-zinc-900 mb-4">Parent Details</Text>
+
+                  <InputField
+                    label="Father's Name"
+                    value={familyData.father_name || ''}
+                    onChangeText={(t) => handleFamilyChange('father_name', t)}
+                  />
+
+                  <InputField
+                    label="Father's Occupation"
+                    value={familyData.father_occupation || ''}
+                    onChangeText={(t) => handleFamilyChange('father_occupation', t)}
+                  />
+
+                  <InputField
+                    label="Father's Staying Place"
+                    value={familyData.father_staying_place || ''}
+                    onChangeText={(t) => handleFamilyChange('father_staying_place', t)}
+                  />
+
+                  <InputField
+                    label="Father's Responsibilities (comma separated)"
+                    value={fatherResponsibilitiesText}
+                    multiline
+                    onChangeText={(t) => setFatherResponsibilitiesText(t)}
+                  />
+
+                  <InputField
+                    label="Mother's Name"
+                    value={familyData.mother_name || ''}
+                    onChangeText={(t) => handleFamilyChange('mother_name', t)}
+                  />
+
+                  <InputField
+                    label="Mother's Occupation"
+                    value={familyData.mother_occupation || ''}
+                    onChangeText={(t) => handleFamilyChange('mother_occupation', t)}
+                  />
+                </View>
+
+                <SiblingCard
+                  title="brothers"
+                  siblings={familyData.brothers || []}
+                  onChange={(next) => handleSiblingsUpdate('brothers', next)}
+                  showResponsibilities={true}
+                />
+
+                <SiblingCard
+                  title="sisters"
+                  siblings={familyData.sisters || []}
+                  onChange={(next) => handleSiblingsUpdate('sisters', next)}
+                  showResponsibilities={false}
+                />
+              </View>
+            )}
+
+            <TouchableOpacity
+              onPress={handleSaveProfile}
+              disabled={isSaving}
+              className="w-full py-4 rounded-xl flex-row justify-center items-center bg-zinc-900 mt-4"
+            >
+              {isSaving ? (
+                <ActivityIndicator color="white" style={{ marginRight: 8 }} />
+              ) : (
+                <Save size={20} color="white" />
+              )}
+              <Text className="text-white font-bold text-lg ml-2">Save Changes</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </Modal>
@@ -430,8 +734,6 @@ export default function ProfileSection() {
           onSave={fetchExtraData}
         />
       )}
-
-      <EmailChangeModal />
     </View>
   );
 }

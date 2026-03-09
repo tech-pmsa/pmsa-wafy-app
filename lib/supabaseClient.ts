@@ -1,29 +1,51 @@
-import 'react-native-url-polyfill/auto'
-import * as SecureStore from 'expo-secure-store'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
-// 1. Create a custom storage adapter using Expo SecureStore
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+
+// 1. Mobile Storage Adapter (Uses Hardware Encryption)
 const ExpoSecureStoreAdapter = {
   getItem: (key: string) => {
-    return SecureStore.getItemAsync(key)
+    return SecureStore.getItemAsync(key);
   },
   setItem: (key: string, value: string) => {
-    SecureStore.setItemAsync(key, value)
+    SecureStore.setItemAsync(key, value);
   },
   removeItem: (key: string) => {
-    SecureStore.deleteItemAsync(key)
+    SecureStore.deleteItemAsync(key);
   },
-}
+};
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+// 2. Web Storage Adapter (Server-Safe)
+const webStorageAdapter = {
+  getItem: (key: string) => {
+    if (typeof window !== 'undefined') {
+      return window.localStorage.getItem(key);
+    }
+    return null; // Prevents crash during Expo static rendering
+  },
+  setItem: (key: string, value: string) => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(key, value);
+    }
+  },
+  removeItem: (key: string) => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(key);
+    }
+  },
+};
 
-// 2. Initialize the Supabase client with the secure adapter
+// Check the platform to pick the right adapter
+const storageAdapter = Platform.OS === 'web' ? webStorageAdapter : ExpoSecureStoreAdapter;
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: ExpoSecureStoreAdapter,
+    storage: storageAdapter,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false, // Not needed in React Native
+    detectSessionInUrl: false,
   },
-})
+});

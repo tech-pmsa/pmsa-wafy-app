@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,24 @@ import {
   ActivityIndicator,
   Image,
   Alert as NativeAlert,
+  Switch,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabaseClient';
-import { Camera, Save, X, User } from 'lucide-react-native';
+import {
+  Camera,
+  Save,
+  X,
+  User,
+  PlusCircle,
+  Trash2,
+  Pencil,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react-native';
+import { MarkEditorModal } from '@/components/settings/profile/MarkEditorModal';
 
 function cardShadow() {
   return {
@@ -38,42 +50,250 @@ function TabButton({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={active ? 'flex-1 py-2.5 rounded-lg items-center bg-white' : 'flex-1 py-2.5 rounded-lg items-center'}
+      className={
+        active
+          ? 'flex-1 py-2.5 rounded-lg items-center bg-white'
+          : 'flex-1 py-2.5 rounded-lg items-center'
+      }
       style={active ? cardShadow() : undefined}
     >
-      <Text className={active ? 'font-semibold text-sm text-zinc-900' : 'font-semibold text-sm text-zinc-500'}>
+      <Text
+        className={
+          active
+            ? 'font-semibold text-sm text-zinc-900'
+            : 'font-semibold text-sm text-zinc-500'
+        }
+      >
         {label}
       </Text>
     </TouchableOpacity>
   );
 }
 
+function InputField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  multiline = false,
+  keyboardType = 'default',
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  keyboardType?: 'default' | 'numeric' | 'phone-pad' | 'email-address';
+}) {
+  return (
+    <View className="mb-4">
+      <Text className="text-sm font-medium text-zinc-700 mb-1">{label}</Text>
+      <TextInput
+        className={`bg-white border border-zinc-200 rounded-xl p-4 text-base ${multiline ? 'h-24' : ''
+          }`}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : 'center'}
+        keyboardType={keyboardType}
+      />
+    </View>
+  );
+}
+
+function SiblingCard({
+  title,
+  siblings,
+  onChange,
+  showResponsibilities,
+}: {
+  title: 'brothers' | 'sisters';
+  siblings: any[];
+  onChange: (next: any[]) => void;
+  showResponsibilities: boolean;
+}) {
+  const addSibling = () => {
+    onChange([
+      ...siblings,
+      {
+        name: '',
+        education: [],
+        occupation: '',
+        responsibilities: [],
+      },
+    ]);
+  };
+
+  const updateSibling = (index: number, field: string, value: any) => {
+    const next = [...siblings];
+    next[index] = { ...next[index], [field]: value };
+    onChange(next);
+  };
+
+  const removeSibling = (index: number) => {
+    onChange(siblings.filter((_, i) => i !== index));
+  };
+
+  return (
+    <View
+      className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+      style={cardShadow()}
+    >
+      <View className="flex-row justify-between items-center mb-4">
+        <Text className="text-lg font-bold text-zinc-900 capitalize">{title}</Text>
+
+        <TouchableOpacity
+          onPress={addSibling}
+          className="bg-zinc-900 px-3 py-2 rounded-xl flex-row items-center"
+        >
+          <View style={{ marginRight: 6 }}>
+            <PlusCircle size={16} color="white" />
+          </View>
+          <Text className="text-white font-bold text-xs">Add</Text>
+        </TouchableOpacity>
+      </View>
+
+      {siblings.length > 0 ? (
+        siblings.map((sib, index) => (
+          <View
+            key={index}
+            className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 mb-3"
+          >
+            <View className="flex-row justify-between items-center mb-2">
+              <Text className="font-bold text-zinc-900">
+                {title === 'brothers' ? 'Brother' : 'Sister'} {index + 1}
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => removeSibling(index)}
+                className="p-2 bg-red-50 rounded-lg"
+              >
+                <Trash2 size={18} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
+
+            <InputField
+              label="Name"
+              value={sib.name || ''}
+              onChangeText={(t) => updateSibling(index, 'name', t)}
+            />
+
+            <InputField
+              label="Education (comma separated)"
+              value={Array.isArray(sib.education) ? sib.education.join(', ') : sib.education || ''}
+              onChangeText={(t) =>
+                updateSibling(
+                  index,
+                  'education',
+                  t
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                )
+              }
+            />
+
+            <InputField
+              label="Occupation"
+              value={sib.occupation || ''}
+              onChangeText={(t) => updateSibling(index, 'occupation', t)}
+            />
+
+            {showResponsibilities && (
+              <InputField
+                label="Responsibilities (comma separated)"
+                value={
+                  Array.isArray(sib.responsibilities)
+                    ? sib.responsibilities.join(', ')
+                    : sib.responsibilities || ''
+                }
+                onChangeText={(t) =>
+                  updateSibling(
+                    index,
+                    'responsibilities',
+                    t
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                  )
+                }
+              />
+            )}
+          </View>
+        ))
+      ) : (
+        <Text className="text-sm text-zinc-500">No {title} added.</Text>
+      )}
+    </View>
+  );
+}
+
 export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
-  const [activeTab, setActiveTab] = useState<'personal' | 'family'>('personal');
+  const [activeTab, setActiveTab] = useState<'personal' | 'academics' | 'family'>(
+    'personal'
+  );
   const [personalForm, setPersonalForm] = useState<any>({});
+  const [fatherResponsibilitiesText, setFatherResponsibilitiesText] = useState('');
   const [familyForm, setFamilyForm] = useState<any>({});
+  const [academicEntries, setAcademicEntries] = useState<any[]>([]);
+  const [selectedEntry, setSelectedEntry] = useState<any | null>(null);
+  const [isMarkModalOpen, setIsMarkModalOpen] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedAcademicId, setExpandedAcademicId] = useState<number | null>(null);
+
+  const fetchAllData = useCallback(async () => {
+    if (!student) return;
+
+    const [familyRes, academicsRes] = await Promise.all([
+      supabase.from('family_data').select('*').eq('student_uid', student.uid).single(),
+      supabase
+        .from('academic_entries')
+        .select('*, subject_marks(*)')
+        .eq('student_uid', student.uid)
+        .order('created_at', { ascending: true }),
+    ]);
+
+    if (familyRes.data) {
+      setFamilyForm(familyRes.data);
+      setFatherResponsibilitiesText(
+        Array.isArray(familyRes.data.father_responsibilities)
+          ? familyRes.data.father_responsibilities.join(', ')
+          : ''
+      );
+    }
+    if (!familyRes.data) {
+      setFamilyForm({});
+      setFatherResponsibilitiesText('');
+    }
+    setAcademicEntries(academicsRes.data || []);
+  }, [student]);
 
   useEffect(() => {
-    if (!isOpen || !student) return;
+    if (!student || !isOpen) return;
 
     setActiveTab('personal');
+    setExpandedAcademicId(null);
+    setSelectedEntry(null);
     setPersonalForm(student);
     setPreview(student.img_url || null);
+    setUploadedImageUrl(student.img_url || null);
+    fetchAllData();
+  }, [student, isOpen, fetchAllData]);
 
-    const fetchFamily = async () => {
-      const { data } = await supabase
-        .from('family_data')
-        .select('*')
-        .eq('student_uid', student.uid)
-        .single();
+  const handlePersonalChange = (field: string, value: any) => {
+    setPersonalForm((prev: any) => ({ ...prev, [field]: value }));
+  };
 
-      setFamilyForm(data || {});
-    };
+  const handleFamilyChange = (field: string, value: any) => {
+    setFamilyForm((prev: any) => ({ ...prev, [field]: value }));
+  };
 
-    fetchFamily();
-  }, [isOpen, student]);
+  const handleSiblingsUpdate = (type: 'brothers' | 'sisters', updated: any[]) => {
+    setFamilyForm((prev: any) => ({ ...prev, [type]: updated }));
+  };
 
   const handleAvatarUpdate = async () => {
     try {
@@ -107,13 +327,26 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
         const newUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
         setPreview(newUrl);
+        setUploadedImageUrl(newUrl);
         setPersonalForm((prev: any) => ({ ...prev, img_url: newUrl }));
       }
     } catch (error: any) {
-      NativeAlert.alert('Error', 'Could not upload image.');
+      NativeAlert.alert('Error', error?.message || 'Could not upload image.');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleEntryDelete = async (entryId: number) => {
+    const { error } = await supabase.from('academic_entries').delete().eq('id', entryId);
+
+    if (error) {
+      NativeAlert.alert('Error', error.message || 'Failed to delete record.');
+      return;
+    }
+
+    await fetchAllData();
+    NativeAlert.alert('Success', 'Academic record deleted.');
   };
 
   const handleSave = async () => {
@@ -122,255 +355,437 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
     setIsSaving(true);
 
     try {
-      const { uid, ...updateData } = personalForm;
+      const { uid, ...restPersonal } = personalForm;
+
+      const finalUpdateData = {
+        ...restPersonal,
+        img_url: uploadedImageUrl || personalForm.img_url || null,
+      };
 
       const { error: studentError } = await supabase
         .from('students')
-        .update(updateData)
+        .update(finalUpdateData)
         .eq('uid', student.uid);
 
       if (studentError) throw studentError;
 
-      const { error: familyError } = await supabase.from('family_data').upsert({
+      const familyPayload = {
         ...familyForm,
+        father_responsibilities: fatherResponsibilitiesText
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
         student_uid: student.uid,
-      });
+      };
+
+      const { error: familyError } = await supabase.from('family_data').upsert(familyPayload);
 
       if (familyError) throw familyError;
 
       NativeAlert.alert('Success', 'Student profile updated successfully.');
-      onSave();
+      await fetchAllData();
+      onSave?.();
       setIsOpen(false);
     } catch (error: any) {
-      NativeAlert.alert('Error', error.message || 'Failed to save changes.');
+      NativeAlert.alert('Error', error?.message || 'Failed to save changes.');
     } finally {
       setIsSaving(false);
     }
   };
 
+  const chronicallyIllChecked = !!familyForm.chronically_ill_members;
+
+  const personalFields = useMemo(
+    () => [
+      ['Full Name', 'name'],
+      ['Class ID', 'class_id'],
+      ['Batch', 'batch'],
+      ['Council', 'council'],
+      ['CIC', 'cic'],
+      ['Phone', 'phone'],
+      ['Guardian Name', 'guardian'],
+      ['Guardian Phone', 'g_phone'],
+      ['SSLC Board', 'sslc'],
+      ['Plus Two Board', 'plustwo'],
+      ['Plus Two Stream', 'plustwo_streams'],
+    ],
+    []
+  );
+
   if (!student) return null;
 
   return (
-    <Modal
-      visible={isOpen}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={() => setIsOpen(false)}
-    >
-      <View className="flex-1 bg-zinc-100 pt-14 px-4">
-        <View className="flex-row justify-between items-center mb-6">
-          <View>
-            <Text className="text-2xl font-bold text-zinc-900">Edit Profile</Text>
-            <Text className="text-zinc-500 text-sm">Editing {student.name}</Text>
+    <>
+      <Modal
+        visible={isOpen}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setIsOpen(false)}
+      >
+        <View className="flex-1 bg-zinc-100 pt-14 px-4">
+          <View className="flex-row justify-between items-center mb-6">
+            <View>
+              <Text className="text-2xl font-bold text-zinc-900">Edit Profile</Text>
+              <Text className="text-zinc-500 text-sm">Editing {student.name}</Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setIsOpen(false)}
+              className="bg-zinc-200 p-2 rounded-full"
+            >
+              <X size={20} color="#09090b" />
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            onPress={() => setIsOpen(false)}
-            className="bg-zinc-200 p-2 rounded-full"
+          <View className="flex-row bg-zinc-200 p-1 rounded-xl mb-4">
+            <TabButton
+              label="Personal"
+              active={activeTab === 'personal'}
+              onPress={() => setActiveTab('personal')}
+            />
+            <TabButton
+              label="Academics"
+              active={activeTab === 'academics'}
+              onPress={() => setActiveTab('academics')}
+            />
+            <TabButton
+              label="Family"
+              active={activeTab === 'family'}
+              onPress={() => setActiveTab('family')}
+            />
+          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 40 }}
           >
-            <X size={20} color="#09090b" />
-          </TouchableOpacity>
-        </View>
-
-        <View className="flex-row bg-zinc-200 p-1 rounded-xl mb-4">
-          <TabButton
-            label="Personal"
-            active={activeTab === 'personal'}
-            onPress={() => setActiveTab('personal')}
-          />
-          <TabButton
-            label="Family"
-            active={activeTab === 'family'}
-            onPress={() => setActiveTab('family')}
-          />
-        </View>
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
-        >
-          {activeTab === 'personal' && (
-            <View>
-              <View className="items-center mb-4">
-                <TouchableOpacity
-                  onPress={handleAvatarUpdate}
-                  disabled={isSaving}
-                  className="relative"
+            {activeTab === 'personal' && (
+              <View>
+                <View
+                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  style={cardShadow()}
                 >
-                  <View
-                    className="h-28 w-28 rounded-full border-4 border-white overflow-hidden bg-zinc-200 justify-center items-center"
-                    style={cardShadow()}
-                  >
-                    {preview ? (
-                      <Image source={{ uri: preview }} className="h-full w-full" />
-                    ) : (
-                      <User size={40} color="#a1a1aa" />
-                    )}
+                  <View className="items-center mb-4">
+                    <TouchableOpacity
+                      onPress={handleAvatarUpdate}
+                      disabled={isSaving}
+                      className="relative"
+                    >
+                      <View
+                        className="h-28 w-28 rounded-full border-4 border-white overflow-hidden bg-zinc-200 justify-center items-center"
+                        style={cardShadow()}
+                      >
+                        {preview ? (
+                          <Image source={{ uri: preview }} className="h-full w-full" />
+                        ) : (
+                          <User size={40} color="#a1a1aa" />
+                        )}
+                      </View>
+
+                      <View className="absolute bottom-0 right-0 bg-blue-600 p-2.5 rounded-full border-2 border-white">
+                        {isSaving ? (
+                          <ActivityIndicator size="small" color="white" />
+                        ) : (
+                          <Camera size={14} color="white" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+
+                    <Text className="text-xs text-zinc-500 mt-2">Tap to change photo</Text>
                   </View>
 
-                  <View className="absolute bottom-0 right-0 bg-blue-600 p-2.5 rounded-full border-2 border-white">
-                    {isSaving ? (
-                      <ActivityIndicator size="small" color="white" />
-                    ) : (
-                      <Camera size={14} color="white" />
-                    )}
-                  </View>
-                </TouchableOpacity>
+                  {personalFields.map(([label, key]) => (
+                    <InputField
+                      key={key}
+                      label={label}
+                      value={personalForm[key] || ''}
+                      onChangeText={(t) => handlePersonalChange(key, t)}
+                      keyboardType={
+                        key === 'phone' || key === 'g_phone' ? 'phone-pad' : 'default'
+                      }
+                    />
+                  ))}
 
-                <Text className="text-xs text-zinc-500 mt-2">Tap to change photo</Text>
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Full Name</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={personalForm.name || ''}
-                  onChangeText={(t) => setPersonalForm({ ...personalForm, name: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Class ID</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={personalForm.class_id || ''}
-                  onChangeText={(t) => setPersonalForm({ ...personalForm, class_id: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Batch</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={personalForm.batch || ''}
-                  onChangeText={(t) => setPersonalForm({ ...personalForm, batch: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Council</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={personalForm.council || ''}
-                  onChangeText={(t) => setPersonalForm({ ...personalForm, council: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Phone</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={personalForm.phone || ''}
-                  keyboardType="phone-pad"
-                  onChangeText={(t) => setPersonalForm({ ...personalForm, phone: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Guardian Name</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={personalForm.guardian || ''}
-                  onChangeText={(t) => setPersonalForm({ ...personalForm, guardian: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Guardian Phone</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={personalForm.g_phone || ''}
-                  keyboardType="phone-pad"
-                  onChangeText={(t) => setPersonalForm({ ...personalForm, g_phone: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Address</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base h-24"
-                  multiline
-                  textAlignVertical="top"
-                  value={personalForm.address || ''}
-                  onChangeText={(t) => setPersonalForm({ ...personalForm, address: t })}
-                />
-              </View>
-            </View>
-          )}
-
-          {activeTab === 'family' && (
-            <View>
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Father's Name</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={familyForm.father_name || ''}
-                  onChangeText={(t) => setFamilyForm({ ...familyForm, father_name: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Father's Occupation</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={familyForm.father_occupation || ''}
-                  onChangeText={(t) => setFamilyForm({ ...familyForm, father_occupation: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Mother's Name</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={familyForm.mother_name || ''}
-                  onChangeText={(t) => setFamilyForm({ ...familyForm, mother_name: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Mother's Occupation</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={familyForm.mother_occupation || ''}
-                  onChangeText={(t) => setFamilyForm({ ...familyForm, mother_occupation: t })}
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-1">Total Family Members</Text>
-                <TextInput
-                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
-                  value={familyForm.total_family_members?.toString() || ''}
-                  keyboardType="numeric"
-                  onChangeText={(t) =>
-                    setFamilyForm({
-                      ...familyForm,
-                      total_family_members: t ? parseInt(t, 10) || null : null,
-                    })
-                  }
-                />
-              </View>
-            </View>
-          )}
-        </ScrollView>
-
-        <View className="py-4 border-t border-zinc-200">
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={isSaving}
-            className="w-full py-4 rounded-xl flex-row justify-center items-center bg-zinc-900"
-          >
-            {isSaving ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <View style={{ marginRight: 8 }}>
-                <Save size={20} color="white" />
+                  <InputField
+                    label="Address"
+                    value={personalForm.address || ''}
+                    onChangeText={(t) => handlePersonalChange('address', t)}
+                    multiline
+                  />
+                </View>
               </View>
             )}
-            <Text className="text-white font-bold text-lg">Save Changes</Text>
-          </TouchableOpacity>
+
+            {activeTab === 'academics' && (
+              <View
+                className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                style={cardShadow()}
+              >
+                <View className="flex-row justify-between items-center mb-4">
+                  <Text className="text-lg font-bold text-zinc-900">Academic Records</Text>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedEntry(null);
+                      setIsMarkModalOpen(true);
+                    }}
+                    className="bg-zinc-900 px-3 py-2 rounded-xl flex-row items-center"
+                  >
+                    <View style={{ marginRight: 6 }}>
+                      <PlusCircle size={16} color="white" />
+                    </View>
+                    <Text className="text-white font-bold text-xs">Add</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {academicEntries.length > 0 ? (
+                  academicEntries.map((entry: any) => {
+                    const isExpanded = expandedAcademicId === entry.id;
+
+                    return (
+                      <View
+                        key={entry.id}
+                        className="bg-zinc-50 rounded-2xl border border-zinc-200 mb-3 overflow-hidden"
+                      >
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          onPress={() =>
+                            setExpandedAcademicId(isExpanded ? null : entry.id)
+                          }
+                          className="p-4 flex-row items-center justify-between"
+                        >
+                          <Text className="font-bold text-zinc-900 text-base flex-1 pr-3">
+                            {entry.title}
+                          </Text>
+
+                          <View className="flex-row items-center">
+                            <TouchableOpacity
+                              onPress={() => {
+                                setSelectedEntry(entry);
+                                setIsMarkModalOpen(true);
+                              }}
+                              className="p-2 bg-white rounded-full border border-zinc-200 mr-2"
+                            >
+                              <Pencil size={16} color="#09090b" />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              onPress={() => handleEntryDelete(entry.id)}
+                              className="p-2 bg-white rounded-full border border-zinc-200 mr-2"
+                            >
+                              <Trash2 size={16} color="#ef4444" />
+                            </TouchableOpacity>
+
+                            {isExpanded ? (
+                              <ChevronUp size={20} color="#71717a" />
+                            ) : (
+                              <ChevronDown size={20} color="#71717a" />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+
+                        {isExpanded && (
+                          <View className="px-4 pb-4 border-t border-zinc-200 pt-3">
+                            <View className="flex-row border-b border-zinc-200 pb-2 mb-2">
+                              <Text className="flex-1 text-xs font-bold text-zinc-500 uppercase">
+                                Subject
+                              </Text>
+                              <Text className="w-20 text-xs font-bold text-zinc-500 uppercase">
+                                Mark
+                              </Text>
+                              <Text className="w-20 text-right text-xs font-bold text-zinc-500 uppercase">
+                                Status
+                              </Text>
+                            </View>
+
+                            {entry.subject_marks && entry.subject_marks.length > 0 ? (
+                              entry.subject_marks.map((subject: any) => (
+                                <View
+                                  key={subject.id}
+                                  className="flex-row items-center py-2 border-b border-zinc-100"
+                                >
+                                  <Text className="flex-1 font-semibold text-zinc-900 uppercase text-xs pr-2">
+                                    {subject.subject_name}
+                                  </Text>
+
+                                  <Text className="w-20 text-zinc-800 uppercase text-xs">
+                                    {subject.marks_obtained}
+                                  </Text>
+
+                                  {subject.status ? (
+                                    <View className="w-20 items-end">
+                                      <View className="bg-green-100 px-2 py-1 rounded">
+                                        <Text className="text-[10px] font-bold text-green-700">
+                                          Passed
+                                        </Text>
+                                      </View>
+                                    </View>
+                                  ) : (
+                                    <View className="w-20 items-end">
+                                      <View className="bg-red-100 px-2 py-1 rounded">
+                                        <Text className="text-[10px] font-bold text-red-700">
+                                          Failed
+                                        </Text>
+                                      </View>
+                                    </View>
+                                  )}
+                                </View>
+                              ))
+                            ) : (
+                              <Text className="text-sm text-zinc-500 py-3 text-center">
+                                No subjects added.
+                              </Text>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+                ) : (
+                  <Text className="text-sm text-zinc-500 py-4 text-center">
+                    No academic records found.
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {activeTab === 'family' && (
+              <View>
+                <View
+                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  style={cardShadow()}
+                >
+                  <Text className="text-lg font-bold text-zinc-900 mb-4">Household</Text>
+
+                  <InputField
+                    label="Total Family Members"
+                    value={familyForm.total_family_members?.toString() || ''}
+                    onChangeText={(t) =>
+                      handleFamilyChange(
+                        'total_family_members',
+                        t ? parseInt(t, 10) || null : null
+                      )
+                    }
+                    keyboardType="numeric"
+                  />
+
+                  <InputField
+                    label="House Type"
+                    value={familyForm.house_type || ''}
+                    onChangeText={(t) => handleFamilyChange('house_type', t)}
+                  />
+
+                  <View className="mb-2">
+                    <Text className="text-sm font-medium text-zinc-700 mb-2">
+                      Are there chronically ill members in the house?
+                    </Text>
+                    <View className="flex-row items-center justify-between bg-white border border-zinc-200 rounded-xl p-4">
+                      <Text className="text-base text-zinc-900">
+                        {chronicallyIllChecked ? 'Yes' : 'No'}
+                      </Text>
+                      <Switch
+                        value={chronicallyIllChecked}
+                        onValueChange={(v) =>
+                          handleFamilyChange('chronically_ill_members', v)
+                        }
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View
+                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  style={cardShadow()}
+                >
+                  <Text className="text-lg font-bold text-zinc-900 mb-4">
+                    Parent Details
+                  </Text>
+
+                  <InputField
+                    label="Father's Name"
+                    value={familyForm.father_name || ''}
+                    onChangeText={(t) => handleFamilyChange('father_name', t)}
+                  />
+
+                  <InputField
+                    label="Father's Occupation"
+                    value={familyForm.father_occupation || ''}
+                    onChangeText={(t) => handleFamilyChange('father_occupation', t)}
+                  />
+
+                  <InputField
+                    label="Father's Staying Place"
+                    value={familyForm.father_staying_place || ''}
+                    onChangeText={(t) =>
+                      handleFamilyChange('father_staying_place', t)
+                    }
+                  />
+
+                  <InputField
+                    label="Father's Responsibilities (comma separated)"
+                    value={fatherResponsibilitiesText}
+                    multiline
+                    onChangeText={(t) => setFatherResponsibilitiesText(t)}
+                  />
+
+                  <InputField
+                    label="Mother's Name"
+                    value={familyForm.mother_name || ''}
+                    onChangeText={(t) => handleFamilyChange('mother_name', t)}
+                  />
+
+                  <InputField
+                    label="Mother's Occupation"
+                    value={familyForm.mother_occupation || ''}
+                    onChangeText={(t) => handleFamilyChange('mother_occupation', t)}
+                  />
+                </View>
+
+                <SiblingCard
+                  title="brothers"
+                  siblings={familyForm.brothers || []}
+                  onChange={(next) => handleSiblingsUpdate('brothers', next)}
+                  showResponsibilities={true}
+                />
+
+                <SiblingCard
+                  title="sisters"
+                  siblings={familyForm.sisters || []}
+                  onChange={(next) => handleSiblingsUpdate('sisters', next)}
+                  showResponsibilities={false}
+                />
+              </View>
+            )}
+          </ScrollView>
+
+          <View className="py-4 border-t border-zinc-200">
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={isSaving}
+              className="w-full py-4 rounded-xl flex-row justify-center items-center bg-zinc-900"
+            >
+              {isSaving ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <View style={{ marginRight: 8 }}>
+                  <Save size={20} color="white" />
+                </View>
+              )}
+              <Text className="text-white font-bold text-lg">Save Changes</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {student && (
+        <MarkEditorModal
+          isOpen={isMarkModalOpen}
+          setIsOpen={setIsMarkModalOpen}
+          entry={selectedEntry}
+          student_uid={student.uid}
+          onSave={fetchAllData}
+        />
+      )}
+    </>
   );
 }

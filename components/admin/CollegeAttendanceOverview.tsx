@@ -368,23 +368,6 @@ export default function CollegeAttendanceOverview() {
         </View>
       )}
 
-      <Text className="text-base font-bold text-zinc-900 mt-4 mb-3">
-        View Class Details
-      </Text>
-
-      <View className="flex-row flex-wrap">
-        {collegeData.chartData.map((cls) => (
-          <TouchableOpacity
-            key={cls.name}
-            onPress={() => setSelectedClassId(cls.name)}
-            className="bg-zinc-100 px-4 py-3 rounded-xl flex-row items-center border border-zinc-200 mr-2 mb-2"
-          >
-            <Users size={16} color="#3f3f46" />
-            <Text className="ml-2 font-semibold text-zinc-800">{cls.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <Modal
         visible={!!selectedClassId}
         animationType="slide"

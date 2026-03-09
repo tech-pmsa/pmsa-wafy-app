@@ -58,62 +58,92 @@ export default function AddStudents() {
 
       <View className="min-h-[250px]">
         {step === 1 && (
-          <View className="space-y-4">
+          <View className="space-y-4 gap-1">
             <View>
               <Text className="text-sm font-medium text-zinc-700 mb-1">Full Name</Text>
-              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., Mohammed Shuhaib M" value={formData.name} onChangeText={(t) => setFormData({...formData, name: t})} />
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., Mohammed Shuhaib M" value={formData.name} onChangeText={(t) => setFormData({ ...formData, name: t })} />
             </View>
             <View>
               <Text className="text-sm font-medium text-zinc-700 mb-1">CIC Number (Unique)</Text>
-              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., 16828" value={formData.cic} onChangeText={(t) => setFormData({...formData, cic: t})} keyboardType="numeric" />
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., 16828" value={formData.cic} onChangeText={(t) => setFormData({ ...formData, cic: t })} keyboardType="numeric" />
+            </View>
+            <View>
+              <Text className="text-sm font-medium text-zinc-700 mb-1">SSLC Board</Text>
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., Any Borad/Nil" value={formData.sslc} onChangeText={(t) => setFormData({ ...formData, sslc: t })} />
+            </View>
+            <View>
+              <Text className="text-sm font-medium text-zinc-700 mb-1">+2 Board</Text>
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., Any Borad/Nil" value={formData.plustwo} onChangeText={(t) => setFormData({ ...formData, plustwo: t })} />
+            </View>
+            <View>
+              <Text className="text-sm font-medium text-zinc-700 mb-1">+2 Stream</Text>
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., Any Stream/Nil" value={formData.plustwo_streams} onChangeText={(t) => setFormData({ ...formData, plustwo_streams: t })} />
             </View>
           </View>
         )}
 
         {step === 2 && (
-          <View className="space-y-4">
+          <View className="space-y-4 gap-1">
             <View>
               <Text className="text-sm font-medium text-zinc-700 mb-1">Class ID</Text>
               <View className="bg-zinc-50 border border-zinc-200 rounded-xl overflow-hidden">
-                <Picker selectedValue={formData.class_id} onValueChange={(v) => setFormData({...formData, class_id: v})}>
+                <Picker selectedValue={formData.class_id} onValueChange={(v) => setFormData({ ...formData, class_id: v })}>
                   {classOptions.map(opt => <Picker.Item key={opt} label={opt} value={opt} />)}
                 </Picker>
               </View>
             </View>
             <View>
               <Text className="text-sm font-medium text-zinc-700 mb-1">Council</Text>
-              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., INSHIRAH" value={formData.council} onChangeText={(t) => setFormData({...formData, council: t})} />
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., INSHIRAH" value={formData.council} onChangeText={(t) => setFormData({ ...formData, council: t })} />
             </View>
             <View>
               <Text className="text-sm font-medium text-zinc-700 mb-1">Batch</Text>
-              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., Batch 12" value={formData.batch} onChangeText={(t) => setFormData({...formData, batch: t})} />
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g., Batch 12" value={formData.batch} onChangeText={(t) => setFormData({ ...formData, batch: t })} />
             </View>
           </View>
         )}
 
         {step === 3 && (
-          <View className="space-y-4">
+          <View className="space-y-4 gap-1">
             <View>
               <Text className="text-sm font-medium text-zinc-700 mb-1">Student Phone</Text>
-              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="+91 00000 00000" value={formData.phone} onChangeText={(t) => setFormData({...formData, phone: t})} keyboardType="phone-pad" />
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="+91 96451 84118" value={formData.phone} onChangeText={(t) => setFormData({ ...formData, phone: t })} keyboardType="phone-pad" />
             </View>
             <View>
               <Text className="text-sm font-medium text-zinc-700 mb-1">Guardian Name</Text>
-              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="Guardian Name" value={formData.guardian} onChangeText={(t) => setFormData({...formData, guardian: t})} />
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="Guardian Name" value={formData.guardian} onChangeText={(t) => setFormData({ ...formData, guardian: t })} />
+            </View>
+            <View>
+              <Text className="text-sm font-medium text-zinc-700 mb-1">Guardian Phone</Text>
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base" placeholder="+91 96451 84118" value={formData.g_phone} onChangeText={(t) => setFormData({ ...formData, g_phone: t })} keyboardType="phone-pad" />
             </View>
             <View>
               <Text className="text-sm font-medium text-zinc-700 mb-1">Address</Text>
-              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base h-24" placeholder="Full address" value={formData.address} onChangeText={(t) => setFormData({...formData, address: t})} multiline textAlignVertical="top" />
+              <TextInput className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base h-24" placeholder="Full address" value={formData.address} onChangeText={(t) => setFormData({ ...formData, address: t })} multiline textAlignVertical="top" />
             </View>
           </View>
         )}
 
         {step === 4 && (
-          <View className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3">
-            <Text className="text-zinc-500 text-xs">Name: <Text className="font-bold text-zinc-900 text-sm">{formData.name}</Text></Text>
-            <Text className="text-zinc-500 text-xs">CIC: <Text className="font-bold text-zinc-900 text-sm">{formData.cic}</Text></Text>
-            <Text className="text-zinc-500 text-xs">Class: <Text className="font-bold text-zinc-900 text-sm">{formData.class_id}</Text></Text>
-            <Text className="text-zinc-500 text-xs">Phone: <Text className="font-bold text-zinc-900 text-sm">{formData.phone}</Text></Text>
+          <View className='gap-2'>
+            <View className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3 gap-1">
+              <Text className="text-zinc-500 text-xs">Name: <Text className="font-bold text-zinc-900 text-sm">{formData.name}</Text></Text>
+              <Text className="text-zinc-500 text-xs">CIC: <Text className="font-bold text-zinc-900 text-sm">{formData.cic}</Text></Text>
+              <Text className="text-zinc-500 text-xs">SSLC: <Text className="font-bold text-zinc-900 text-sm">{formData.sslc}</Text></Text>
+              <Text className="text-zinc-500 text-xs">+2: <Text className="font-bold text-zinc-900 text-sm">{formData.plustwo}</Text></Text>
+              <Text className="text-zinc-500 text-xs">+2 Stream: <Text className="font-bold text-zinc-900 text-sm">{formData.plustwo_streams}</Text></Text>
+            </View>
+            <View className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3 gap-1">
+              <Text className="text-zinc-500 text-xs">Class: <Text className="font-bold text-zinc-900 text-sm">{formData.class_id}</Text></Text>
+              <Text className="text-zinc-500 text-xs">Batch: <Text className="font-bold text-zinc-900 text-sm">{formData.batch}</Text></Text>
+              <Text className="text-zinc-500 text-xs">Council: <Text className="font-bold text-zinc-900 text-sm">{formData.council}</Text></Text>
+            </View>
+            <View className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 space-y-3 gap-1">
+              <Text className="text-zinc-500 text-xs">Phone: <Text className="font-bold text-zinc-900 text-sm">{formData.phone}</Text></Text>
+              <Text className="text-zinc-500 text-xs">Guardian: <Text className="font-bold text-zinc-900 text-sm">{formData.guardian}</Text></Text>
+              <Text className="text-zinc-500 text-xs">Guardian Phone: <Text className="font-bold text-zinc-900 text-sm">{formData.g_phone}</Text></Text>
+              <Text className="text-zinc-500 text-xs">Address: <Text className="font-bold text-zinc-900 text-sm">{formData.address}</Text></Text>
+            </View>
           </View>
         )}
       </View>

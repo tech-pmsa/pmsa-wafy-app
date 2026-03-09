@@ -136,14 +136,22 @@ function FeeSheetContent({ sheetName, sheetData, role, cic }: { sheetName: strin
     };
   }, [rows]);
 
+  // CRITICAL FIX: Sort by highest payment first, then take top 10, and use CIC!
   const chartData = useMemo(() => {
-    return rows.slice(0, 10).map(row => { // Limit to 10 for mobile chart readability
+    // 1. Calculate totals for ALL students
+    const allStudentsData = rows.map(row => {
       const totalPaid = row.slice(3).reduce((sum, cell) => {
         const val = parseFloat(cell || '0');
         return sum + (isNaN(val) ? 0 : val);
       }, 0);
-      return { name: row[2]?.split(' ')[0], total: totalPaid }; // Use first name only
+      // Save the CIC number instead of the name
+      return { cic: String(row[1] || 'N/A'), total: totalPaid };
     });
+
+    // 2. Sort descending (highest payers first) and slice the top 10
+    return allStudentsData
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
   }, [rows]);
 
   return (
@@ -158,26 +166,29 @@ function FeeSheetContent({ sheetName, sheetData, role, cic }: { sheetName: strin
       {/* Chart */}
       {role !== 'student' && chartData.length > 0 && (
         <View className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-100 mb-6">
-          <Text className="font-bold text-zinc-900 mb-4">Top 10 Payment Overview</Text>
+          <Text className="font-bold text-zinc-900 mb-1">Top 10 Payments</Text>
+          <Text className="text-xs text-zinc-500 mb-4">Ranked by highest amount paid</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <BarChart
               data={{
-                labels: chartData.map(d => d.name),
+                labels: chartData.map(d => d.cic), // Using CIC here!
                 datasets: [{ data: chartData.map(d => d.total) }]
               }}
-              width={Math.max(screenWidth - 48, chartData.length * 50)}
-              height={220}
+              width={Math.max(screenWidth - 48, chartData.length * 45)}
+              height={300}
               yAxisLabel="₹"
               yAxisSuffix=""
               chartConfig={{
                 backgroundGradientFrom: "#ffffff",
                 backgroundGradientTo: "#ffffff",
-                color: (opacity = 1) => `rgba(9, 9, 11, ${opacity})`,
+                color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`, // Switched to a nice blue
                 labelColor: (opacity = 1) => `rgba(113, 113, 122, ${opacity})`,
                 barPercentage: 0.5,
                 decimalPlaces: 0,
+                propsForBackgroundLines: { strokeWidth: 0 },
               }}
-              verticalLabelRotation={30}
+              verticalLabelRotation={70}
+              showValuesOnTopOfBars={false}
               fromZero
             />
           </ScrollView>

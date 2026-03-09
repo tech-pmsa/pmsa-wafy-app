@@ -2,20 +2,44 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert as NativeAlert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing'; // <-- NEW IMPORT
 import * as XLSX from 'xlsx';
 import { parse } from 'papaparse';
 import { supabase } from '@/lib/supabaseClient';
-import { UploadCloud, File, CheckCircle2, AlertCircle, ListChecks } from 'lucide-react-native';
+import { UploadCloud, File, CheckCircle2, AlertCircle, ListChecks, Download } from 'lucide-react-native'; // <-- Added Download icon
 
 const REQUIRED_COLUMNS = ['name', 'cic', 'class_id', 'council', 'batch', 'phone', 'guardian', 'g_phone', 'address', 'sslc', 'plustwo', 'plustwo_streams'];
 
 export default function AddBulkStudents() {
   const [step, setStep] = useState(1);
-  const [fileData, setFileData] = useState<any>(null); // To hold the parsed array of objects
+  const [fileData, setFileData] = useState<any>(null);
   const [fileName, setFileName] = useState('');
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
+
+  // --- NEW: Generate and Download Template ---
+  const handleDownloadTemplate = async () => {
+    try {
+      // 1. Create an empty worksheet using our REQUIRED_COLUMNS as the header row
+      const worksheet = XLSX.utils.aoa_to_sheet([REQUIRED_COLUMNS]);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+
+      // 2. Convert workbook to Base64
+      const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+
+      // 3. Save to the device's temporary cache directory
+      const uri = `${FileSystem.cacheDirectory}Bulk_Student_Template.xlsx`;
+      await FileSystem.writeAsStringAsync(uri, wbout, { encoding: FileSystem.EncodingType.Base64 });
+
+      // 4. Open the native Share/Save dialog
+      await Sharing.shareAsync(uri, { dialogTitle: 'Download Student Template' });
+    } catch (error) {
+      console.error("Template Error:", error);
+      NativeAlert.alert("Error", "Failed to generate the template file.");
+    }
+  };
 
   const handleFileSelect = async () => {
     try {
@@ -28,9 +52,7 @@ export default function AddBulkStudents() {
       const file = result.assets[0];
       setFileName(file.name);
 
-      // Read file contents
       const base64Str = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
-
       let parsedArray: any[] = [];
 
       if (file.name.endsWith('.xlsx')) {
@@ -38,7 +60,6 @@ export default function AddBulkStudents() {
         const sheetName = workbook.SheetNames[0];
         parsedArray = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
       } else {
-        // For CSV, we need to decode the base64 back to string
         const binaryStr = atob(base64Str);
         parsedArray = parse(binaryStr, { header: true, skipEmptyLines: true }).data;
       }
@@ -64,7 +85,7 @@ export default function AddBulkStudents() {
     setUploadResult(null);
 
     try {
-      // Calls the Edge Function we are about to build!
+      // Calls the Edge Function
       const { data, error } = await supabase.functions.invoke('bulk-create-users', {
         body: { students: fileData }
       });
@@ -86,7 +107,7 @@ export default function AddBulkStudents() {
   };
 
   return (
-    <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-200 mt-6">
+    <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-200 mt-6 mb-6">
       <View className="flex-row items-center mb-6">
         <View className="bg-blue-50 p-3 rounded-xl mr-4"><UploadCloud size={24} color="#2563eb" /></View>
         <View className="flex-1">
@@ -96,11 +117,22 @@ export default function AddBulkStudents() {
       </View>
 
       {step === 1 && (
-        <TouchableOpacity onPress={handleFileSelect} className="border-2 border-dashed border-zinc-300 rounded-2xl py-10 items-center justify-center bg-zinc-50">
-          <UploadCloud size={40} color="#a1a1aa" className="mb-3" />
-          <Text className="font-semibold text-zinc-700">Tap to select file</Text>
-          <Text className="text-xs text-zinc-500 mt-1">XLSX or CSV format</Text>
-        </TouchableOpacity>
+        <View>
+          <TouchableOpacity onPress={handleFileSelect} className="border-2 border-dashed border-zinc-300 rounded-2xl py-10 items-center justify-center bg-zinc-50 mb-4">
+            <UploadCloud size={40} color="#a1a1aa" className="mb-3" />
+            <Text className="font-semibold text-zinc-700">Tap to select file</Text>
+            <Text className="text-xs text-zinc-500 mt-1">XLSX or CSV format</Text>
+          </TouchableOpacity>
+
+          {/* Download Template Button */}
+          <TouchableOpacity
+            onPress={handleDownloadTemplate}
+            className="flex-row items-center justify-center py-3 bg-zinc-100 rounded-xl border border-zinc-200"
+          >
+            <Download size={18} color="#3f3f46" />
+            <Text className="ml-2 font-bold text-zinc-800">Download Excel Template</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {step === 2 && (

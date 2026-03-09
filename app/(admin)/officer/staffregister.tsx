@@ -5,7 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '@/lib/supabaseClient';
 import { useUserData } from '@/hooks/useUserData';
 import { format, startOfMonth, endOfMonth, parse } from 'date-fns';
-import { CalendarIcon, UserPlus, Download, Trash2, Save, Search, Clock, BedDouble, X } from 'lucide-react-native';
+import { CalendarIcon, UserPlus, Download, Trash2, Save, Search, Clock, BedDouble, X, Edit, XCircle } from 'lucide-react-native';
 import { Switch } from 'react-native';
 
 // File system imports for Excel generation
@@ -32,10 +32,14 @@ export default function StaffRegisterPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal States
+  // Add Staff Modal States
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffDesignation, setNewStaffDesignation] = useState('');
+
+  // Edit Staff Modal States
+  const [isEditStaffOpen, setIsEditStaffOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
   const fetchData = useCallback(async (date: Date) => {
     setLoading(true);
@@ -83,6 +87,41 @@ export default function StaffRegisterPage() {
       setStaffList(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
       setNewStaffName(''); setNewStaffDesignation(''); setIsAddStaffOpen(false);
     }
+  };
+
+  // --- NEW: Handle Update Staff ---
+  const handleUpdateStaff = async () => {
+    if (!editingStaff || !editingStaff.name) return;
+    const { error } = await supabase.from('staff')
+      .update({ name: editingStaff.name, designation: editingStaff.designation })
+      .eq('id', editingStaff.id);
+
+    if (error) NativeAlert.alert("Error", error.message);
+    else {
+      NativeAlert.alert("Success", "Staff details updated.");
+      setStaffList(prev => prev.map(s => s.id === editingStaff.id ? editingStaff : s).sort((a, b) => a.name.localeCompare(b.name)));
+      setIsEditStaffOpen(false);
+      setEditingStaff(null);
+    }
+  };
+
+  // --- NEW: Handle Delete Staff ---
+  const handleDeleteStaff = (staff: StaffMember) => {
+    NativeAlert.alert(
+      "Remove Staff",
+      `Are you sure you want to remove ${staff.name}? This will hide them from the active list.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: async () => {
+            const { error } = await supabase.from('staff').update({ is_active: false }).eq('id', staff.id);
+            if (error) NativeAlert.alert("Error", error.message);
+            else {
+              setStaffList(prev => prev.filter(s => s.id !== staff.id));
+              NativeAlert.alert("Success", `${staff.name} removed.`);
+            }
+        }}
+      ]
+    );
   };
 
   const handleExport = async () => {
@@ -202,29 +241,62 @@ export default function StaffRegisterPage() {
               const formatDisplayTime = (t: string | null) => t ? format(parse(t, 'HH:mm:ss', new Date()), 'hh:mm a') : 'Set Time';
 
               return (
-                <View key={staff.id} className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm">
-                  <Text className="font-bold text-zinc-900 text-lg mb-1">{staff.name}</Text>
-                  <Text className="text-sm text-zinc-500 mb-4">{staff.designation}</Text>
+                <View key={staff.id} className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm mb-3">
+
+                  {/* Header Row with Edit/Delete Buttons */}
+                  <View className="flex-row justify-between items-start mb-4">
+                    <View className="flex-1">
+                      <Text className="font-bold text-zinc-900 text-lg mb-1">{staff.name}</Text>
+                      <Text className="text-sm text-zinc-500">{staff.designation}</Text>
+                    </View>
+                    <View className="flex-row items-center gap-4 pl-2">
+                      <TouchableOpacity onPress={() => { setEditingStaff(staff); setIsEditStaffOpen(true); }}>
+                        <Edit size={20} color="#3b82f6" />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDeleteStaff(staff)}>
+                        <Trash2 size={20} color="#dc2626" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
 
                   <View className="flex-row items-end gap-3">
+                    {/* IN TIME BLOCK WITH CLEAR BUTTON */}
                     <View className="flex-1">
                       <Text className="text-xs font-bold text-zinc-500 mb-1 flex-row items-center"><Clock size={12} color="#71717a"/> IN Time</Text>
-                      <TouchableOpacity
-                        onPress={() => setActiveTimePicker({ staffId: staff.id, field: 'time_in', currentValue: record.time_in ? parse(record.time_in, 'HH:mm:ss', new Date()) : new Date() })}
-                        className="bg-zinc-50 border border-zinc-200 py-2.5 rounded-lg items-center"
-                      >
-                        <Text className={`font-semibold ${record.time_in ? 'text-zinc-900' : 'text-zinc-400'}`}>{formatDisplayTime(record.time_in)}</Text>
-                      </TouchableOpacity>
+                      <View className="flex-row items-center bg-zinc-50 border border-zinc-200 rounded-lg">
+                        <TouchableOpacity
+                          onPress={() => setActiveTimePicker({ staffId: staff.id, field: 'time_in', currentValue: record.time_in ? parse(record.time_in, 'HH:mm:ss', new Date()) : new Date() })}
+                          className="flex-1 py-2.5 pl-3"
+                        >
+                          <Text className={`font-semibold ${record.time_in ? 'text-zinc-900' : 'text-zinc-400'}`}>{formatDisplayTime(record.time_in)}</Text>
+                        </TouchableOpacity>
+                        {record.time_in && (
+                          <TouchableOpacity onPress={() => handleAttendanceChange(staff.id, 'time_in', null)} className="px-3 py-2.5">
+                            <XCircle size={18} color="#a1a1aa" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
+
+                    {/* OUT TIME BLOCK WITH CLEAR BUTTON */}
                     <View className="flex-1">
                       <Text className="text-xs font-bold text-zinc-500 mb-1 flex-row items-center"><Clock size={12} color="#71717a"/> OUT Time</Text>
-                      <TouchableOpacity
-                        onPress={() => setActiveTimePicker({ staffId: staff.id, field: 'time_out', currentValue: record.time_out ? parse(record.time_out, 'HH:mm:ss', new Date()) : new Date() })}
-                        className="bg-zinc-50 border border-zinc-200 py-2.5 rounded-lg items-center"
-                      >
-                        <Text className={`font-semibold ${record.time_out ? 'text-zinc-900' : 'text-zinc-400'}`}>{formatDisplayTime(record.time_out)}</Text>
-                      </TouchableOpacity>
+                      <View className="flex-row items-center bg-zinc-50 border border-zinc-200 rounded-lg">
+                        <TouchableOpacity
+                          onPress={() => setActiveTimePicker({ staffId: staff.id, field: 'time_out', currentValue: record.time_out ? parse(record.time_out, 'HH:mm:ss', new Date()) : new Date() })}
+                          className="flex-1 py-2.5 pl-3"
+                        >
+                          <Text className={`font-semibold ${record.time_out ? 'text-zinc-900' : 'text-zinc-400'}`}>{formatDisplayTime(record.time_out)}</Text>
+                        </TouchableOpacity>
+                        {record.time_out && (
+                          <TouchableOpacity onPress={() => handleAttendanceChange(staff.id, 'time_out', null)} className="px-3 py-2.5">
+                            <XCircle size={18} color="#a1a1aa" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
+
+                    {/* STAYING TOGGLE */}
                     <View className="items-center px-2">
                       <Text className="text-xs font-bold text-zinc-500 mb-2"><BedDouble size={12} color="#71717a"/> Staying</Text>
                       <Switch value={record.is_staying || false} onValueChange={v => handleAttendanceChange(staff.id, 'is_staying', v)} />
@@ -290,10 +362,45 @@ export default function StaffRegisterPage() {
               <Text className="text-sm font-medium text-zinc-700 mb-1">Designation</Text>
               <TextInput className="bg-white border border-zinc-200 rounded-xl p-4 text-base" placeholder="e.g. Principal" value={newStaffDesignation} onChangeText={setNewStaffDesignation} />
             </View>
-            <TouchableOpacity onPress={handleAddNewStaff} disabled={!newStaffName} className={`w-full py-4 rounded-xl items-center mt-4 ${!newStaffName ? 'bg-zinc-300' : 'bg-zinc-900'}`}>
+            <TouchableOpacity onPress={handleAddNewStaff} disabled={!newStaffName} className={!newStaffName ? "w-full py-4 rounded-xl items-center mt-4 bg-zinc-300" : "w-full py-4 rounded-xl items-center mt-4 bg-zinc-900"}>
               <Text className="text-white font-bold text-lg">Add Staff</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Edit Staff Modal */}
+      <Modal visible={isEditStaffOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => {setIsEditStaffOpen(false); setEditingStaff(null);}}>
+        <View className="flex-1 bg-zinc-100 pt-6 px-6">
+          <View className="flex-row justify-between items-center mb-8">
+            <Text className="text-2xl font-bold text-zinc-900">Edit Staff Member</Text>
+            <TouchableOpacity onPress={() => {setIsEditStaffOpen(false); setEditingStaff(null);}} className="bg-zinc-200 p-2 rounded-full"><X size={20} color="#09090b" /></TouchableOpacity>
+          </View>
+
+          {editingStaff && (
+            <View className="space-y-4">
+              <View>
+                <Text className="text-sm font-medium text-zinc-700 mb-1">Full Name</Text>
+                <TextInput
+                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
+                  value={editingStaff.name}
+                  onChangeText={(text) => setEditingStaff({...editingStaff, name: text})}
+                />
+              </View>
+              <View>
+                <Text className="text-sm font-medium text-zinc-700 mb-1">Designation</Text>
+                <TextInput
+                  className="bg-white border border-zinc-200 rounded-xl p-4 text-base"
+                  placeholder="e.g. Principal"
+                  value={editingStaff.designation || ''}
+                  onChangeText={(text) => setEditingStaff({...editingStaff, designation: text})}
+                />
+              </View>
+              <TouchableOpacity onPress={handleUpdateStaff} disabled={!editingStaff.name} className={!editingStaff.name ? "w-full py-4 rounded-xl items-center mt-4 bg-zinc-300" : "w-full py-4 rounded-xl items-center mt-4 bg-blue-600"}>
+                <Text className="text-white font-bold text-lg">Save Changes</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </Modal>
 
