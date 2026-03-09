@@ -11,7 +11,7 @@ export default function IndexScreen() {
     <View className="flex-1 justify-center items-center bg-zinc-900">
       <View className="items-center mb-8">
         <GraduationCap size={64} color="white" />
-        <Text className="text-white text-2xl font-bold font-heading mt-4">
+        <Text className="text-white text-2xl font-bold font-muller-bold mt-4">
           PMSA Wafy College
         </Text>
       </View>

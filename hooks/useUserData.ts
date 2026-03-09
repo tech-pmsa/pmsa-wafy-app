@@ -19,59 +19,52 @@ export function useUserData(): UserData {
 
   useEffect(() => {
     const fetchData = async () => {
+      let finalUser: User | null = null;
+      let finalRole: string | null = null;
+      let finalDetails: any = null;
+
       try {
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (sessionError || !session) {
-          setData({ loading: false, user: null, role: null, details: null });
-          return;
-        }
+        if (sessionError || !session) return; // Will skip to the 'finally' block
 
-        const user = session.user;
+        finalUser = session.user;
 
         // Try profiles table first
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('uid', user.id)
+          .eq('uid', finalUser.id)
           .single();
 
         if (profile && !profileError) {
-          setData({
-            loading: false,
-            user,
-            role: profile.role,
-            details: profile,
-          });
-          return;
+          finalRole = profile.role;
+          finalDetails = profile;
+          return; // Skip to 'finally' block
         }
 
-        // Then try students table, fetching ALL columns
+        // Then try students table
         const { data: student, error: studentError } = await supabase
           .from('students')
           .select('*')
-          .eq('uid', user.id)
+          .eq('uid', finalUser.id)
           .single();
 
         if (student && !studentError) {
-          setData({
-            loading: false,
-            user,
-            role: student.role,
-            details: student,
-          });
-          return;
+          finalRole = student.role;
+          finalDetails = student;
         }
 
-        // If no role found in any table
-        setData({ loading: false, user, role: null, details: null });
-
       } catch (err) {
-        console.error('Error fetching user data:', err);
-        setData({ loading: false, user: null, role: null, details: null });
+        console.error('Error fetching user data in hook:', err);
+      } finally {
+        // This is guaranteed to run, hiding your loading spinners!
+        setData({
+          loading: false,
+          user: finalUser,
+          role: finalRole,
+          details: finalDetails,
+        });
       }
     };
 

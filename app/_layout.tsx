@@ -8,25 +8,22 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
-
-// Keep the splash screen visible while fetching fonts/auth
 SplashScreen.preventAutoHideAsync();
 
-// Helper function to fetch user role
 async function getUserRole(uid: string): Promise<string | null> {
-  const { data: profile } = await supabase.from('profiles').select('role').eq('uid', uid).single();
-  if (profile?.role) return profile.role;
+  try {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('uid', uid).single();
+    if (profile?.role) return profile.role;
 
-  const { data: student } = await supabase.from('students').select('role').eq('uid', uid).single();
-  if (student?.role) return student.role;
-
+    const { data: student } = await supabase.from('students').select('role').eq('uid', uid).single();
+    if (student?.role) return student.role;
+  } catch (error) {
+    console.error("Error fetching user role in layout:", error);
+  }
   return null;
 }
 
 export default function RootLayout() {
-  // ==========================================
-  // 1. ALL HOOKS MUST BE DECLARED AT THE TOP
-  // ==========================================
   const [fontsLoaded] = useFonts({
     'AnekMalayalam': require('../assets/fonts/AnekMalayalam-Variable.ttf'),
     'MullerBold': require('../assets/fonts/MullerBold.ttf'),
@@ -41,32 +38,34 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
 
-  // ==========================================
-  // 2. ALL EFFECTS
-  // ==========================================
-
-  // Hide Splash Screen once fonts are loaded
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
 
-  // Handle Supabase Auth State
   useEffect(() => {
     const fetchSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      if (session) {
-        const userRole = await getUserRole(session.user.id);
-        setRole(userRole);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        setSession(session);
+        if (session) {
+          const userRole = await getUserRole(session.user.id);
+          setRole(userRole);
+        }
+      } catch (error) {
+        console.error("Auth Initialization Error:", error);
+      } finally {
+        // THIS IS THE FIX! It guarantees the app will stop spinning even if offline.
+        setIsInitialized(true);
       }
-      setIsInitialized(true);
     };
 
     fetchSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
       if (newSession) {
         const userRole = await getUserRole(newSession.user.id);
@@ -76,17 +75,14 @@ export default function RootLayout() {
       }
     });
 
-    return () => authListener.subscription.unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
-
-  // Handle Route Redirection
   useEffect(() => {
     if (!isInitialized || !rootNavigationState?.key) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
-    // Wrap the routing logic in a setTimeout to push it to the next event tick!
     setTimeout(() => {
       if (!session && !inAuthGroup) {
         router.replace('/(auth)/login' as any);
@@ -103,14 +99,15 @@ export default function RootLayout() {
         if (inAuthGroup && targetRoute) {
           router.replace(targetRoute as any);
         }
+      } else if (session && !role && inAuthGroup) {
+        // Fallback: If they have a session but no role exists in DB yet,
+        // we log them out so they aren't permanently stuck on the login screen.
+        console.warn("User has session but no assigned role.");
+        supabase.auth.signOut();
       }
-    }, 0); // 0ms delay safely waits for the UI to mount
+    }, 0);
 
   }, [session, isInitialized, segments, role, rootNavigationState?.key]);
-
-  // ==========================================
-  // 3. CONDITIONS & RETURNS (Must be after all hooks!)
-  // ==========================================
 
   if (!fontsLoaded || !isInitialized) {
     return (
