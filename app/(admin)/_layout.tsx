@@ -19,6 +19,7 @@ export default function AdminLayout() {
       <Drawer.Screen name="officer/officer-dashboard" options={{ title: 'Officer Dashboard' }} />
       <Drawer.Screen name="officer/staffregister" options={{ title: 'Staff Register' }} />
       <Drawer.Screen name="classroom/class-dashboard" options={{ title: 'Class Dashboard' }} />
+      <Drawer.Screen name="classroom/notifications" options={{ title: 'Notifications' }} />
       <Drawer.Screen name="classleader/class-leader-dashboard" options={{ title: 'Class Leader' }} />
       <Drawer.Screen name="staff/staff-dashboard" options={{ title: 'Staff Dashboard' }} />
       <Drawer.Screen name="manage-students" options={{ title: 'Manage Students' }} />

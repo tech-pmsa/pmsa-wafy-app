@@ -10,6 +10,7 @@ const allNavItems = [
   { href: '/(admin)/officer/officer-dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['officer'] },
   { href: '/(admin)/classroom/class-dashboard', label: 'Dashboard', icon: School, roles: ['class'] },
   { href: '/(admin)/classleader/class-leader-dashboard', label: 'Dashboard', icon: BookUser, roles: ['class-leader'] },
+  { href: '/(admin)/staff/staff-dashboard', label: 'Dashboard', icon: BookUser, roles: ['staff'] },
   { href: '/(student)/student-dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['student'] },
   { href: '/(admin)/manage-students', label: 'Students', icon: Users, roles: ['officer', 'class'] },
   { href: '/(admin)/manage-staff', label: 'Staff', icon: UserCheck, roles: ['officer'] },
