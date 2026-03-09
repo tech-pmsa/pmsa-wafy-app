@@ -50,29 +50,52 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError]);
 
   // 2. Handle Authentication (Single Source of Truth)
+  // 2. Handle Authentication (Standalone APK Safe Version)
   useEffect(() => {
-    let isMounted = true; // Prevents state updates if component unmounts
+    let isMounted = true;
 
-    // Supabase automatically fires this the moment the app opens, so we don't need getSession()!
+    // A. Manually check the session exactly once on boot
+    const initializeApp = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        setSession(session);
+        if (session) {
+          const userRole = await getUserRole(session.user.id);
+          if (isMounted) setRole(userRole);
+        }
+      } catch (error) {
+        console.error("Auth Init Error:", error);
+      } finally {
+        if (isMounted) {
+          setIsFetchingRole(false);
+          setIsInitialized(true); // Guaranteed to unlock the dark screen!
+        }
+      }
+    };
+
+    initializeApp();
+
+    // B. Listen for any future Logins or Logouts while the app is open
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!isMounted) return;
+      // Ignore the initial broadcast to prevent the double-fetch crash!
+      if (event === 'INITIAL_SESSION') return;
 
+      if (!isMounted) return;
       setSession(newSession);
 
       if (newSession) {
         setIsFetchingRole(true);
         const userRole = await getUserRole(newSession.user.id);
-
         if (isMounted) {
           setRole(userRole);
           setIsFetchingRole(false);
-          setIsInitialized(true); // Unlock the app!
         }
       } else {
         if (isMounted) {
           setRole(null);
           setIsFetchingRole(false);
-          setIsInitialized(true); // Unlock the app!
         }
       }
     });
