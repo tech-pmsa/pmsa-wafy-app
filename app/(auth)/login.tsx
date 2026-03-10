@@ -45,12 +45,11 @@ export default function LoginScreen() {
 
   return (
     <ImageBackground
-      source={require('../../assets/images/imglogin.jpeg')}
+      source={require('../../assets/images/pmsalogin.png')}
       style={styles.backgroundImage}
       resizeMode="cover"
     >
-      {/* Dark overlay to make the form pop */}
-      <View className="flex-1 bg-black/60">
+      <View className="flex-1">
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
@@ -66,28 +65,28 @@ export default function LoginScreen() {
               <View className="bg-white/20 p-4 rounded-full mb-4">
                 <GraduationCap size={48} color="white" />
               </View>
-              <Text className="text-white text-3xl font-bold font-heading text-center">
+              <Text className="text-white text-3xl font-muller-bold text-center">
                 PMSA Wafy College
               </Text>
-              <Text className="text-white/80 text-base mt-2 text-center px-8">
+              <Text className="text-white/80 text-base font-muller mt-2 text-center px-8">
                 Your portal to academic excellence and campus life.
               </Text>
             </View>
 
             {/* Floating Form Card */}
-            <View className="bg-white p-6 rounded-3xl shadow-xl w-full max-w-md mx-auto">
-              <Text className="text-2xl font-bold text-zinc-900 mb-1 text-center font-heading">
+            <View className="p-6 rounded-3xl shadow-xl w-full max-w-md mx-auto">
+              <Text className="text-2xl font-muller-bold text-white mb-1 text-center">
                 Welcome Back
               </Text>
-              <Text className="text-zinc-500 mb-6 text-center text-sm">
+              <Text className="text-white/80 mb-6 font-muller text-center text-sm">
                 Enter your credentials to continue
               </Text>
 
               {/* Email Input */}
               <View className="mb-4">
-                <Text className="text-sm font-medium text-zinc-700 mb-2">Email Address</Text>
+                <Text className="text-sm font-muller text-white mb-2">Email Address</Text>
                 <TextInput
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-4 text-base text-zinc-900"
+                  className="w-full border border-zinc-200 font-muller rounded-xl px-4 py-4 text-base text-white/80"
                   placeholder="you@pmsa.com"
                   placeholderTextColor="#a1a1aa"
                   value={email}
@@ -100,9 +99,9 @@ export default function LoginScreen() {
 
               {/* Password Input */}
               <View className="mb-6">
-                <Text className="text-sm font-medium text-zinc-700 mb-2">Password</Text>
+                <Text className="text-sm font-muller text-white mb-2">Password</Text>
                 <TextInput
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-4 text-base text-zinc-900"
+                  className="w-full border border-zinc-200 rounded-xl font-muller px-4 py-4 text-base text-white/80"
                   placeholder="••••••••"
                   placeholderTextColor="#a1a1aa"
                   value={password}
@@ -124,16 +123,16 @@ export default function LoginScreen() {
               <TouchableOpacity
                 onPress={handleLogin}
                 disabled={loading}
-                className={loading ? "w-full py-4 rounded-xl flex-row justify-center items-center bg-blue-400" : "w-full py-4 rounded-xl flex-row justify-center items-center bg-blue-600"}
+                className={loading ? "w-full py-4 rounded-xl flex-row justify-center items-center bg-green-800" : "w-full py-4 rounded-xl flex-row justify-center items-center bg-green-950"}
               >
+                <Text className="text-white text-lg font-muller">
+                  {loading ? "Signing In... " : "Sign In "}
+                </Text>
                 {loading ? (
                   <ActivityIndicator color="white" className="mr-2" />
                 ) : (
                   <LogIn size={20} color="white" className="mr-2" />
                 )}
-                <Text className="text-white text-lg font-semibold">
-                  {loading ? "Signing In..." : "Sign In"}
-                </Text>
               </TouchableOpacity>
             </View>
 
