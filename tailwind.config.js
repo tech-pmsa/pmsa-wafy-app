@@ -6,7 +6,6 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        anek: ["AnekMalayalam"],
         muller: ["MullerMedium"],
         "muller-bold": ["MullerBold"],
       },

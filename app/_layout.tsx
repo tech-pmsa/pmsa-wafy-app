@@ -1,7 +1,8 @@
 import "../global.css";
 import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments, useRootNavigationState, usePathname } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+// NEW: Imported AppState from react-native
+import { View, ActivityIndicator, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabaseClient';
 import { StatusBar } from 'expo-status-bar';
@@ -10,7 +11,6 @@ import * as SplashScreen from 'expo-splash-screen';
 
 SplashScreen.preventAutoHideAsync();
 
-// Helper function to fetch user role safely
 async function getUserRole(uid: string): Promise<string | null> {
   try {
     const { data: profile } = await supabase.from('profiles').select('role').eq('uid', uid).maybeSingle();
@@ -25,9 +25,7 @@ async function getUserRole(uid: string): Promise<string | null> {
 }
 
 export default function RootLayout() {
-  // NEW: Added fontError to prevent the app from hanging if a font fails to load!
   const [fontsLoaded, fontError] = useFonts({
-    'AnekMalayalam': require('../assets/fonts/AnekMalayalam-Variable.ttf'),
     'MullerBold': require('../assets/fonts/MullerBold.ttf'),
     'MullerMedium': require('../assets/fonts/MullerMedium.ttf'),
   });
@@ -42,19 +40,34 @@ export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // 1. Handle Splash Screen
+  // 1. WAKE UP SUPABASE (The 1-Hour Expiry Fix)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        // App is opened! Tell Supabase to check and refresh the token.
+        supabase.auth.startAutoRefresh();
+      } else {
+        // App is closed/backgrounded. Pause the timers to save battery.
+        supabase.auth.stopAutoRefresh();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // 2. Handle Splash Screen
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
-  // 2. Handle Authentication (Single Source of Truth)
-  // 2. Handle Authentication (Standalone APK Safe Version)
+  // 3. Handle Authentication
   useEffect(() => {
     let isMounted = true;
 
-    // A. Manually check the session exactly once on boot
     const initializeApp = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -70,16 +83,14 @@ export default function RootLayout() {
       } finally {
         if (isMounted) {
           setIsFetchingRole(false);
-          setIsInitialized(true); // Guaranteed to unlock the dark screen!
+          setIsInitialized(true);
         }
       }
     };
 
     initializeApp();
 
-    // B. Listen for any future Logins or Logouts while the app is open
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      // Ignore the initial broadcast to prevent the double-fetch crash!
       if (event === 'INITIAL_SESSION') return;
 
       if (!isMounted) return;
@@ -106,9 +117,8 @@ export default function RootLayout() {
     };
   }, []);
 
-  // 3. Handle Route Redirection
+  // 4. Handle Route Redirection
   useEffect(() => {
-    // Wait until everything is perfectly ready before moving the user
     const isReadyToRoute = isInitialized && rootNavigationState?.key && !isFetchingRole;
     if (!isReadyToRoute) return;
 
@@ -116,11 +126,11 @@ export default function RootLayout() {
     const isRootIndex = pathname === '/';
 
     setTimeout(() => {
-      // Not logged in?
+      // User is not logged in
       if (!session && !inAuthGroup) {
         router.replace('/(auth)/login' as any);
       }
-      // Logged in with a role?
+      // User IS logged in and we successfully got their role
       else if (session && role) {
         const roleRedirects: Record<string, string> = {
           officer: '/(admin)/officer/officer-dashboard',
@@ -133,16 +143,20 @@ export default function RootLayout() {
         const safeRole = role.replace(/_/g, '-').replace(/ /g, '-');
         const targetRoute = roleRedirects[safeRole] || roleRedirects[role];
 
-        // Move them if they are stuck on Login OR the Root Index cap screen
         if ((inAuthGroup || isRootIndex) && targetRoute) {
           router.replace(targetRoute as any);
         }
+      }
+      // THE RESCUE MISSION: Session exists, but token is dead/corrupted and role failed to load.
+      else if (session && !role && (isRootIndex || inAuthGroup)) {
+        console.warn("Dead session detected. Forcing logout to rescue user.");
+        supabase.auth.signOut(); // This clears the corrupted token and safely drops them at the login screen!
       }
     }, 0);
 
   }, [session, isInitialized, segments, pathname, role, rootNavigationState?.key, isFetchingRole]);
 
-  // 4. Loading State Check
+  // 5. Loading State Check
   const fontsAreReady = fontsLoaded || fontError;
 
   if (!fontsAreReady || !isInitialized) {
