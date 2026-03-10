@@ -1,7 +1,6 @@
 import "../global.css";
 import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments, useRootNavigationState, usePathname } from 'expo-router';
-// NEW: Imported AppState from react-native
 import { View, ActivityIndicator, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabaseClient';
@@ -11,17 +10,21 @@ import * as SplashScreen from 'expo-splash-screen';
 
 SplashScreen.preventAutoHideAsync();
 
-async function getUserRole(uid: string): Promise<string | null> {
+// 1. THE BULLETPROOF ROLE FETCHER
+async function getUserRole(uid: string): Promise<string> {
   try {
     const { data: profile } = await supabase.from('profiles').select('role').eq('uid', uid).maybeSingle();
-    if (profile) return profile.role?.toLowerCase().trim() || null;
+    if (profile?.role) return profile.role.toLowerCase().trim();
 
     const { data: student } = await supabase.from('students').select('role').eq('uid', uid).maybeSingle();
-    if (student) return student.role?.toLowerCase().trim() || 'student';
+    if (student?.role) return student.role.toLowerCase().trim();
   } catch (error) {
     console.error("Error fetching user role in layout:", error);
   }
-  return null;
+
+  // UNBREAKABLE FALLBACK: If network fails or token is expired, NEVER return null.
+  // This guarantees the router always has a destination and never gets stuck!
+  return 'student';
 }
 
 export default function RootLayout() {
@@ -44,17 +47,12 @@ export default function RootLayout() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        // App is opened! Tell Supabase to check and refresh the token.
         supabase.auth.startAutoRefresh();
       } else {
-        // App is closed/backgrounded. Pause the timers to save battery.
         supabase.auth.stopAutoRefresh();
       }
     });
-
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, []);
 
   // 2. Handle Splash Screen
@@ -147,11 +145,7 @@ export default function RootLayout() {
           router.replace(targetRoute as any);
         }
       }
-      // THE RESCUE MISSION: Session exists, but token is dead/corrupted and role failed to load.
-      else if (session && !role && (isRootIndex || inAuthGroup)) {
-        console.warn("Dead session detected. Forcing logout to rescue user.");
-        supabase.auth.signOut(); // This clears the corrupted token and safely drops them at the login screen!
-      }
+      // Note: The aggressive "Rescue Mission" has been completely removed!
     }, 0);
 
   }, [session, isInitialized, segments, pathname, role, rootNavigationState?.key, isFetchingRole]);
