@@ -11,10 +11,10 @@ import {
 
 function cardShadow() {
   return {
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   };
 }
@@ -22,10 +22,10 @@ function cardShadow() {
 export function FamilyDataTab({ data }: { data: any }) {
   if (!data || Object.keys(data).length === 0) {
     return (
-      <View className="items-center justify-center p-8 bg-zinc-50 rounded-2xl border-2 border-dashed border-zinc-200 h-64">
-        <FamilyIcon size={48} color="#a1a1aa" />
-        <Text className="mt-4 font-bold text-zinc-700 text-lg">No Family Data</Text>
-        <Text className="text-sm text-zinc-500 text-center">
+      <View className="items-center justify-center p-8 bg-[#F8FAFC] rounded-[16px] border border-dashed border-[#E2E8F0] h-64">
+        <FamilyIcon size={48} color="#94A3B8" />
+        <Text className="mt-5 font-muller-bold text-[#0F172A] text-lg tracking-tight">No Family Data</Text>
+        <Text className="text-[14px] text-[#475569] font-muller mt-1.5 text-center">
           Family information has not been added yet.
         </Text>
       </View>
@@ -35,10 +35,10 @@ export function FamilyDataTab({ data }: { data: any }) {
   return (
     <View>
       <View
-        className="bg-white rounded-3xl p-5 border border-zinc-200 mb-6"
+        className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
         style={cardShadow()}
       >
-        <Text className="text-xl font-bold text-zinc-900 mb-4">
+        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mb-5">
           Parent & Household
         </Text>
 
@@ -79,46 +79,46 @@ export function FamilyDataTab({ data }: { data: any }) {
       </View>
 
       <View
-        className="bg-white rounded-3xl p-5 border border-zinc-200"
+        className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0]"
         style={cardShadow()}
       >
-        <Text className="text-xl font-bold text-zinc-900 mb-4">
+        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mb-5">
           Sibling Information
         </Text>
 
-        <Text className="font-bold text-lg text-zinc-700 mb-3">Brothers</Text>
+        <Text className="font-muller-bold text-lg text-[#0F172A] tracking-tight mb-4">Brothers</Text>
 
         {data.brothers && data.brothers.length > 0 ? (
           data.brothers.map((bro: any, i: number) => (
             <View
               key={i}
-              className="bg-zinc-50 p-4 rounded-xl border border-zinc-200 mb-3"
+              className="bg-[#F8FAFC] p-4 rounded-[16px] border border-[#E2E8F0] mb-3.5"
             >
-              <Text className="font-bold text-zinc-900 text-base mb-2">
+              <Text className="font-muller-bold text-[#0F172A] text-[15px] mb-3">
                 {bro.name}
               </Text>
 
-              <Text className="text-sm text-zinc-600 mb-1">
-                <Text className="font-bold">Education: </Text>
+              <Text className="text-[13px] font-muller text-[#475569] mb-1.5 leading-relaxed">
+                <Text className="font-muller-bold text-[#0F172A]">Education: </Text>
                 {(bro.education || []).join(', ') || 'N/A'}
               </Text>
 
-              <Text className="text-sm text-zinc-600 mb-1">
-                <Text className="font-bold">Occupation: </Text>
+              <Text className="text-[13px] font-muller text-[#475569] mb-1.5 leading-relaxed">
+                <Text className="font-muller-bold text-[#0F172A]">Occupation: </Text>
                 {bro.occupation || 'N/A'}
               </Text>
 
-              <Text className="text-sm text-zinc-600">
-                <Text className="font-bold">Responsibilities: </Text>
+              <Text className="text-[13px] font-muller text-[#475569] leading-relaxed">
+                <Text className="font-muller-bold text-[#0F172A]">Responsibilities: </Text>
                 {(bro.responsibilities || []).join(', ') || 'N/A'}
               </Text>
             </View>
           ))
         ) : (
-          <Text className="text-sm text-zinc-500 mb-4">No brothers added.</Text>
+          <Text className="text-[13px] font-muller text-[#94A3B8] mb-5">No brothers added.</Text>
         )}
 
-        <Text className="font-bold text-lg text-zinc-700 mb-3 mt-4 border-t border-zinc-100 pt-4">
+        <Text className="font-muller-bold text-lg text-[#0F172A] tracking-tight mb-4 mt-5 border-t border-[#E2E8F0] pt-5">
           Sisters
         </Text>
 
@@ -126,25 +126,25 @@ export function FamilyDataTab({ data }: { data: any }) {
           data.sisters.map((sis: any, i: number) => (
             <View
               key={i}
-              className="bg-zinc-50 p-4 rounded-xl border border-zinc-200 mb-3"
+              className="bg-[#F8FAFC] p-4 rounded-[16px] border border-[#E2E8F0] mb-3.5"
             >
-              <Text className="font-bold text-zinc-900 text-base mb-2">
+              <Text className="font-muller-bold text-[#0F172A] text-[15px] mb-3">
                 {sis.name}
               </Text>
 
-              <Text className="text-sm text-zinc-600 mb-1">
-                <Text className="font-bold">Education: </Text>
+              <Text className="text-[13px] font-muller text-[#475569] mb-1.5 leading-relaxed">
+                <Text className="font-muller-bold text-[#0F172A]">Education: </Text>
                 {(sis.education || []).join(', ') || 'N/A'}
               </Text>
 
-              <Text className="text-sm text-zinc-600">
-                <Text className="font-bold">Occupation: </Text>
+              <Text className="text-[13px] font-muller text-[#475569] leading-relaxed">
+                <Text className="font-muller-bold text-[#0F172A]">Occupation: </Text>
                 {sis.occupation || 'N/A'}
               </Text>
             </View>
           ))
         ) : (
-          <Text className="text-sm text-zinc-500 mb-4">No sisters added.</Text>
+          <Text className="text-[13px] font-muller text-[#94A3B8] mb-2">No sisters added.</Text>
         )}
       </View>
     </View>

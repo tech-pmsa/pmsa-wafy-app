@@ -5,6 +5,17 @@ import { Picker } from '@react-native-picker/picker';
 import { supabase } from '@/lib/supabaseClient';
 import { format } from 'date-fns';
 import { AlertTriangle, CalendarIcon, Unlock, X } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
+
+function cardShadow() {
+  return {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  };
+}
 
 export default function UnlockAttendance() {
   const [classes, setClasses] = useState<string[]>([]);
@@ -54,49 +65,105 @@ export default function UnlockAttendance() {
 
   return (
     <>
-      <View className="bg-orange-50 border border-orange-200 rounded-3xl p-5">
-        <View className="flex-row items-center mb-4">
-          <AlertTriangle size={24} color="#f97316" />
-          <Text className="text-lg font-bold text-orange-700 ml-3">Unlock Attendance</Text>
+      <View
+        className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[16px] p-5 shadow-sm"
+        style={cardShadow()}
+      >
+        <View className="flex-row items-center mb-5">
+          <View className="bg-[#D97706]/10 p-2.5 rounded-[12px] border border-[#D97706]/20">
+            <AlertTriangle size={20} color={COLORS.warning} />
+          </View>
+          <Text className="text-lg font-muller-bold text-[#D97706] ml-3 tracking-tight">Unlock Attendance</Text>
         </View>
 
-        <Text className="text-sm font-medium text-zinc-700 mb-1">Select Class</Text>
-        <View className="bg-white border border-zinc-200 rounded-xl overflow-hidden mb-4">
-          <Picker selectedValue={selectedClass} onValueChange={setSelectedClass}>
-            <Picker.Item label="Select..." value="" />
-            {classes.map(cls => <Picker.Item key={cls} label={cls} value={cls} />)}
+        <Text className="text-[13px] font-muller-bold text-[#475569] mb-2 ml-1">Select Class</Text>
+        <View className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] overflow-hidden mb-5">
+          <Picker
+            selectedValue={selectedClass}
+            onValueChange={setSelectedClass}
+            style={{ color: '#0F172A' }}
+          >
+            <Picker.Item label="Select class..." value="" color="#94A3B8" />
+            {classes.map(cls => <Picker.Item key={cls} label={cls} value={cls} color="#0F172A" />)}
           </Picker>
         </View>
 
-        <Text className="text-sm font-medium text-zinc-700 mb-1">Select Date</Text>
-        <TouchableOpacity onPress={() => setShowDatePicker(true)} className="flex-row items-center bg-white border border-zinc-200 rounded-xl px-4 py-3 mb-4">
-          <CalendarIcon size={18} color="#71717a" />
-          <Text className="ml-2 text-zinc-900">{format(selectedDate, 'PPP')}</Text>
+        <Text className="text-[13px] font-muller-bold text-[#475569] mb-2 ml-1">Select Date</Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setShowDatePicker(true)}
+          className="flex-row items-center bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5 mb-5"
+        >
+          <CalendarIcon size={18} color="#475569" />
+          <Text className="ml-3 text-[#0F172A] font-muller-bold text-[15px]">{format(selectedDate, 'PPP')}</Text>
         </TouchableOpacity>
         {showDatePicker && <DateTimePicker value={selectedDate} mode="date" maximumDate={new Date()} onChange={(e, d) => { setShowDatePicker(Platform.OS === 'ios'); if(d) setSelectedDate(d); }} />}
 
-        <Text className="text-sm font-medium text-zinc-700 mb-1">Reason</Text>
-        <TextInput className="bg-white border border-zinc-200 rounded-xl p-4 text-base mb-6" placeholder="Reason for unlocking" value={reason} onChangeText={setReason} />
+        <Text className="text-[13px] font-muller-bold text-[#475569] mb-2 ml-1">Reason</Text>
+        <TextInput
+          className="bg-[#F8FAFC] border border-[#E2E8F0] font-muller text-[#0F172A] rounded-[14px] p-4 text-[15px] mb-6"
+          placeholder="Reason for unlocking"
+          placeholderTextColor="#94A3B8"
+          value={reason}
+          onChangeText={setReason}
+        />
 
         <TouchableOpacity
           onPress={() => setIsModalOpen(true)}
           disabled={!selectedClass || !reason}
-          className={`py-3 rounded-xl items-center flex-row justify-center ${(!selectedClass || !reason) ? 'bg-orange-300' : 'bg-orange-500'}`}
+          activeOpacity={0.8}
+          className={`py-3.5 rounded-[14px] items-center flex-row justify-center ${(!selectedClass || !reason) ? 'bg-[#E2E8F0]' : 'bg-[#D97706]'}`}
         >
-          <Unlock size={18} color="white" />
-          <Text className="text-white font-bold ml-2">Unlock Day</Text>
+          <Unlock size={18} color={(!selectedClass || !reason) ? '#94A3B8' : 'white'} />
+          <Text className={`font-muller-bold ml-2 text-[15px] tracking-wide ${(!selectedClass || !reason) ? 'text-[#94A3B8]' : 'text-white'}`}>
+            Unlock Day
+          </Text>
         </TouchableOpacity>
       </View>
 
       <Modal visible={isModalOpen} transparent animationType="fade">
-        <View className="flex-1 bg-black/60 justify-center px-6">
-          <View className="bg-white rounded-3xl p-6 shadow-xl">
-            <View className="flex-row justify-between items-center mb-4"><Text className="text-xl font-bold text-orange-700">Confirm Unlock</Text><TouchableOpacity onPress={() => setIsModalOpen(false)}><X size={24} color="#71717a" /></TouchableOpacity></View>
-            <Text className="text-zinc-600 mb-4">Type <Text className="font-bold text-zinc-900">{confPhrase}</Text> to unlock {selectedClass}.</Text>
-            <TextInput className="bg-zinc-50 border border-zinc-300 rounded-xl p-4 text-base mb-6" placeholder={confPhrase} value={confirmationText} onChangeText={setConfirmationText} />
-            <TouchableOpacity onPress={handleUnlock} disabled={isLoading || confirmationText.toLowerCase() !== confPhrase.toLowerCase()} className={`w-full py-4 rounded-xl items-center flex-row justify-center ${confirmationText.toLowerCase() === confPhrase.toLowerCase() ? 'bg-orange-500' : 'bg-orange-300'}`}>
+        <View className="flex-1 bg-black/40 justify-center px-6">
+          <View
+            className="bg-[#FFFFFF] rounded-[20px] p-6 shadow-xl border border-[#E2E8F0]"
+            style={cardShadow()}
+          >
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-xl font-muller-bold text-[#D97706] tracking-tight">Confirm Unlock</Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setIsModalOpen(false)}
+                className="bg-[#F1F5F9] p-2.5 rounded-full"
+              >
+                <X size={20} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            <Text className="text-[#475569] font-muller text-[15px] mb-5 leading-relaxed">
+              Type <Text className="font-muller-bold text-[#0F172A]">{confPhrase}</Text> to unlock {selectedClass}.
+            </Text>
+
+            <TextInput
+              className="bg-[#F8FAFC] border border-[#E2E8F0] font-muller-bold text-[#0F172A] rounded-[14px] p-4 text-[15px] mb-6"
+              placeholder={confPhrase}
+              placeholderTextColor="#94A3B8"
+              value={confirmationText}
+              onChangeText={setConfirmationText}
+            />
+
+            <TouchableOpacity
+              onPress={handleUnlock}
+              activeOpacity={0.8}
+              disabled={isLoading || confirmationText.toLowerCase() !== confPhrase.toLowerCase()}
+              className={`w-full py-4 rounded-[14px] items-center flex-row justify-center ${
+                confirmationText.toLowerCase() === confPhrase.toLowerCase() ? 'bg-[#D97706]' : 'bg-[#E2E8F0]'
+              }`}
+            >
               {isLoading && <ActivityIndicator color="white" className="mr-2" />}
-              <Text className="text-white font-bold text-lg">Confirm & Unlock</Text>
+              <Text className={`font-muller-bold text-[16px] tracking-wide ${
+                confirmationText.toLowerCase() === confPhrase.toLowerCase() ? 'text-white' : 'text-[#94A3B8]'
+              }`}>
+                Confirm & Unlock
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

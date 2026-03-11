@@ -27,13 +27,14 @@ import {
   ChevronUp,
 } from 'lucide-react-native';
 import { MarkEditorModal } from '@/components/settings/profile/MarkEditorModal';
+import { COLORS } from '@/constants/theme';
 
 function cardShadow() {
   return {
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   };
 }
@@ -49,20 +50,17 @@ function TabButton({
 }) {
   return (
     <TouchableOpacity
+      activeOpacity={0.7}
       onPress={onPress}
-      className={
-        active
-          ? 'flex-1 py-2.5 rounded-lg items-center bg-white'
-          : 'flex-1 py-2.5 rounded-lg items-center'
-      }
+      className={`flex-1 py-3 rounded-[14px] items-center justify-center ${
+        active ? 'bg-[#FFFFFF] border border-[#E2E8F0]' : 'border border-transparent'
+      }`}
       style={active ? cardShadow() : undefined}
     >
       <Text
-        className={
-          active
-            ? 'font-semibold text-sm text-zinc-900'
-            : 'font-semibold text-sm text-zinc-500'
-        }
+        className={`font-muller-bold tracking-tight text-[15px] ${
+          active ? 'text-[#1E40AF]' : 'text-[#475569]'
+        }`}
       >
         {label}
       </Text>
@@ -86,14 +84,16 @@ function InputField({
   keyboardType?: 'default' | 'numeric' | 'phone-pad' | 'email-address';
 }) {
   return (
-    <View className="mb-4">
-      <Text className="text-sm font-medium text-zinc-700 mb-1">{label}</Text>
+    <View className="mb-5">
+      <Text className="text-sm font-muller-bold text-[#475569] mb-2 ml-1">{label}</Text>
       <TextInput
-        className={`bg-white border border-zinc-200 rounded-xl p-4 text-base ${multiline ? 'h-24' : ''
-          }`}
+        className={`bg-[#FFFFFF] border border-[#E2E8F0] font-muller text-[#0F172A] rounded-[14px] p-4 text-[16px] shadow-sm ${
+          multiline ? 'h-28' : ''
+        }`}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        placeholderTextColor="#94A3B8"
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}
         keyboardType={keyboardType}
@@ -137,20 +137,21 @@ function SiblingCard({
 
   return (
     <View
-      className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
       style={cardShadow()}
     >
-      <View className="flex-row justify-between items-center mb-4">
-        <Text className="text-lg font-bold text-zinc-900 capitalize">{title}</Text>
+      <View className="flex-row justify-between items-center mb-5">
+        <Text className="text-lg font-muller-bold text-[#0F172A] capitalize">{title}</Text>
 
         <TouchableOpacity
+          activeOpacity={0.7}
           onPress={addSibling}
-          className="bg-zinc-900 px-3 py-2 rounded-xl flex-row items-center"
+          className="bg-[#1E40AF]/10 px-3.5 py-2.5 rounded-[12px] border border-[#1E40AF]/20 flex-row items-center"
         >
           <View style={{ marginRight: 6 }}>
-            <PlusCircle size={16} color="white" />
+            <PlusCircle size={16} color={COLORS.primary} />
           </View>
-          <Text className="text-white font-bold text-xs">Add</Text>
+          <Text className="text-[#1E40AF] font-muller-bold text-xs uppercase tracking-wider">Add</Text>
         </TouchableOpacity>
       </View>
 
@@ -158,18 +159,19 @@ function SiblingCard({
         siblings.map((sib, index) => (
           <View
             key={index}
-            className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 mb-3"
+            className="bg-[#F8FAFC] p-4 rounded-[16px] border border-[#E2E8F0] mb-4"
           >
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="font-bold text-zinc-900">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="font-muller-bold text-[#0F172A] text-[15px]">
                 {title === 'brothers' ? 'Brother' : 'Sister'} {index + 1}
               </Text>
 
               <TouchableOpacity
+                activeOpacity={0.7}
                 onPress={() => removeSibling(index)}
-                className="p-2 bg-red-50 rounded-lg"
+                className="p-2.5 bg-[#DC2626]/10 rounded-[10px]"
               >
-                <Trash2 size={18} color="#ef4444" />
+                <Trash2 size={18} color={COLORS.danger} />
               </TouchableOpacity>
             </View>
 
@@ -223,7 +225,7 @@ function SiblingCard({
           </View>
         ))
       ) : (
-        <Text className="text-sm text-zinc-500">No {title} added.</Text>
+        <Text className="text-sm font-muller text-[#94A3B8]">No {title} added.</Text>
       )}
     </View>
   );
@@ -422,22 +424,23 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
         transparent={false}
         onRequestClose={() => setIsOpen(false)}
       >
-        <View className="flex-1 bg-zinc-100 pt-14 px-4">
+        <View className="flex-1 bg-[#F8FAFC] pt-14 px-5">
           <View className="flex-row justify-between items-center mb-6">
             <View>
-              <Text className="text-2xl font-bold text-zinc-900">Edit Profile</Text>
-              <Text className="text-zinc-500 text-sm">Editing {student.name}</Text>
+              <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight">Edit Profile</Text>
+              <Text className="text-[#475569] font-muller text-sm mt-0.5">Editing {student.name}</Text>
             </View>
 
             <TouchableOpacity
+              activeOpacity={0.7}
               onPress={() => setIsOpen(false)}
-              className="bg-zinc-200 p-2 rounded-full"
+              className="bg-[#E2E8F0]/60 p-2.5 rounded-full"
             >
-              <X size={20} color="#09090b" />
+              <X size={20} color="#0F172A" />
             </TouchableOpacity>
           </View>
 
-          <View className="flex-row bg-zinc-200 p-1 rounded-xl mb-4">
+          <View className="flex-row bg-[#E2E8F0]/60 p-1.5 rounded-[16px] mb-6">
             <TabButton
               label="Personal"
               active={activeTab === 'personal'}
@@ -462,36 +465,37 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
             {activeTab === 'personal' && (
               <View>
                 <View
-                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
                   style={cardShadow()}
                 >
-                  <View className="items-center mb-4">
+                  <View className="items-center mb-6 mt-2">
                     <TouchableOpacity
+                      activeOpacity={0.8}
                       onPress={handleAvatarUpdate}
                       disabled={isSaving}
                       className="relative"
                     >
                       <View
-                        className="h-28 w-28 rounded-full border-4 border-white overflow-hidden bg-zinc-200 justify-center items-center"
+                        className="h-28 w-28 rounded-full border-4 border-[#FFFFFF] overflow-hidden bg-[#F1F5F9] justify-center items-center"
                         style={cardShadow()}
                       >
                         {preview ? (
                           <Image source={{ uri: preview }} className="h-full w-full" />
                         ) : (
-                          <User size={40} color="#a1a1aa" />
+                          <User size={44} color="#94A3B8" />
                         )}
                       </View>
 
-                      <View className="absolute bottom-0 right-0 bg-blue-600 p-2.5 rounded-full border-2 border-white">
+                      <View className="absolute bottom-0 right-0 bg-[#1E40AF] p-3 rounded-full border-2 border-[#FFFFFF] shadow-sm">
                         {isSaving ? (
                           <ActivityIndicator size="small" color="white" />
                         ) : (
-                          <Camera size={14} color="white" />
+                          <Camera size={16} color="white" />
                         )}
                       </View>
                     </TouchableOpacity>
 
-                    <Text className="text-xs text-zinc-500 mt-2">Tap to change photo</Text>
+                    <Text className="text-[11px] font-muller-bold text-[#94A3B8] mt-3 uppercase tracking-wider">Tap to change photo</Text>
                   </View>
 
                   {personalFields.map(([label, key]) => (
@@ -518,23 +522,24 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
 
             {activeTab === 'academics' && (
               <View
-                className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
                 style={cardShadow()}
               >
-                <View className="flex-row justify-between items-center mb-4">
-                  <Text className="text-lg font-bold text-zinc-900">Academic Records</Text>
+                <View className="flex-row justify-between items-center mb-5">
+                  <Text className="text-lg font-muller-bold text-[#0F172A] tracking-tight">Academic Records</Text>
 
                   <TouchableOpacity
+                    activeOpacity={0.7}
                     onPress={() => {
                       setSelectedEntry(null);
                       setIsMarkModalOpen(true);
                     }}
-                    className="bg-zinc-900 px-3 py-2 rounded-xl flex-row items-center"
+                    className="bg-[#1E40AF]/10 px-3.5 py-2.5 rounded-[12px] border border-[#1E40AF]/20 flex-row items-center"
                   >
                     <View style={{ marginRight: 6 }}>
-                      <PlusCircle size={16} color="white" />
+                      <PlusCircle size={16} color={COLORS.primary} />
                     </View>
-                    <Text className="text-white font-bold text-xs">Add</Text>
+                    <Text className="text-[#1E40AF] font-muller-bold text-xs uppercase tracking-wider">Add</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -545,7 +550,7 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                     return (
                       <View
                         key={entry.id}
-                        className="bg-zinc-50 rounded-2xl border border-zinc-200 mb-3 overflow-hidden"
+                        className="bg-[#F8FAFC] rounded-[16px] border border-[#E2E8F0] mb-3.5 overflow-hidden"
                       >
                         <TouchableOpacity
                           activeOpacity={0.7}
@@ -554,46 +559,48 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                           }
                           className="p-4 flex-row items-center justify-between"
                         >
-                          <Text className="font-bold text-zinc-900 text-base flex-1 pr-3">
+                          <Text className="font-muller-bold text-[#0F172A] text-[15px] flex-1 pr-3">
                             {entry.title}
                           </Text>
 
                           <View className="flex-row items-center">
                             <TouchableOpacity
+                              activeOpacity={0.6}
                               onPress={() => {
                                 setSelectedEntry(entry);
                                 setIsMarkModalOpen(true);
                               }}
-                              className="p-2 bg-white rounded-full border border-zinc-200 mr-2"
+                              className="p-2 bg-[#FFFFFF] rounded-[10px] border border-[#E2E8F0] mr-2"
                             >
-                              <Pencil size={16} color="#09090b" />
+                              <Pencil size={16} color={COLORS.primary} />
                             </TouchableOpacity>
 
                             <TouchableOpacity
+                              activeOpacity={0.6}
                               onPress={() => handleEntryDelete(entry.id)}
-                              className="p-2 bg-white rounded-full border border-zinc-200 mr-2"
+                              className="p-2 bg-[#FFFFFF] rounded-[10px] border border-[#E2E8F0] mr-2.5"
                             >
-                              <Trash2 size={16} color="#ef4444" />
+                              <Trash2 size={16} color={COLORS.danger} />
                             </TouchableOpacity>
 
                             {isExpanded ? (
-                              <ChevronUp size={20} color="#71717a" />
+                              <ChevronUp size={22} color="#94A3B8" />
                             ) : (
-                              <ChevronDown size={20} color="#71717a" />
+                              <ChevronDown size={22} color="#94A3B8" />
                             )}
                           </View>
                         </TouchableOpacity>
 
                         {isExpanded && (
-                          <View className="px-4 pb-4 border-t border-zinc-200 pt-3">
-                            <View className="flex-row border-b border-zinc-200 pb-2 mb-2">
-                              <Text className="flex-1 text-xs font-bold text-zinc-500 uppercase">
+                          <View className="px-4 pb-4 border-t border-[#E2E8F0] pt-3.5">
+                            <View className="flex-row border-b border-[#E2E8F0] pb-2 mb-2.5">
+                              <Text className="flex-1 text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
                                 Subject
                               </Text>
-                              <Text className="w-20 text-xs font-bold text-zinc-500 uppercase">
+                              <Text className="w-20 text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
                                 Mark
                               </Text>
-                              <Text className="w-20 text-right text-xs font-bold text-zinc-500 uppercase">
+                              <Text className="w-20 text-right text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
                                 Status
                               </Text>
                             </View>
@@ -602,28 +609,28 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                               entry.subject_marks.map((subject: any) => (
                                 <View
                                   key={subject.id}
-                                  className="flex-row items-center py-2 border-b border-zinc-100"
+                                  className="flex-row items-center py-2.5 border-b border-[#E2E8F0]/60"
                                 >
-                                  <Text className="flex-1 font-semibold text-zinc-900 uppercase text-xs pr-2">
+                                  <Text className="flex-1 font-muller-bold text-[#0F172A] text-[13px] pr-2">
                                     {subject.subject_name}
                                   </Text>
 
-                                  <Text className="w-20 text-zinc-800 uppercase text-xs">
+                                  <Text className="w-20 font-muller-bold text-[#0F172A] text-[13px]">
                                     {subject.marks_obtained}
                                   </Text>
 
                                   {subject.status ? (
                                     <View className="w-20 items-end">
-                                      <View className="bg-green-100 px-2 py-1 rounded">
-                                        <Text className="text-[10px] font-bold text-green-700">
+                                      <View className="bg-[#16A34A]/10 px-2.5 py-1.5 rounded-[8px] border border-[#16A34A]/20">
+                                        <Text className="text-[10px] font-muller-bold text-[#16A34A] uppercase tracking-wider">
                                           Passed
                                         </Text>
                                       </View>
                                     </View>
                                   ) : (
                                     <View className="w-20 items-end">
-                                      <View className="bg-red-100 px-2 py-1 rounded">
-                                        <Text className="text-[10px] font-bold text-red-700">
+                                      <View className="bg-[#DC2626]/10 px-2.5 py-1.5 rounded-[8px] border border-[#DC2626]/20">
+                                        <Text className="text-[10px] font-muller-bold text-[#DC2626] uppercase tracking-wider">
                                           Failed
                                         </Text>
                                       </View>
@@ -632,7 +639,7 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                                 </View>
                               ))
                             ) : (
-                              <Text className="text-sm text-zinc-500 py-3 text-center">
+                              <Text className="text-[13px] font-muller text-[#94A3B8] py-3 text-center">
                                 No subjects added.
                               </Text>
                             )}
@@ -642,7 +649,7 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                     );
                   })
                 ) : (
-                  <Text className="text-sm text-zinc-500 py-4 text-center">
+                  <Text className="text-[13px] font-muller text-[#94A3B8] py-4 text-center">
                     No academic records found.
                   </Text>
                 )}
@@ -652,10 +659,10 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
             {activeTab === 'family' && (
               <View>
                 <View
-                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
                   style={cardShadow()}
                 >
-                  <Text className="text-lg font-bold text-zinc-900 mb-4">Household</Text>
+                  <Text className="text-lg font-muller-bold text-[#0F172A] mb-5 tracking-tight">Household</Text>
 
                   <InputField
                     label="Total Family Members"
@@ -676,11 +683,11 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                   />
 
                   <View className="mb-2">
-                    <Text className="text-sm font-medium text-zinc-700 mb-2">
+                    <Text className="text-sm font-muller-bold text-[#475569] mb-2.5 ml-1">
                       Are there chronically ill members in the house?
                     </Text>
-                    <View className="flex-row items-center justify-between bg-white border border-zinc-200 rounded-xl p-4">
-                      <Text className="text-base text-zinc-900">
+                    <View className="flex-row items-center justify-between bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-[14px] p-4">
+                      <Text className="text-[16px] font-muller-bold text-[#0F172A]">
                         {chronicallyIllChecked ? 'Yes' : 'No'}
                       </Text>
                       <Switch
@@ -688,16 +695,17 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                         onValueChange={(v) =>
                           handleFamilyChange('chronically_ill_members', v)
                         }
+                        trackColor={{ false: '#E2E8F0', true: COLORS.primary }}
                       />
                     </View>
                   </View>
                 </View>
 
                 <View
-                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
                   style={cardShadow()}
                 >
-                  <Text className="text-lg font-bold text-zinc-900 mb-4">
+                  <Text className="text-lg font-muller-bold text-[#0F172A] mb-5 tracking-tight">
                     Parent Details
                   </Text>
 
@@ -758,11 +766,14 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
             )}
           </ScrollView>
 
-          <View className="py-4 border-t border-zinc-200">
+          <View className="py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]">
             <TouchableOpacity
+              activeOpacity={0.8}
               onPress={handleSave}
               disabled={isSaving}
-              className="w-full py-4 rounded-xl flex-row justify-center items-center bg-zinc-900"
+              className={`w-full py-4 rounded-[14px] flex-row justify-center items-center ${
+                isSaving ? 'bg-[#1E40AF]/60' : 'bg-[#1E40AF]'
+              }`}
             >
               {isSaving ? (
                 <ActivityIndicator color="white" />
@@ -771,7 +782,7 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                   <Save size={20} color="white" />
                 </View>
               )}
-              <Text className="text-white font-bold text-lg">Save Changes</Text>
+              <Text className="text-white font-muller-bold text-[16px] tracking-wide ml-1.5">Save Changes</Text>
             </TouchableOpacity>
           </View>
         </View>

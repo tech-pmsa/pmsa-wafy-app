@@ -13,6 +13,7 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { useUserData } from '@/hooks/useUserData';
 import { PlusCircle, Trash2, Save, X } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 export function MarkEditorModal({ isOpen, setIsOpen, entry, onSave }: any) {
   const { user } = useUserData();
@@ -115,13 +116,17 @@ export function MarkEditorModal({ isOpen, setIsOpen, entry, onSave }: any) {
       transparent={false}
       onRequestClose={() => setIsOpen(false)}
     >
-      <View className="flex-1 bg-zinc-100 pt-14 px-4">
+      <View className="flex-1 bg-[#F8FAFC] pt-14 px-5">
         <View className="flex-row justify-between items-center mb-6">
-          <Text className="text-2xl font-bold text-zinc-900">
+          <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight">
             {entry?.id ? 'Edit' : 'Add'} Record
           </Text>
-          <TouchableOpacity onPress={() => setIsOpen(false)}>
-            <X size={24} color="#09090b" />
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setIsOpen(false)}
+            className="bg-[#E2E8F0]/60 p-2.5 rounded-full"
+          >
+            <X size={20} color="#0F172A" />
           </TouchableOpacity>
         </View>
 
@@ -129,51 +134,54 @@ export function MarkEditorModal({ isOpen, setIsOpen, entry, onSave }: any) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 }}
         >
-          <Text className="text-sm font-medium text-zinc-700 mb-1">
+          <Text className="text-[13px] font-muller-bold text-[#475569] mb-2 ml-1">
             Exam / Semester Title
           </Text>
 
           <TextInput
-            className="bg-white border border-zinc-200 rounded-xl p-4 text-base mb-6"
+            className="bg-[#FFFFFF] border border-[#E2E8F0] font-muller-bold text-[#0F172A] rounded-[14px] p-4 text-[16px] mb-8 shadow-sm"
             value={title}
             onChangeText={setTitle}
             placeholder="e.g. SSLC"
+            placeholderTextColor="#94A3B8"
             autoCapitalize="characters"
           />
 
-          <Text className="text-sm font-bold text-zinc-900 mb-3">
+          <Text className="text-[15px] font-muller-bold text-[#0F172A] tracking-tight mb-4 ml-1">
             Subjects & Marks
           </Text>
 
           {subjects.map((sub, i) => (
             <View
               key={i}
-              className="bg-white border border-zinc-200 p-3 rounded-xl mb-3"
+              className="bg-[#FFFFFF] border border-[#E2E8F0] p-4 rounded-[16px] mb-4 shadow-sm"
             >
               <TextInput
-                className="bg-zinc-50 border border-zinc-200 rounded-lg p-3 text-sm mb-2"
+                className="bg-[#F8FAFC] border border-[#E2E8F0] font-muller-bold text-[#0F172A] rounded-[12px] p-3.5 text-[15px] mb-3"
                 value={sub.subject_name}
                 onChangeText={(t) => updateSubject(i, 'subject_name', t)}
                 placeholder="Subject Name"
+                placeholderTextColor="#94A3B8"
                 autoCapitalize="characters"
               />
 
               <View className="flex-row items-center">
                 <TextInput
-                  className="bg-zinc-50 border border-zinc-200 rounded-lg p-3 text-sm flex-1 mr-2"
+                  className="bg-[#F8FAFC] border border-[#E2E8F0] font-muller-bold text-[#0F172A] rounded-[12px] p-3.5 text-[15px] flex-1 mr-3"
                   value={sub.marks_obtained}
                   onChangeText={(t) => updateSubject(i, 'marks_obtained', t)}
                   placeholder="Mark"
+                  placeholderTextColor="#94A3B8"
                   autoCapitalize="characters"
                 />
 
-                <View className="flex-row items-center bg-zinc-50 border border-zinc-200 p-2 rounded-lg mr-2">
+                <View className="flex-row items-center bg-[#F8FAFC] border border-[#E2E8F0] p-2 rounded-[12px] mr-3">
                   {sub.status ? (
-                    <Text className="mr-2 font-bold text-xs text-green-600">
+                    <Text className="mr-2 font-muller-bold text-[11px] text-[#16A34A] uppercase tracking-wider ml-1">
                       PASS
                     </Text>
                   ) : (
-                    <Text className="mr-2 font-bold text-xs text-red-600">
+                    <Text className="mr-2 font-muller-bold text-[11px] text-[#DC2626] uppercase tracking-wider ml-1">
                       FAIL
                     </Text>
                   )}
@@ -181,35 +189,41 @@ export function MarkEditorModal({ isOpen, setIsOpen, entry, onSave }: any) {
                   <Switch
                     value={!!sub.status}
                     onValueChange={(v) => updateSubject(i, 'status', v)}
+                    trackColor={{ false: '#E2E8F0', true: COLORS.success }}
                   />
                 </View>
 
                 <TouchableOpacity
+                  activeOpacity={0.7}
                   onPress={() => removeSubject(i)}
-                  className="p-3 bg-red-50 rounded-lg"
+                  className="p-3.5 bg-[#DC2626]/10 border border-[#DC2626]/20 rounded-[12px]"
                 >
-                  <Trash2 size={20} color="#ef4444" />
+                  <Trash2 size={20} color={COLORS.danger} />
                 </TouchableOpacity>
               </View>
             </View>
           ))}
 
           <TouchableOpacity
+            activeOpacity={0.7}
             onPress={addSubject}
-            className="w-full py-4 border-2 border-dashed border-zinc-300 rounded-xl flex-row justify-center items-center mt-2"
+            className="w-full py-4 border border-dashed border-[#94A3B8] bg-[#F8FAFC] rounded-[14px] flex-row justify-center items-center mt-3"
           >
             <View style={{ marginRight: 8 }}>
-              <PlusCircle size={20} color="#71717a" />
+              <PlusCircle size={20} color="#475569" />
             </View>
-            <Text className="font-bold text-zinc-600">Add Subject</Text>
+            <Text className="font-muller-bold text-[#475569] text-[15px] tracking-wide">Add Subject</Text>
           </TouchableOpacity>
         </ScrollView>
 
-        <View className="py-4 border-t border-zinc-200">
+        <View className="py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]">
           <TouchableOpacity
+            activeOpacity={0.8}
             onPress={handleSave}
             disabled={isSaving}
-            className="w-full py-4 rounded-xl flex-row justify-center items-center bg-zinc-900"
+            className={`w-full py-4 rounded-[14px] flex-row justify-center items-center shadow-sm ${
+              isSaving ? 'bg-[#1E40AF]/60' : 'bg-[#1E40AF]'
+            }`}
           >
             {isSaving ? (
               <ActivityIndicator color="white" />
@@ -219,7 +233,7 @@ export function MarkEditorModal({ isOpen, setIsOpen, entry, onSave }: any) {
               </View>
             )}
 
-            <Text className="text-white font-bold text-lg">
+            <Text className="text-white font-muller-bold text-[16px] tracking-wide ml-1.5">
               Save Record
             </Text>
           </TouchableOpacity>

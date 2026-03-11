@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
+import { COLORS } from '@/constants/theme';
 
 interface PeriodDetail {
   status?: 'Present' | 'Absent';
@@ -54,10 +55,10 @@ const excusedAbsences = ['Cic Related', 'Wsf Related', 'Exam Related'];
 
 function cardShadow() {
   return {
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   };
 }
@@ -67,7 +68,7 @@ function StatCard({
   value,
   icon: Icon,
   footer,
-  color = '#2563eb',
+  color = COLORS.primary,
 }: {
   title: string;
   value: string;
@@ -77,31 +78,32 @@ function StatCard({
 }) {
   return (
     <View
-      className="bg-white p-4 rounded-2xl border border-zinc-200 mb-3"
+      className="bg-[#FFFFFF] p-4 rounded-[14px] border border-[#E2E8F0] mb-3"
       style={cardShadow()}
     >
       <View className="flex-row justify-between items-center mb-2">
-        <Text className="text-sm font-medium text-zinc-600">{title}</Text>
+        <Text className="text-sm font-muller font-medium text-[#475569]">{title}</Text>
         <Icon size={18} color={color} />
       </View>
-      <Text className="text-2xl font-bold text-zinc-900">{value}</Text>
-      <Text className="text-xs text-zinc-500 mt-1">{footer}</Text>
+      <Text className="text-2xl font-muller-bold font-bold text-[#0F172A] tracking-tight">{value}</Text>
+      <Text className="text-xs font-muller text-[#94A3B8] mt-1">{footer}</Text>
     </View>
   );
 }
 
 function ProgressBar({ percentage }: { percentage: number }) {
   const safePercentage = Math.max(0, Math.min(100, percentage));
-  const barColor = safePercentage < 75 ? '#ef4444' : '#22c55e';
+  const barColor = safePercentage < 75 ? COLORS.danger : COLORS.success;
 
   return (
-    <View className="w-full h-2 bg-zinc-200 rounded-full overflow-hidden">
+    <View className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
       <View
         style={{
           width: `${safePercentage}%`,
           height: '100%',
           backgroundColor: barColor,
         }}
+        className="rounded-full"
       />
     </View>
   );
@@ -117,28 +119,30 @@ function ClassAverageBar({
   onPress: () => void;
 }) {
   const safeAverage = Math.max(0, Math.min(100, average));
-  const fillColor = safeAverage < 75 ? '#ef4444' : '#2563eb';
+  const fillColor = safeAverage < 75 ? COLORS.danger : COLORS.primary;
 
   return (
     <TouchableOpacity
+      activeOpacity={0.7}
       onPress={onPress}
-      className="bg-white rounded-2xl border border-zinc-200 p-4 mb-3"
+      className="bg-[#FFFFFF] rounded-[14px] border border-[#E2E8F0] p-4 mb-3"
       style={cardShadow()}
     >
-      <View className="flex-row justify-between items-center mb-2">
-        <Text className="text-base font-bold text-zinc-900">{className}</Text>
-        <Text className="text-sm font-semibold text-zinc-600">
+      <View className="flex-row justify-between items-center mb-2.5">
+        <Text className="text-base font-muller-bold text-[#0F172A] tracking-tight">{className}</Text>
+        <Text className="text-sm font-muller-bold text-[#475569]">
           {safeAverage.toFixed(1)}%
         </Text>
       </View>
 
-      <View className="h-3 bg-zinc-200 rounded-full overflow-hidden">
+      <View className="h-2.5 bg-[#F1F5F9] rounded-full overflow-hidden">
         <View
           style={{
             width: `${safeAverage}%`,
             height: '100%',
             backgroundColor: fillColor,
           }}
+          className="rounded-full"
         />
       </View>
     </TouchableOpacity>
@@ -305,23 +309,23 @@ export default function CollegeAttendanceOverview() {
   if (loading) {
     return (
       <View
-        className="bg-white p-6 rounded-3xl items-center justify-center mb-6 border border-zinc-200"
+        className="bg-[#FFFFFF] p-8 rounded-[18px] items-center justify-center mb-6 border border-[#E2E8F0]"
         style={cardShadow()}
       >
-        <ActivityIndicator size="large" color="#09090b" />
-        <Text className="mt-4 text-zinc-500 font-medium">Loading Attendance Data...</Text>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text className="mt-4 text-[#475569] font-muller font-medium">Loading Attendance Data...</Text>
       </View>
     );
   }
 
   return (
     <View
-      className="bg-white rounded-3xl p-5 border border-zinc-200 mb-6"
+      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-6"
       style={cardShadow()}
     >
-      <View className="mb-4">
-        <Text className="text-xl font-bold text-zinc-900">College Attendance</Text>
-        <Text className="text-sm text-zinc-500">Summary across all classes.</Text>
+      <View className="mb-5">
+        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">College Attendance</Text>
+        <Text className="text-sm font-muller text-[#475569] mt-0.5">Summary across all classes.</Text>
       </View>
 
       <StatCard
@@ -336,7 +340,7 @@ export default function CollegeAttendanceOverview() {
         value={collegeData.topClass?.name || 'N/A'}
         icon={TrendingUp}
         footer={`${collegeData.topClass?.average_attendance?.toFixed(1) || '0.0'}% Avg`}
-        color="#16a34a"
+        color={COLORS.success}
       />
 
       <StatCard
@@ -344,10 +348,10 @@ export default function CollegeAttendanceOverview() {
         value={collegeData.bottomClass?.name || 'N/A'}
         icon={TrendingDown}
         footer={`${collegeData.bottomClass?.average_attendance?.toFixed(1) || '0.0'}% Avg`}
-        color="#dc2626"
+        color={COLORS.danger}
       />
 
-      <Text className="text-base font-bold text-zinc-900 mt-3 mb-3">
+      <Text className="text-base font-muller-bold text-[#0F172A] tracking-tight mt-5 mb-3">
         Class Performance
       </Text>
 
@@ -363,31 +367,33 @@ export default function CollegeAttendanceOverview() {
           ))}
         </View>
       ) : (
-        <View className="bg-zinc-50 rounded-2xl p-4 border border-zinc-200">
-          <Text className="text-zinc-500">No attendance data found.</Text>
+        <View className="bg-[#F1F5F9] rounded-[14px] p-4 border border-[#E2E8F0]">
+          <Text className="text-[#475569] font-muller">No attendance data found.</Text>
         </View>
       )}
 
+      {/* Class Detail Modal */}
       <Modal
         visible={!!selectedClassId}
         animationType="slide"
         transparent={false}
         onRequestClose={() => setSelectedClassId(null)}
       >
-        <View className="flex-1 bg-zinc-100">
-          <View className="pt-14 px-5 pb-4 bg-white border-b border-zinc-200">
+        <View className="flex-1 bg-[#F8FAFC]">
+          <View className="pt-14 px-5 pb-5 bg-[#FFFFFF] border-b border-[#E2E8F0]">
             <View className="flex-row justify-between items-center">
               <View className="flex-1 pr-4">
-                <Text className="text-2xl font-bold text-zinc-900">
+                <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight">
                   {selectedClassId || 'Class'} Overview
                 </Text>
-                <Text className="text-zinc-500">Attendance details and today status</Text>
+                <Text className="text-[#475569] font-muller mt-0.5">Attendance details and today's status</Text>
               </View>
               <TouchableOpacity
                 onPress={() => setSelectedClassId(null)}
-                className="bg-zinc-200 p-2 rounded-full"
+                className="bg-[#F1F5F9] p-2.5 rounded-full"
+                activeOpacity={0.7}
               >
-                <X size={22} color="#09090b" />
+                <X size={22} color="#0F172A" />
               </TouchableOpacity>
             </View>
           </View>
@@ -411,36 +417,36 @@ export default function CollegeAttendanceOverview() {
                   value={String(modalClassData.belowThreshold)}
                   icon={AlertTriangle}
                   footer="Need attention"
-                  color="#dc2626"
+                  color={COLORS.danger}
                 />
 
-                <View className="mb-4">
-                  <View className="flex-row items-center bg-white border border-zinc-200 rounded-xl px-4 py-3">
-                    <Search size={20} color="#a1a1aa" />
+                <View className="mb-5 mt-2">
+                  <View className="flex-row items-center bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5">
+                    <Search size={20} color="#94A3B8" />
                     <TextInput
-                      className="flex-1 ml-2 text-base text-zinc-900"
+                      className="flex-1 ml-3 text-base font-muller text-[#0F172A]"
                       placeholder="Search student..."
-                      placeholderTextColor="#a1a1aa"
+                      placeholderTextColor="#94A3B8"
                       value={searchTerm}
                       onChangeText={setSearchTerm}
                     />
                   </View>
                 </View>
 
-                <View className="flex-row bg-zinc-200 p-1 rounded-xl mb-4">
+                {/* Tab Switcher */}
+                <View className="flex-row bg-[#E2E8F0]/60 p-1.5 rounded-[16px] mb-5">
                   <TouchableOpacity
                     onPress={() => setActiveTab('details')}
-                    className={`flex-1 py-3 rounded-lg items-center ${
-                      activeTab === 'details' ? 'bg-white' : ''
+                    activeOpacity={0.7}
+                    className={`flex-1 py-3 rounded-[14px] items-center justify-center ${
+                      activeTab === 'details' ? 'bg-[#FFFFFF] border border-[#E2E8F0]' : 'border border-transparent'
                     }`}
                     style={activeTab === 'details' ? cardShadow() : undefined}
                   >
                     <Text
-                      className={
-                        activeTab === 'details'
-                          ? 'font-semibold text-zinc-900'
-                          : 'font-semibold text-zinc-500'
-                      }
+                      className={`font-muller-bold tracking-tight text-[15px] ${
+                        activeTab === 'details' ? 'text-[#1E40AF]' : 'text-[#475569]'
+                      }`}
                     >
                       Detailed List
                     </Text>
@@ -448,17 +454,16 @@ export default function CollegeAttendanceOverview() {
 
                   <TouchableOpacity
                     onPress={() => setActiveTab('status')}
-                    className={`flex-1 py-3 rounded-lg items-center ${
-                      activeTab === 'status' ? 'bg-white' : ''
+                    activeOpacity={0.7}
+                    className={`flex-1 py-3 rounded-[14px] items-center justify-center ${
+                      activeTab === 'status' ? 'bg-[#FFFFFF] border border-[#E2E8F0]' : 'border border-transparent'
                     }`}
                     style={activeTab === 'status' ? cardShadow() : undefined}
                   >
                     <Text
-                      className={
-                        activeTab === 'status'
-                          ? 'font-semibold text-zinc-900'
-                          : 'font-semibold text-zinc-500'
-                      }
+                      className={`font-muller-bold tracking-tight text-[15px] ${
+                        activeTab === 'status' ? 'text-[#1E40AF]' : 'text-[#475569]'
+                      }`}
                     >
                       Live Status
                     </Text>
@@ -470,34 +475,28 @@ export default function CollegeAttendanceOverview() {
                     {modalClassData.students.map((student) => (
                       <View
                         key={student.uid}
-                        className="bg-white p-4 rounded-xl border border-zinc-200 mb-3 flex-row items-center justify-between"
+                        className="bg-[#FFFFFF] p-4 rounded-[14px] border border-[#E2E8F0] mb-3 flex-row items-center justify-between"
                       >
                         <View className="flex-1 pr-4">
-                          <Text className="font-bold text-zinc-900 text-base">
+                          <Text className="font-muller-bold text-[#0F172A] text-[15px] mb-2.5">
                             {student.name}
                           </Text>
-
-                          <View className="mt-2">
-                            <ProgressBar percentage={student.percentage} />
-                          </View>
-
-                          <Text className="text-xs font-semibold text-zinc-500 mt-2">
+                          <ProgressBar percentage={student.percentage} />
+                          <Text className="text-xs font-muller-bold text-[#475569] mt-2">
                             {student.percentage.toFixed(1)}%
                           </Text>
                         </View>
 
-                        <View className="items-end">
+                        <View className="items-end bg-[#F8FAFC] px-3 py-2 rounded-[12px] border border-[#E2E8F0]">
                           <Text
-                            className={
-                              student.points < 10
-                                ? 'font-bold text-xl text-red-600'
-                                : 'font-bold text-xl text-blue-600'
-                            }
+                            className={`font-muller-bold text-xl ${
+                              student.points < 10 ? 'text-[#DC2626]' : 'text-[#1E40AF]'
+                            }`}
                           >
                             {student.points}
                           </Text>
-                          <Text className="text-xs text-zinc-400 font-medium">/ 20 Pts</Text>
-                          <Text className="text-xs text-zinc-500 mt-1">
+                          <Text className="text-[11px] font-muller text-[#94A3B8]">/ 20 Pts</Text>
+                          <Text className="text-xs font-muller-bold text-[#475569] mt-1.5 pt-1.5 border-t border-[#E2E8F0]">
                             {student.total} Days
                           </Text>
                         </View>
@@ -509,14 +508,16 @@ export default function CollegeAttendanceOverview() {
                     {modalClassData.students.map((student) => (
                       <View
                         key={student.uid}
-                        className="bg-white p-4 rounded-xl border border-zinc-200 mb-3"
+                        className="bg-[#FFFFFF] p-4 rounded-[14px] border border-[#E2E8F0] mb-3"
                       >
-                        <Text className="font-bold text-zinc-900 mb-3">{student.name}</Text>
+                        <Text className="font-muller-bold text-[#0F172A] text-[15px] mb-3">{student.name}</Text>
 
                         {student.today_attendance?.is_leave_day ? (
-                          <Text className="text-sm font-semibold text-blue-600">
-                            Leave Day
-                          </Text>
+                          <View className="bg-[#1E40AF]/10 self-start px-3 py-1.5 rounded-lg border border-[#1E40AF]/20">
+                            <Text className="text-sm font-muller-bold text-[#1E40AF]">
+                              Leave Day
+                            </Text>
+                          </View>
                         ) : student.today_attendance ? (
                           <View className="flex-row flex-wrap">
                             {periods.map((period, i) => {
@@ -527,24 +528,24 @@ export default function CollegeAttendanceOverview() {
                               const isPresent = detail?.status === 'Present';
                               const isExcused = excusedAbsences.includes(detail?.reason || '');
 
-                              let bgClass = 'bg-red-50 border-red-200';
-                              let icon = <XCircle size={16} color="#dc2626" />;
+                              let bgClass = 'bg-[#DC2626]/10 border-[#DC2626]/20';
+                              let icon = <XCircle size={16} color={COLORS.danger} />;
 
                               if (isPresent) {
-                                bgClass = 'bg-green-50 border-green-200';
-                                icon = <CheckCircle2 size={16} color="#16a34a" />;
+                                bgClass = 'bg-[#16A34A]/10 border-[#16A34A]/20';
+                                icon = <CheckCircle2 size={16} color={COLORS.success} />;
                               } else if (isExcused) {
-                                bgClass = 'bg-blue-50 border-blue-200';
-                                icon = <AlertCircle size={16} color="#3b82f6" />;
+                                bgClass = 'bg-[#1E40AF]/10 border-[#1E40AF]/20';
+                                icon = <AlertCircle size={16} color={COLORS.primary} />;
                               }
 
                               return (
                                 <View
                                   key={period}
                                   style={{ width: '23%', marginRight: '2%', marginBottom: 8 }}
-                                  className={`items-center justify-center py-2 rounded-lg border ${bgClass}`}
+                                  className={`items-center justify-center py-2 rounded-[10px] border ${bgClass}`}
                                 >
-                                  <Text className="text-[10px] font-bold text-zinc-600 mb-1">
+                                  <Text className="text-[11px] font-muller-bold text-[#475569] mb-1">
                                     P{i + 1}
                                   </Text>
                                   {icon}
@@ -553,8 +554,8 @@ export default function CollegeAttendanceOverview() {
                             })}
                           </View>
                         ) : (
-                          <Text className="text-sm text-zinc-400 italic">
-                            Attendance not submitted.
+                          <Text className="text-sm font-muller text-[#94A3B8] italic">
+                            Attendance not submitted yet.
                           </Text>
                         )}
                       </View>
@@ -565,7 +566,7 @@ export default function CollegeAttendanceOverview() {
             </>
           ) : (
             <View className="flex-1 items-center justify-center">
-              <Text className="text-zinc-500">No class data available.</Text>
+              <Text className="text-[#475569] font-muller">No class data available.</Text>
             </View>
           )}
         </View>

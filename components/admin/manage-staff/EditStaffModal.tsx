@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabaseClient';
 import { Camera, Save, X, User } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 export function EditStaffModal({ isOpen, setIsOpen, staff, onSave }: any) {
   const [name, setName] = useState('');
@@ -71,41 +72,63 @@ export function EditStaffModal({ isOpen, setIsOpen, staff, onSave }: any) {
 
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setIsOpen(false)}>
-      <View className="flex-1 bg-zinc-100 pt-6 px-4">
+      <View className="flex-1 bg-[#F8FAFC] pt-6 px-5">
 
         <View className="flex-row justify-between items-center mb-8">
           <View>
-            <Text className="text-2xl font-bold text-zinc-900">Edit Staff</Text>
-            <Text className="text-zinc-500 text-sm">Editing {staff?.name}</Text>
+            <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight">Edit Staff</Text>
+            <Text className="text-[#475569] font-muller mt-0.5">Editing {staff?.name}</Text>
           </View>
-          <TouchableOpacity onPress={() => setIsOpen(false)} className="bg-zinc-200 p-2 rounded-full"><X size={20} color="#09090b" /></TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setIsOpen(false)}
+            className="bg-[#E2E8F0]/60 p-2.5 rounded-full"
+            activeOpacity={0.7}
+          >
+            <X size={20} color="#0F172A" />
+          </TouchableOpacity>
         </View>
 
-        <View className="items-center mb-8">
-          <TouchableOpacity onPress={handleAvatarUpdate} disabled={isSaving} className="relative">
-            <View className="h-32 w-32 rounded-full border-4 border-white shadow-sm overflow-hidden bg-zinc-200 justify-center items-center">
-              {preview ? <Image source={{ uri: preview }} className="h-full w-full" /> : <User size={48} color="#a1a1aa" />}
+        <View className="items-center mb-10 mt-2">
+          <TouchableOpacity onPress={handleAvatarUpdate} disabled={isSaving} className="relative" activeOpacity={0.8}>
+            <View className="h-32 w-32 rounded-full border-4 border-[#FFFFFF] shadow-sm overflow-hidden bg-[#F1F5F9] justify-center items-center">
+              {preview ? (
+                <Image source={{ uri: preview }} className="h-full w-full" />
+              ) : (
+                <User size={52} color="#94A3B8" />
+              )}
             </View>
-            <View className="absolute bottom-0 right-0 bg-blue-600 p-3 rounded-full border-2 border-white">
-              {isSaving ? <ActivityIndicator size="small" color="white" /> : <Camera size={16} color="white" />}
+            <View className="absolute bottom-0 right-0 bg-[#1E40AF] p-3.5 rounded-full border-2 border-[#FFFFFF] shadow-sm">
+              {isSaving ? <ActivityIndicator size="small" color="white" /> : <Camera size={18} color="white" />}
             </View>
           </TouchableOpacity>
-          <Text className="text-xs text-zinc-500 mt-3">Tap to change photo</Text>
+          <Text className="text-xs font-muller text-[#94A3B8] mt-4 uppercase tracking-wider">Tap to change photo</Text>
         </View>
 
-        <View className="space-y-2">
-          <Text className="text-sm font-medium text-zinc-700 ml-1">Full Name</Text>
+        <View className="space-y-2.5">
+          <Text className="text-sm font-muller-bold text-[#475569] ml-1">Full Name</Text>
           <TextInput
-            className="bg-white border border-zinc-200 rounded-xl p-4 text-lg font-medium"
+            className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] p-4 text-[16px] font-muller-bold text-[#0F172A] shadow-sm"
             value={name}
             onChangeText={setName}
+            placeholderTextColor="#94A3B8"
           />
         </View>
 
         <View className="mt-auto pb-10 pt-4">
-          <TouchableOpacity onPress={handleSave} disabled={isSaving} className="w-full py-4 rounded-xl flex-row justify-center items-center bg-zinc-900">
-            {isSaving ? <ActivityIndicator color="white" className="mr-2" /> : <Save size={20} color="white" className="mr-2" />}
-            <Text className="text-white font-bold text-lg">Save Changes</Text>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isSaving}
+            activeOpacity={0.8}
+            className={`w-full py-4 rounded-[14px] flex-row justify-center items-center ${
+              isSaving ? 'bg-[#1E40AF]/60' : 'bg-[#1E40AF]'
+            }`}
+          >
+            {isSaving ? (
+              <ActivityIndicator color="white" className="mr-2.5" />
+            ) : (
+              <Save size={20} color="white" className="mr-2.5" />
+            )}
+            <Text className="text-white font-muller-bold text-[16px] tracking-wide">Save Changes</Text>
           </TouchableOpacity>
         </View>
 

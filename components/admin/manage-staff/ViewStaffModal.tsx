@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { User, Shield, X } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 export function ViewStaffModal({ isOpen, setIsOpen, staff }: any) {
   const [councilDetails, setCouncilDetails] = useState<any | null>(null);
@@ -37,40 +38,56 @@ export function ViewStaffModal({ isOpen, setIsOpen, staff }: any) {
 
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setIsOpen(false)}>
-      <View className="flex-1 bg-zinc-100 pt-6 px-4">
+      <View className="flex-1 bg-[#F8FAFC] pt-6 px-5">
 
-        <View className="flex-row justify-end mb-2">
-          <TouchableOpacity onPress={() => setIsOpen(false)} className="bg-zinc-200 p-2 rounded-full"><X size={20} color="#09090b" /></TouchableOpacity>
+        <View className="flex-row justify-end mb-4">
+          <TouchableOpacity
+            onPress={() => setIsOpen(false)}
+            className="bg-[#E2E8F0]/60 p-2.5 rounded-full"
+            activeOpacity={0.7}
+          >
+            <X size={20} color="#0F172A" />
+          </TouchableOpacity>
         </View>
 
-        <View className="items-center mb-6">
-          <View className="h-24 w-24 rounded-full border-4 border-white shadow-sm overflow-hidden bg-zinc-200 justify-center items-center">
-            {staff.img_url ? <Image source={{ uri: staff.img_url }} className="h-full w-full" /> : <User size={40} color="#a1a1aa" />}
+        <View className="items-center mb-8">
+          <View className="h-28 w-28 rounded-full border-4 border-[#FFFFFF] shadow-sm overflow-hidden bg-[#F1F5F9] justify-center items-center">
+            {staff.img_url ? (
+              <Image source={{ uri: staff.img_url }} className="h-full w-full" />
+            ) : (
+              <User size={44} color="#94A3B8" />
+            )}
           </View>
-          <Text className="text-2xl font-bold text-zinc-900 mt-3">{staff.name}</Text>
-          <Text className="text-sm text-zinc-500">{staff.designation || staff.role}</Text>
+          <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight mt-4">{staff.name}</Text>
+          <Text className="text-[15px] font-muller text-[#475569] mt-1">{staff.designation || staff.role}</Text>
         </View>
 
         {staff.designation?.endsWith(' Class') && (
-          <View className="bg-white rounded-3xl p-5 border border-zinc-200">
-            <View className="flex-row items-center mb-4 border-b border-zinc-100 pb-3">
-              <Shield size={20} color="#2563eb" />
-              <Text className="text-lg font-bold text-zinc-900 ml-2">Class Council ({councilDetails?.batch || 'N/A'})</Text>
+          <View className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0]">
+            <View className="flex-row items-center mb-5 border-b border-[#E2E8F0] pb-4">
+              <Shield size={20} color={COLORS.primary} />
+              <Text className="text-lg font-muller-bold text-[#0F172A] tracking-tight ml-2.5">
+                Class Council ({councilDetails?.batch || 'N/A'})
+              </Text>
             </View>
 
             {isLoadingCouncil ? (
-              <ActivityIndicator size="small" color="#09090b" className="py-4" />
+              <ActivityIndicator size="small" color={COLORS.primary} className="py-4" />
             ) : councilDetails ? (
-              <View className="flex-row flex-wrap">
+              <View className="flex-row flex-wrap gap-y-5">
                 {councilMembers.map(member => (
-                  <View key={member.role} className="w-1/2 mb-4 pr-2">
-                    <Text className="text-xs text-zinc-500 font-bold uppercase">{member.role}</Text>
-                    <Text className="text-base font-medium text-zinc-900 mt-0.5">{member.name || 'N/A'}</Text>
+                  <View key={member.role} className="w-1/2 pr-2">
+                    <Text className="text-[11px] text-[#94A3B8] font-muller-bold uppercase tracking-wider">
+                      {member.role}
+                    </Text>
+                    <Text className="text-[15px] font-muller-bold text-[#0F172A] mt-1">
+                      {member.name || 'N/A'}
+                    </Text>
                   </View>
                 ))}
               </View>
             ) : (
-              <Text className="text-center text-zinc-500 py-4">No council data found.</Text>
+              <Text className="text-center font-muller text-[#475569] py-4">No council data found.</Text>
             )}
           </View>
         )}

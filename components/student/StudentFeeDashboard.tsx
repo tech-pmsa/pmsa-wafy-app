@@ -3,6 +3,17 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useUserData } from '@/hooks/useUserData';
 import { supabase } from '@/lib/supabaseClient';
 import { CheckCircle2, XCircle, MinusCircle, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
+
+function cardShadow() {
+  return {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  };
+}
 
 export default function StudentFeeDashboard() {
   const { loading: userLoading, details } = useUserData();
@@ -60,51 +71,74 @@ export default function StudentFeeDashboard() {
     return { payments, paidCount, total: applicable.length, totalPaid };
   }, [feeData]);
 
-  if (isFetching || userLoading) return <ActivityIndicator size="large" color="#09090b" className="my-6" />;
-  if (!processedFees) return <View className="bg-white p-6 rounded-3xl"><Text className="text-zinc-500 text-center">No fee record found.</Text></View>;
+  if (isFetching || userLoading) {
+    return (
+      <View
+        className="bg-[#FFFFFF] p-8 rounded-[18px] items-center justify-center my-2 border border-[#E2E8F0]"
+        style={cardShadow()}
+      >
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text className="mt-4 text-[#475569] font-muller font-medium">Loading Fee Details...</Text>
+      </View>
+    );
+  }
+
+  if (!processedFees) {
+    return (
+      <View className="bg-[#FFFFFF] p-6 rounded-[18px] border border-[#E2E8F0] my-2" style={cardShadow()}>
+        <Text className="text-[#475569] font-muller text-center">No fee record found.</Text>
+      </View>
+    );
+  }
 
   const { payments, paidCount, total, totalPaid } = processedFees;
   const isFullyPaid = paidCount >= total && total > 0;
 
   return (
-    <View className="bg-white rounded-3xl shadow-sm border border-zinc-200 p-5">
-      <Text className="text-xl font-bold text-zinc-900 mb-1">My Fee Details</Text>
-      <Text className="text-sm text-zinc-500 mb-6">Summary of your monthly payments.</Text>
+    <View
+      className="bg-[#FFFFFF] rounded-[18px] border border-[#E2E8F0] p-5 my-2"
+      style={cardShadow()}
+    >
+      <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mb-1">My Fee Details</Text>
+      <Text className="text-sm font-muller text-[#475569] mb-5">Summary of your monthly payments.</Text>
 
-      <View className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 flex-row items-center justify-between mb-4">
+      <View className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[16px] p-5 flex-row items-center justify-between mb-5">
         <View>
-          <Text className="text-xs text-zinc-500 font-medium mb-1">Payment Status</Text>
-          <View className={`px-2 py-1 rounded-md ${isFullyPaid ? 'bg-green-100' : 'bg-red-100'} self-start`}>
-            <Text className={`text-xs font-bold ${isFullyPaid ? 'text-green-700' : 'text-red-700'}`}>
+          <Text className="text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider mb-2">Payment Status</Text>
+          <View className={`px-2.5 py-1.5 rounded-[8px] border ${isFullyPaid ? 'bg-[#16A34A]/10 border-[#16A34A]/20' : 'bg-[#DC2626]/10 border-[#DC2626]/20'} self-start`}>
+            <Text className={`text-xs font-muller-bold tracking-wide uppercase ${isFullyPaid ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
               {isFullyPaid ? 'Fully Paid' : 'Pending'}
             </Text>
           </View>
-          <Text className="text-sm font-semibold text-zinc-900 mt-2">{paidCount} of {total} months paid</Text>
+          <Text className="text-[13px] font-muller-bold text-[#0F172A] mt-3">
+            {paidCount} of {total} months paid
+          </Text>
         </View>
         <View className="items-end">
-          <Text className="text-xs text-zinc-500 font-medium mb-1">Total Paid</Text>
-          <Text className="text-2xl font-bold text-blue-600">₹{totalPaid.toLocaleString('en-IN')}</Text>
+          <Text className="text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider mb-2">Total Paid</Text>
+          <Text className="text-3xl font-muller-bold text-[#1E40AF] tracking-tight">₹{totalPaid.toLocaleString('en-IN')}</Text>
         </View>
       </View>
 
       <TouchableOpacity
+        activeOpacity={0.7}
         onPress={() => setIsExpanded(!isExpanded)}
-        className="bg-zinc-100 p-4 rounded-xl flex-row justify-between items-center"
+        className="bg-[#F1F5F9] p-4 rounded-[14px] border border-[#E2E8F0] flex-row justify-between items-center"
       >
-        <Text className="font-semibold text-zinc-900">View Monthly Breakdown</Text>
-        {isExpanded ? <ChevronUp size={20} color="#71717a" /> : <ChevronDown size={20} color="#71717a" />}
+        <Text className="font-muller-bold text-[#0F172A] text-[15px]">View Monthly Breakdown</Text>
+        {isExpanded ? <ChevronUp size={22} color="#94A3B8" /> : <ChevronDown size={22} color="#94A3B8" />}
       </TouchableOpacity>
 
       {isExpanded && (
-        <View className="mt-3 flex-row flex-wrap justify-between border-t border-zinc-100 pt-3">
+        <View className="mt-4 flex-row flex-wrap justify-between border-t border-[#E2E8F0] pt-4">
           {payments.map((p: any) => (
-            <View key={p.month} className="w-[48%] flex-row items-center mb-3">
-              {p.status === 'paid' && <CheckCircle2 size={20} color="#16a34a" />}
-              {p.status === 'unpaid' && <XCircle size={20} color="#dc2626" />}
-              {p.status === 'not_applicable' && <MinusCircle size={20} color="#a1a1aa" />}
-              <View className="ml-2 flex-1">
-                <Text className="text-sm font-medium text-zinc-900">{p.month}</Text>
-                <Text className="text-xs text-zinc-500">
+            <View key={p.month} className="w-[48%] flex-row items-center mb-3.5">
+              {p.status === 'paid' && <CheckCircle2 size={18} color={COLORS.success} />}
+              {p.status === 'unpaid' && <XCircle size={18} color={COLORS.danger} />}
+              {p.status === 'not_applicable' && <MinusCircle size={18} color="#94A3B8" />}
+              <View className="ml-2.5 flex-1">
+                <Text className="text-[13px] font-muller-bold text-[#0F172A] mb-0.5">{p.month}</Text>
+                <Text className="text-[11px] font-muller-bold text-[#475569]">
                   {p.status === 'paid' ? `₹${p.amount}` : p.status === 'unpaid' ? 'Pending' : 'N/A'}
                 </Text>
               </View>

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert as Na
 import { useUserData } from '@/hooks/useUserData';
 import { supabase } from '@/lib/supabaseClient';
 import { Pencil, Crown, Banknote, ShieldCheck, Users, Speaker, Save, X } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 const councilPositions = [
   { key: 'batch', label: 'Batch', icon: Users },
@@ -13,6 +14,16 @@ const councilPositions = [
   { key: 'auditor', label: 'Auditor', icon: ShieldCheck },
   { key: 'pro', label: 'PRO', icon: Speaker },
 ];
+
+function cardShadow() {
+  return {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  };
+}
 
 export default function ClassCouncil() {
   const { user, loading: userLoading } = useUserData();
@@ -55,39 +66,61 @@ export default function ClassCouncil() {
     setIsSaving(false);
   };
 
-  if (loading || userLoading) return <ActivityIndicator size="large" color="#09090b" className="my-10" />;
+  if (loading || userLoading) {
+    return (
+      <View
+        className="bg-[#FFFFFF] p-8 rounded-[18px] items-center justify-center my-2 border border-[#E2E8F0]"
+        style={cardShadow()}
+      >
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text className="mt-4 text-[#475569] font-muller font-medium">Loading Council Details...</Text>
+      </View>
+    );
+  }
 
   return (
-    <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-200">
+    <View
+      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] my-2"
+      style={cardShadow()}
+    >
       <View className="flex-row justify-between items-start mb-6">
         <View className="flex-1">
-          <Text className="text-xl font-bold text-zinc-900">Class Council</Text>
-          <Text className="text-sm text-zinc-500 mt-1">{editMode ? 'Update names' : `Batch: ${council?.batch || 'N/A'}`}</Text>
+          <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">Class Council</Text>
+          <Text className="text-sm font-muller text-[#475569] mt-0.5">
+            {editMode ? 'Update assigned names' : `Batch: ${council?.batch || 'N/A'}`}
+          </Text>
         </View>
         {!editMode && (
-          <TouchableOpacity onPress={() => setEditMode(true)} className="bg-zinc-100 p-3 rounded-full">
-            <Pencil size={20} color="#09090b" />
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setEditMode(true)}
+            className="bg-[#F1F5F9] p-3 rounded-full"
+          >
+            <Pencil size={20} color="#0F172A" />
           </TouchableOpacity>
         )}
       </View>
 
-      <View className="space-y-3">
+      <View className="space-y-3.5">
         {councilPositions.map(({ key, label, icon: Icon }) => (
-          <View key={key} className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 flex-row items-center">
-            <View className="bg-white p-3 rounded-xl border border-zinc-200">
-              <Icon size={24} color="#71717a" />
+          <View key={key} className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[16px] p-4 flex-row items-center">
+            <View className="bg-[#FFFFFF] p-3 rounded-[12px] border border-[#E2E8F0]">
+              <Icon size={22} color="#475569" />
             </View>
             <View className="ml-4 flex-1">
-              <Text className="text-xs font-bold text-zinc-500 uppercase">{label}</Text>
+              <Text className="text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">{label}</Text>
               {editMode ? (
                 <TextInput
-                  className="border-b border-zinc-300 py-1 text-base text-zinc-900 font-semibold"
+                  className="border-b border-[#E2E8F0] py-1.5 text-[15px] text-[#0F172A] font-muller-bold mt-1"
                   value={council?.[key] || ''}
                   onChangeText={(t) => setCouncil({ ...council, [key]: t })}
                   placeholder="Enter name"
+                  placeholderTextColor="#94A3B8"
                 />
               ) : (
-                <Text className="text-base font-semibold text-zinc-900 mt-0.5">{council?.[key] || 'Not Assigned'}</Text>
+                <Text className="text-[15px] font-muller-bold text-[#0F172A] mt-1.5 tracking-tight">
+                  {council?.[key] || 'Not Assigned'}
+                </Text>
               )}
             </View>
           </View>
@@ -95,13 +128,24 @@ export default function ClassCouncil() {
       </View>
 
       {editMode && (
-        <View className="flex-row mt-6 pt-4 border-t border-zinc-100 gap-3">
-          <TouchableOpacity onPress={() => { setCouncil(originalCouncil); setEditMode(false); }} className="flex-1 py-4 rounded-xl bg-zinc-100 items-center justify-center">
-            <Text className="font-bold text-zinc-900">Cancel</Text>
+        <View className="flex-row mt-8 pt-5 border-t border-[#E2E8F0] gap-3">
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => { setCouncil(originalCouncil); setEditMode(false); }}
+            className="flex-1 py-3.5 rounded-[14px] bg-[#F1F5F9] border border-[#E2E8F0] items-center justify-center"
+          >
+            <Text className="font-muller-bold text-[#0F172A] text-[15px] tracking-wide">Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSubmit} disabled={isSaving} className="flex-1 py-4 rounded-xl bg-zinc-900 flex-row items-center justify-center">
-            {isSaving ? <ActivityIndicator color="white" /> : <Save size={20} color="white" className="mr-2" />}
-            <Text className="font-bold text-white">Save</Text>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleSubmit}
+            disabled={isSaving}
+            className={`flex-1 py-3.5 rounded-[14px] flex-row items-center justify-center shadow-sm ${
+              isSaving ? 'bg-[#1E40AF]/60' : 'bg-[#1E40AF]'
+            }`}
+          >
+            {isSaving ? <ActivityIndicator color="white" className="mr-2.5" /> : <Save size={18} color="white" className="mr-2.5" />}
+            <Text className="font-muller-bold text-white text-[15px] tracking-wide">Save Changes</Text>
           </TouchableOpacity>
         </View>
       )}

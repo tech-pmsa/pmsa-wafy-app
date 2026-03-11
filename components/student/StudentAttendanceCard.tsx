@@ -5,6 +5,7 @@ import { useUserData } from '@/hooks/useUserData';
 import { format } from 'date-fns';
 import Svg, { Circle } from 'react-native-svg';
 import { CalendarCheck2, CalendarDays, TrendingUp, TrendingDown, CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 interface AttendanceSummary { total_present: number; total_days: number; }
 interface PeriodDetail { status: 'Present' | 'Absent'; reason?: string; description?: string; }
@@ -13,17 +14,27 @@ interface TodaysAttendanceRecord { date: string; is_leave_day: boolean; [key: st
 const periods = Array.from({ length: 8 }, (_, i) => `period_${i + 1}`);
 const excusedAbsences = ['Cic Related', 'Wsf Related', 'Exam Related'];
 
+function cardShadow() {
+  return {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  };
+}
+
 function RadialProgress({ percentage, colorHex }: { percentage: number; colorHex: string }) {
-  const radius = 52;
-  const stroke = 10;
+  const radius = 56;
+  const stroke = 12;
   const normalizedRadius = radius - stroke / 2;
   const circumference = normalizedRadius * 2 * Math.PI;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <View className="items-center justify-center h-36 w-36 mb-4">
+    <View className="items-center justify-center h-36 w-36 mb-6 mt-2">
       <Svg height="100%" width="100%" viewBox="0 0 120 120" style={{ transform: [{ rotate: '-90deg' }] }}>
-        <Circle cx="60" cy="60" r={normalizedRadius} stroke="#f4f4f5" strokeWidth={stroke} fill="transparent" />
+        <Circle cx="60" cy="60" r={normalizedRadius} stroke="#F1F5F9" strokeWidth={stroke} fill="transparent" />
         <Circle
           cx="60" cy="60" r={normalizedRadius}
           stroke={colorHex} strokeWidth={stroke} fill="transparent"
@@ -31,8 +42,8 @@ function RadialProgress({ percentage, colorHex }: { percentage: number; colorHex
         />
       </Svg>
       <View className="absolute items-center justify-center">
-        <Text className="text-3xl font-bold text-zinc-900">{percentage.toFixed(0)}%</Text>
-        <Text className="text-xs text-zinc-500 font-medium">Overall</Text>
+        <Text className="text-3xl font-muller-bold text-[#0F172A] tracking-tight">{percentage.toFixed(0)}%</Text>
+        <Text className="text-[11px] text-[#94A3B8] font-muller-bold mt-1 uppercase tracking-wider">Overall</Text>
       </View>
     </View>
   );
@@ -82,73 +93,124 @@ export default function StudentAttendanceCard() {
     const { total_present, total_days } = summaryData;
     const percentage = total_days > 0 ? (total_present / total_days) * 100 : 0;
 
-    let status = 'Poor'; let hex = '#dc2626'; let desc = 'Attendance is critically low.'; let Icon = TrendingDown;
-    if (percentage >= 75) { status = 'Good'; hex = '#16a34a'; desc = "Excellent work! You're on track."; Icon = TrendingUp; }
-    else if (percentage >= 50) { status = 'Average'; hex = '#ca8a04'; desc = 'Room for improvement.'; Icon = TrendingUp; }
+    let status = 'Poor';
+    let hex = COLORS.danger;
+    let desc = 'Attendance is critically low.';
+    let Icon = TrendingDown;
+    let bgClass = 'bg-[#DC2626]/10';
+    let borderClass = 'border-[#DC2626]/20';
 
-    return { total_present, total_days, percentage, status, hex, desc, Icon };
+    if (percentage >= 75) {
+      status = 'Good';
+      hex = COLORS.success;
+      desc = "Excellent work! You're on track.";
+      Icon = TrendingUp;
+      bgClass = 'bg-[#16A34A]/10';
+      borderClass = 'border-[#16A34A]/20';
+    } else if (percentage >= 50) {
+      status = 'Average';
+      hex = COLORS.warning;
+      desc = 'Room for improvement.';
+      Icon = TrendingUp;
+      bgClass = 'bg-[#D97706]/10';
+      borderClass = 'border-[#D97706]/20';
+    }
+
+    return { total_present, total_days, percentage, status, hex, desc, Icon, bgClass, borderClass };
   }, [summaryData]);
 
-  if (loading || userLoading) return <ActivityIndicator size="large" color="#09090b" className="my-6" />;
-  if (!info) return <View className="bg-white p-6 rounded-3xl"><Text className="text-zinc-500 text-center">No attendance record found.</Text></View>;
+  if (loading || userLoading) {
+    return (
+      <View
+        className="bg-[#FFFFFF] p-8 rounded-[18px] items-center justify-center my-2 border border-[#E2E8F0]"
+        style={cardShadow()}
+      >
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text className="mt-4 text-[#475569] font-muller font-medium">Loading Attendance...</Text>
+      </View>
+    );
+  }
+
+  if (!info) {
+    return (
+      <View className="bg-[#FFFFFF] p-6 rounded-[18px] border border-[#E2E8F0]" style={cardShadow()}>
+        <Text className="text-[#475569] font-muller text-center">No attendance record found.</Text>
+      </View>
+    );
+  }
 
   return (
-    <View className="bg-white rounded-3xl shadow-sm border border-zinc-200 p-5">
-      <Text className="text-xl font-bold text-zinc-900 mb-1">My Attendance</Text>
-      <Text className="text-sm text-zinc-500 mb-6">Your overall summary and today's live status.</Text>
+    <View className="bg-[#FFFFFF] rounded-[18px] border border-[#E2E8F0] p-5" style={cardShadow()}>
+      <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mb-1">My Attendance</Text>
+      <Text className="text-sm font-muller text-[#475569] mb-5">Your overall summary and today's live status.</Text>
 
       <View className="items-center">
         <RadialProgress percentage={info.percentage} colorHex={info.hex} />
 
-        <View className="flex-row bg-zinc-100 rounded-2xl p-4 w-full mb-4">
-          <View className="flex-1 items-center border-r border-zinc-200">
-            <CalendarCheck2 size={24} color="#71717a" />
-            <Text className="text-xl font-bold text-zinc-900 mt-1">{info.total_present}</Text>
-            <Text className="text-xs text-zinc-500">Days Present</Text>
+        <View className="flex-row bg-[#F8FAFC] rounded-[16px] border border-[#E2E8F0] p-4 w-full mb-4">
+          <View className="flex-1 items-center border-r border-[#E2E8F0]">
+            <CalendarCheck2 size={24} color="#94A3B8" />
+            <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mt-2">{info.total_present}</Text>
+            <Text className="text-[11px] font-muller-bold text-[#475569] mt-0.5 uppercase tracking-wider">Present</Text>
           </View>
           <View className="flex-1 items-center">
-            <CalendarDays size={24} color="#71717a" />
-            <Text className="text-xl font-bold text-zinc-900 mt-1">{info.total_days}</Text>
-            <Text className="text-xs text-zinc-500">Total Days</Text>
+            <CalendarDays size={24} color="#94A3B8" />
+            <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mt-2">{info.total_days}</Text>
+            <Text className="text-[11px] font-muller-bold text-[#475569] mt-0.5 uppercase tracking-wider">Total Days</Text>
           </View>
         </View>
 
-        <View className="flex-row items-center w-full bg-zinc-50 p-4 rounded-xl border border-zinc-200">
-          <info.Icon size={20} color={info.hex} />
-          <View className="ml-3">
-            <Text style={{ color: info.hex }} className="font-bold">{info.status} Standing</Text>
-            <Text className="text-xs text-zinc-500">{info.desc}</Text>
+        <View className={`flex-row items-center w-full p-4 rounded-[14px] border ${info.borderClass} ${info.bgClass}`}>
+          <info.Icon size={22} color={info.hex} />
+          <View className="ml-3.5 flex-1">
+            <Text style={{ color: info.hex }} className="font-muller-bold text-[15px]">{info.status} Standing</Text>
+            <Text className="text-xs font-muller text-[#475569] mt-0.5">{info.desc}</Text>
           </View>
         </View>
       </View>
 
-      <View className="border-t border-zinc-100 mt-6 pt-4">
-        <Text className="font-bold text-zinc-900 text-center mb-4">Today's Status ({format(new Date(), 'PPP')})</Text>
+      <View className="border-t border-[#E2E8F0] mt-6 pt-5">
+        <Text className="font-muller-bold text-[#0F172A] tracking-tight text-center mb-4">
+          Today's Status ({format(new Date(), 'PPP')})
+        </Text>
 
         {!todayData ? (
-          <Text className="text-center text-zinc-500 italic bg-zinc-50 p-3 rounded-lg border border-zinc-200">Pending class leader submission...</Text>
+          <Text className="text-center font-muller text-[#94A3B8] italic bg-[#F8FAFC] p-4 rounded-[12px] border border-[#E2E8F0]">
+            Pending class leader submission...
+          </Text>
         ) : todayData.is_leave_day ? (
-          <Text className="text-center text-blue-600 font-medium bg-blue-50 p-3 rounded-lg border border-blue-200">Leave Day - No attendance recorded.</Text>
+          <View className="bg-[#1E40AF]/10 p-4 rounded-[12px] border border-[#1E40AF]/20">
+            <Text className="text-center text-[#1E40AF] font-muller-bold">Leave Day</Text>
+            <Text className="text-center text-[#1E40AF]/70 font-muller text-xs mt-1">No attendance recorded today.</Text>
+          </View>
         ) : (
-          <View className="flex-row flex-wrap justify-between gap-y-2">
+          <View className="flex-row flex-wrap justify-between gap-y-2.5">
             {periods.map((period, i) => {
               const detail = todayData[period] as PeriodDetail;
               const isPresent = detail?.status === 'Present';
               const isExcused = excusedAbsences.includes(detail?.reason || '');
 
-              let IconComp = XCircle; let color = "#dc2626"; let bg = "bg-red-50";
-              if (isPresent) { IconComp = CheckCircle2; color = "#16a34a"; bg = "bg-green-50"; }
-              else if (isExcused) { IconComp = AlertCircle; color = "#2563eb"; bg = "bg-blue-50"; }
+              let IconComp = XCircle; let color = COLORS.danger;
+              let bg = "bg-[#DC2626]/10"; let border = "border-[#DC2626]/20";
+
+              if (isPresent) {
+                IconComp = CheckCircle2; color = COLORS.success;
+                bg = "bg-[#16A34A]/10"; border = "border-[#16A34A]/20";
+              } else if (isExcused) {
+                IconComp = AlertCircle; color = COLORS.primary;
+                bg = "bg-[#1E40AF]/10"; border = "border-[#1E40AF]/20";
+              }
 
               return (
                 <TouchableOpacity
                   key={period}
                   disabled={isPresent}
+                  activeOpacity={0.6}
                   onPress={() => setSelectedAbsence({ p: i+1, r: detail?.reason, d: detail?.description })}
-                  className={`w-[23%] items-center justify-center py-3 rounded-xl border border-zinc-200 ${bg}`}
+                  className={`w-[23%] items-center justify-center py-3 rounded-[12px] border ${border} ${bg}`}
                 >
-                  <Text className="text-[10px] font-bold text-zinc-600 mb-1">P{i + 1}</Text>
-                  <IconComp size={20} color={color} />
+                  <Text className="text-[11px] font-muller-bold text-[#475569] mb-1.5">P{i + 1}</Text>
+                  <IconComp size={18} color={color} />
                 </TouchableOpacity>
               );
             })}
@@ -158,13 +220,41 @@ export default function StudentAttendanceCard() {
 
       {/* Modal for viewing absence reason */}
       <Modal visible={!!selectedAbsence} transparent animationType="fade" onRequestClose={() => setSelectedAbsence(null)}>
-        <View className="flex-1 bg-black/50 justify-center items-center p-6">
-          <View className="bg-white rounded-3xl w-full p-6 shadow-xl">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-bold text-zinc-900">{selectedAbsence?.r || 'Absent'}</Text>
-              <TouchableOpacity onPress={() => setSelectedAbsence(null)}><X size={24} color="#71717a" /></TouchableOpacity>
+        <View className="flex-1 bg-black/40 justify-center items-center p-6">
+          <View
+            className="bg-[#FFFFFF] rounded-[20px] w-full p-6 border border-[#E2E8F0]"
+            style={cardShadow()}
+          >
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">
+                {selectedAbsence?.r || 'Absent'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSelectedAbsence(null)}
+                className="bg-[#F1F5F9] p-2 rounded-full"
+              >
+                <X size={20} color="#475569" />
+              </TouchableOpacity>
             </View>
-            <Text className="text-zinc-500">{selectedAbsence?.d || "No description provided."}</Text>
+
+            <View className="bg-[#F8FAFC] p-4 rounded-[14px] border border-[#E2E8F0] mb-5">
+              <Text className="text-[#475569] font-muller text-sm">
+                Missed: <Text className="font-muller-bold text-[#0F172A]">Period {selectedAbsence?.p}</Text>
+              </Text>
+            </View>
+
+            <Text className="text-[#0F172A] font-muller-bold mb-2">Description / Note</Text>
+            <Text className="text-[#475569] font-muller leading-relaxed">
+              {selectedAbsence?.d || "No description provided."}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => setSelectedAbsence(null)}
+              activeOpacity={0.8}
+              className="mt-8 bg-[#1E40AF] py-3.5 rounded-[14px] items-center"
+            >
+              <Text className="text-white font-muller-bold text-[15px]">Close Details</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

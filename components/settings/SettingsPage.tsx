@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserData } from '@/hooks/useUserData';
 import { User, BookUser, UserPlus, Trash2, AlertTriangle } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 // Import our tabs
 import ProfileSection from '@/components/settings/ProfileSection';
@@ -25,18 +26,22 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-zinc-100 justify-center items-center">
-        <ActivityIndicator size="large" color="#09090b" />
+      <SafeAreaView className="flex-1 bg-[#F8FAFC] justify-center items-center">
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </SafeAreaView>
     );
   }
 
   if (!role) {
     return (
-      <SafeAreaView className="flex-1 bg-zinc-100 justify-center items-center p-6">
-        <AlertTriangle size={48} color="#dc2626" />
-        <Text className="text-xl font-bold text-zinc-900 mt-4">Access Denied</Text>
-        <Text className="text-zinc-500 mt-2 text-center">Could not determine user role. Please try logging in again.</Text>
+      <SafeAreaView className="flex-1 bg-[#F8FAFC] justify-center items-center p-6">
+        <View className="bg-[#DC2626]/10 p-5 rounded-full mb-4">
+          <AlertTriangle size={48} color={COLORS.danger} />
+        </View>
+        <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight mt-2">Access Denied</Text>
+        <Text className="text-[#475569] font-muller mt-2 text-center leading-relaxed">
+          Could not determine user role. Please try logging in again.
+        </Text>
       </SafeAreaView>
     );
   }
@@ -44,28 +49,29 @@ export default function SettingsPage() {
   const accessibleTabs = settingsTabs.filter(tab => tab.roles.includes(role));
 
   return (
-    <SafeAreaView className="flex-1 bg-zinc-100" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-[#F8FAFC]" edges={['top']}>
       <View className="px-6 pt-4 pb-2">
-        <Text className="text-3xl font-bold text-zinc-900">Settings</Text>
-        <Text className="text-zinc-500 mt-1">Manage your profile and system settings.</Text>
+        <Text className="text-3xl font-muller-bold text-[#0F172A] tracking-tight">Settings</Text>
+        <Text className="text-[#475569] font-muller mt-1.5">Manage your profile and system configuration.</Text>
       </View>
 
       {/* Tab Navigation */}
-      <View className="px-4">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="my-4">
+      <View className="px-5">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="my-5 -ml-1 pl-1">
           {accessibleTabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.value;
             return (
               <TouchableOpacity
                 key={tab.value}
+                activeOpacity={0.7}
                 onPress={() => setActiveTab(tab.value)}
-                className={`flex-row items-center px-4 py-2.5 rounded-full mr-2 border ${
-                  isActive ? 'bg-zinc-900 border-zinc-900' : 'bg-white border-zinc-300'
+                className={`flex-row items-center px-4 py-3 rounded-[14px] mr-2.5 border ${
+                  isActive ? 'bg-[#1E40AF] border-[#1E40AF]' : 'bg-[#FFFFFF] border-[#E2E8F0]'
                 }`}
               >
-                <Icon size={16} color={isActive ? 'white' : '#71717a'} />
-                <Text className={`ml-2 font-semibold ${isActive ? 'text-white' : 'text-zinc-700'}`}>
+                <Icon size={18} color={isActive ? 'white' : '#475569'} />
+                <Text className={`ml-2.5 font-muller-bold tracking-wide text-[13px] ${isActive ? 'text-white' : 'text-[#475569]'}`}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -75,7 +81,7 @@ export default function SettingsPage() {
       </View>
 
       {/* Tab Content */}
-      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         {activeTab === 'profile' && <ProfileSection />}
         {activeTab === 'council' && <ClassCouncil />}
 
@@ -87,11 +93,14 @@ export default function SettingsPage() {
         )}
 
         {activeTab === 'danger-zone' && (
-          <View className="bg-red-50 border border-red-200 rounded-3xl p-5">
-            <Text className="text-xl font-bold text-red-700 mb-2">Danger Zone</Text>
-            <Text className="text-sm text-red-600 mb-4">Critical actions with permanent consequences.</Text>
-            <UnlockAttendance />
-            <ClearAttendance />
+          <View className="bg-[#DC2626]/10 border border-[#DC2626]/20 rounded-[18px] p-5">
+            <Text className="text-xl font-muller-bold tracking-tight text-[#DC2626] mb-1">Danger Zone</Text>
+            <Text className="text-[13px] font-muller text-[#DC2626]/80 mb-6">Critical actions with permanent consequences.</Text>
+
+            <View className="space-y-4">
+              <UnlockAttendance />
+              <ClearAttendance />
+            </View>
           </View>
         )}
       </ScrollView>

@@ -36,39 +36,42 @@ export default function CustomDrawerContent(props: any) {
   const isSettingsActive = pathname.endsWith('/settings');
 
   return (
-    <View className="flex-1 bg-zinc-900">
+    <View className="flex-1 bg-[#F8FAFC]">
       <DrawerContentScrollView {...props} contentContainerStyle={{ paddingTop: 0 }}>
 
-        {/* Header / Logo */}
-        <View className="p-6 border-b border-zinc-800 flex-row items-center pt-16">
-          <View className="bg-blue-600 p-2 rounded-xl">
-            <GraduationCap size={24} color="white" />
+        {/* Header / Logo Area */}
+        <View className="px-6 py-4 bg-[#FFFFFF] border-b border-[#E2E8F0] flex-row items-center pt-16">
+          <View className="bg-[#1E40AF] p-3 rounded-[14px]">
+            <GraduationCap size={26} color="#FFFFFF" />
           </View>
-          <Text className="text-white text-xl font-bold ml-3 font-heading">PMSA Wafy</Text>
+          <View className="ml-4 flex-1">
+            <Text className="text-[#0F172A] text-xl font-bold font-heading tracking-tight">PMSA Wafy</Text>
+            <Text className="text-[#475569] text-xs font-medium mt-0.5">Academic Portal</Text>
+          </View>
         </View>
 
-        {/* Links */}
+        {/* Navigation Links */}
         <View className="p-4 mt-2">
           {accessibleNavItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
 
-            // Strict NativeWind strings
             const touchableClass = isActive
-              ? "flex-row items-center p-3 rounded-xl mb-2 bg-blue-600"
-              : "flex-row items-center p-3 rounded-xl mb-2 bg-transparent";
+              ? "flex-row items-center p-3.5 rounded-[14px] mb-1 bg-[#1E40AF]/10 border border-[#1E40AF]/10"
+              : "flex-row items-center p-3.5 rounded-[14px] mb-1 bg-transparent border border-transparent";
 
             const textClass = isActive
-              ? "ml-3 font-semibold text-white"
-              : "ml-3 font-semibold text-zinc-400";
+              ? "ml-3.5 font-semibold text-[#1E40AF]"
+              : "ml-3.5 font-medium text-[#475569]";
 
             return (
               <TouchableOpacity
                 key={item.href}
                 onPress={() => router.push(item.href as any)}
                 className={touchableClass}
+                activeOpacity={0.7}
               >
-                <Icon size={20} color={isActive ? 'white' : '#a1a1aa'} />
+                <Icon size={22} color={isActive ? '#1E40AF' : '#94A3B8'} />
                 <Text className={textClass}>
                   {item.label}
                 </Text>
@@ -77,35 +80,49 @@ export default function CustomDrawerContent(props: any) {
           })}
 
           {/* Dynamic Settings Link */}
+          <View className="h-[1px] bg-[#E2E8F0] my-3 mx-2" />
+
           <TouchableOpacity
             onPress={() => router.push(settingsRoute as any)}
-            className={isSettingsActive ? "flex-row items-center p-3 rounded-xl mb-2 bg-blue-600" : "flex-row items-center p-3 rounded-xl mb-2 bg-transparent"}
+            className={isSettingsActive ? "flex-row items-center p-3.5 rounded-[14px] mb-2 bg-[#1E40AF]/10 border border-[#1E40AF]/10" : "flex-row items-center p-3.5 rounded-[14px] mb-2 bg-transparent border border-transparent"}
+            activeOpacity={0.7}
           >
-            <Settings size={20} color={isSettingsActive ? 'white' : '#a1a1aa'} />
-            <Text className={isSettingsActive ? "ml-3 font-semibold text-white" : "ml-3 font-semibold text-zinc-400"}>Settings</Text>
+            <Settings size={22} color={isSettingsActive ? '#1E40AF' : '#94A3B8'} />
+            <Text className={isSettingsActive ? "ml-3.5 font-semibold text-[#1E40AF]" : "ml-3.5 font-medium text-[#475569]"}>Settings</Text>
           </TouchableOpacity>
         </View>
       </DrawerContentScrollView>
 
       {/* Footer Profile Section */}
-      <View className="p-4 border-t border-zinc-800 pb-8">
-        <View className="flex-row items-center mb-4">
-          <View className="h-10 w-10 bg-zinc-800 rounded-full items-center justify-center overflow-hidden">
+      <View className="p-4 bg-[#FFFFFF] border-t border-[#E2E8F0] pb-8 shadow-sm">
+
+        {/* Profile Card Block */}
+        <View className="flex-row items-center mb-4 bg-[#F8FAFC] p-3 rounded-[16px] border border-[#E2E8F0]">
+          <View className="h-11 w-11 bg-[#1E40AF]/10 rounded-[12px] items-center justify-center overflow-hidden border border-[#1E40AF]/20">
             {details?.img_url ? (
               <Image source={{ uri: details.img_url }} className="h-full w-full" />
             ) : (
-              <Text className="text-white font-bold">{details?.name?.charAt(0) || 'U'}</Text>
+              <Text className="text-[#1E40AF] font-bold text-lg">{details?.name?.charAt(0) || 'U'}</Text>
             )}
           </View>
           <View className="ml-3 flex-1">
-            <Text className="text-white font-semibold truncate" numberOfLines={1}>{details?.name}</Text>
-            <Text className="text-zinc-400 text-xs capitalize">{details?.role || role}</Text>
+            <Text className="text-[#0F172A] font-bold text-[15px] tracking-tight truncate" numberOfLines={1}>
+              {details?.name || 'Loading...'}
+            </Text>
+            <Text className="text-[#475569] text-xs capitalize font-medium mt-0.5">
+              {details?.role || role || 'User'}
+            </Text>
           </View>
         </View>
 
-        <TouchableOpacity onPress={handleLogout} className="flex-row items-center p-3 bg-red-500/10 rounded-xl border border-red-500/20">
-          <LogOut size={18} color="#ef4444" />
-          <Text className="ml-3 font-semibold text-red-500">Sign Out</Text>
+        {/* Danger Logout Action */}
+        <TouchableOpacity
+          onPress={handleLogout}
+          className="flex-row items-center justify-center p-3.5 bg-[#DC2626]/10 rounded-[14px] border border-[#DC2626]/20"
+          activeOpacity={0.7}
+        >
+          <LogOut size={18} color="#DC2626" />
+          <Text className="ml-2.5 font-semibold text-[#DC2626]">Sign Out</Text>
         </TouchableOpacity>
       </View>
     </View>

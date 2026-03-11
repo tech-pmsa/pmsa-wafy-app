@@ -4,12 +4,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabaseClient';
 import { useUserData } from '@/hooks/useUserData';
 import { Search, AlertTriangle, ChevronsRight, Trash2, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 // Import our newly adapted sub-components
 import { StudentCard } from '@/components/admin/manage-students/StudentCard';
 import { ViewStudentModal } from '@/components/admin/manage-students/ViewStudentModal';
 import { EditStudentModal } from '@/components/admin/manage-students/EditStudentModal';
 import { PromoteClassModal } from '@/components/admin/manage-students/PromoteClassModal';
+
+function cardShadow() {
+  return {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  };
+}
 
 export default function ManageStudentsPage() {
   const { user: authUser, role: authRole, details: authDetails, loading: authLoading } = useUserData();
@@ -103,25 +114,30 @@ export default function ManageStudentsPage() {
 
   if (authLoading || loading) {
     return (
-      <SafeAreaView className="flex-1 bg-zinc-100 justify-center items-center">
-        <ActivityIndicator size="large" color="#09090b" />
+      <SafeAreaView className="flex-1 bg-[#F8FAFC] justify-center items-center">
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text className="mt-4 text-[#475569] font-muller font-medium">Loading Students...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-zinc-100" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-[#F8FAFC]" edges={['top']}>
       <View className="px-6 pt-4 pb-4">
-        <Text className="text-3xl font-bold text-zinc-900">Manage Students</Text>
-        <Text className="text-zinc-500 mt-1">View, edit, and manage profiles.</Text>
+        <Text className="text-3xl font-muller-bold text-[#0F172A] tracking-tight">Manage Students</Text>
+        <Text className="text-[#475569] font-muller mt-1.5">View, edit, and manage profiles.</Text>
       </View>
 
-      <View className="px-4 mb-4">
-        <View className="flex-row items-center bg-white border border-zinc-200 rounded-xl px-4 py-3 shadow-sm">
-          <Search size={20} color="#a1a1aa" />
+      <View className="px-4 mb-5">
+        <View
+          className="flex-row items-center bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5 shadow-sm"
+          style={cardShadow()}
+        >
+          <Search size={20} color="#94A3B8" />
           <TextInput
-            className="flex-1 ml-2 text-base text-zinc-900"
+            className="flex-1 ml-3 text-base font-muller text-[#0F172A]"
             placeholder="Search by name or CIC..."
+            placeholderTextColor="#94A3B8"
             value={searchQuery} onChangeText={setSearchQuery}
           />
         </View>
@@ -134,32 +150,49 @@ export default function ManageStudentsPage() {
           Object.entries(groupedStudents).sort().map(([classId, studentList]: [string, any[]]) => {
             const isExpanded = expandedClass === classId;
             return (
-              <View key={classId} className="bg-white rounded-3xl mb-4 shadow-sm border border-zinc-200 overflow-hidden">
+              <View
+                key={classId}
+                className="bg-[#FFFFFF] rounded-[18px] mb-5 border border-[#E2E8F0] overflow-hidden"
+                style={cardShadow()}
+              >
                 <TouchableOpacity
+                  activeOpacity={0.7}
                   onPress={() => setExpandedClass(isExpanded ? null : classId)}
-                  className="flex-row items-center justify-between p-5 bg-zinc-50 border-b border-zinc-100"
+                  className="flex-row items-center justify-between p-5 bg-[#F8FAFC] border-b border-[#E2E8F0]"
                 >
-                  <View className="flex-row items-center">
-                    <Text className="text-xl font-bold text-zinc-900">{classId}</Text>
-                    <View className="bg-zinc-200 px-2 py-0.5 rounded-full ml-3">
-                      <Text className="text-xs font-bold text-zinc-700">{studentList.length}</Text>
+                  <View className="flex-row items-center flex-1 pr-4">
+                    <Text className="text-[17px] font-muller-bold text-[#0F172A] tracking-tight truncate" numberOfLines={1}>
+                      {classId}
+                    </Text>
+                    <View className="bg-[#E2E8F0]/60 px-2.5 py-1 rounded-[8px] ml-3 border border-[#E2E8F0]">
+                      <Text className="text-xs font-muller-bold text-[#475569]">{studentList.length}</Text>
                     </View>
                   </View>
-                  {isExpanded ? <ChevronUp size={24} color="#71717a" /> : <ChevronDown size={24} color="#71717a" />}
+                  {isExpanded ? <ChevronUp size={22} color="#94A3B8" /> : <ChevronDown size={22} color="#94A3B8" />}
                 </TouchableOpacity>
 
                 {isExpanded && (
-                  <View className="p-4">
-                    <View className="flex-row justify-between mb-4 gap-2">
-                      <TouchableOpacity onPress={() => handlePromoteClassClick(classId)} className="flex-1 py-2.5 rounded-xl border border-zinc-300 flex-row justify-center items-center">
-                        <ChevronsRight size={16} color="#09090b" /><Text className="font-bold text-zinc-900 ml-1">Promote</Text>
+                  <View className="p-4 bg-[#FFFFFF]">
+                    <View className="flex-row justify-between mb-5 gap-3">
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => handlePromoteClassClick(classId)}
+                        className="flex-1 py-3 rounded-[12px] border border-[#E2E8F0] bg-[#F8FAFC] flex-row justify-center items-center"
+                      >
+                        <ChevronsRight size={18} color="#0F172A" />
+                        <Text className="font-muller-bold text-[#0F172A] ml-2 text-[13px] tracking-wide uppercase">Promote</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDeleteClassClick(classId)} className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-200 flex-row justify-center items-center">
-                        <Trash2 size={16} color="#dc2626" /><Text className="font-bold text-red-700 ml-1">Delete Class</Text>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => handleDeleteClassClick(classId)}
+                        className="flex-1 py-3 rounded-[12px] bg-[#DC2626]/10 border border-[#DC2626]/20 flex-row justify-center items-center"
+                      >
+                        <Trash2 size={18} color={COLORS.danger} />
+                        <Text className="font-muller-bold text-[#DC2626] ml-2 text-[13px] tracking-wide uppercase">Delete Class</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <View className="space-y-3">
+                    <View className="space-y-3.5 gap-1">
                       {/* Explicitly typed student below */}
                       {studentList.map((student: any) => (
                         <StudentCard key={student.uid} student={student} onView={handleViewClick} onEdit={handleEditClick} onDelete={handleDeleteClick} />
@@ -172,7 +205,7 @@ export default function ManageStudentsPage() {
           })
         ) : (
           // CLASS ROLE VIEW (Flat List of their specific batch)
-          <View className="space-y-3">
+          <View className="space-y-3.5 gap-1">
             {/* Explicitly typed student below */}
             {filteredStudents.map((student: any) => (
               <StudentCard key={student.uid} student={student} onView={handleViewClick} onEdit={handleEditClick} onDelete={handleDeleteClick} />

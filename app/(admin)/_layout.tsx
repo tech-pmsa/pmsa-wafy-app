@@ -1,6 +1,7 @@
 import React from 'react';
 import { Drawer } from 'expo-router/drawer';
 import CustomDrawerContent from '@/components/CustomDrawerContent';
+import { COLORS } from '@/constants/theme';
 
 export default function AdminLayout() {
   return (
@@ -8,11 +9,15 @@ export default function AdminLayout() {
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         headerShown: true, // This forces the Navbar to appear
-        headerTintColor: '#09090b',
-        headerStyle: { backgroundColor: '#ffffff' },
+        headerTintColor: COLORS.textPrimary, // #0F172A
+        headerStyle: { backgroundColor: COLORS.background }, // #F8FAFC to blend with screens
+        headerTitleStyle: {
+          fontFamily: 'MullerBold',
+          fontSize: 18,
+        },
         headerShadowVisible: false,
-        drawerActiveBackgroundColor: '#f4f4f5',
-        drawerActiveTintColor: '#09090b',
+        drawerActiveBackgroundColor: COLORS.primaryLight,
+        drawerActiveTintColor: COLORS.primary,
       }}
       backBehavior="history"
     >

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert as Na
 import { supabase } from '@/lib/supabaseClient';
 import { format } from 'date-fns';
 import { Search, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp, X } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 interface PeriodDetail { status: 'Present' | 'Absent'; reason?: string; description?: string; }
 interface TodaysAttendanceRecord { is_leave_day: boolean; [key: string]: any; }
@@ -10,6 +11,16 @@ interface StudentFullAttendance { uid: string; name: string; class_id: string; t
 
 const periods = Array.from({ length: 8 }, (_, i) => `period_${i + 1}`);
 const excusedAbsences = ['Cic Related', 'Wsf Related', 'Exam Related'];
+
+function cardShadow() {
+  return {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  };
+}
 
 export default function CollegeLiveAttendance() {
   const [allAttendance, setAllAttendance] = useState<StudentFullAttendance[]>([]);
@@ -82,23 +93,36 @@ export default function CollegeLiveAttendance() {
   };
 
   if (loading) {
-    return <ActivityIndicator size="large" color="#09090b" className="my-10" />;
+    return (
+      <View
+        className="bg-[#FFFFFF] p-8 rounded-[18px] items-center justify-center my-4 border border-[#E2E8F0]"
+        style={cardShadow()}
+      >
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text className="mt-4 text-[#475569] font-muller font-medium">Loading Live Attendance...</Text>
+      </View>
+    );
   }
 
   return (
     <View className="space-y-4">
-      <View className="flex-row items-center bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 mb-4">
-        <Search size={20} color="#a1a1aa" />
+      {/* Search Bar */}
+      <View
+        className="flex-row items-center bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5 mb-5"
+        style={cardShadow()}
+      >
+        <Search size={20} color="#94A3B8" />
         <TextInput
-          className="flex-1 ml-2 text-base text-zinc-900"
+          className="flex-1 ml-3 text-base font-muller text-[#0F172A]"
           placeholder="Search students across all classes..."
-          placeholderTextColor="#a1a1aa"
+          placeholderTextColor="#94A3B8"
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
       </View>
 
-      <View className="space-y-3 pb-6">
+      {/* Classes Accordion */}
+      <View className="space-y-4 pb-6 gap-2">
         {Object.entries(groupedAndFilteredStudents).map(([classId, students]) => {
           const isExpanded = !!expandedClasses[classId];
           const activeFilter = periodFilters[classId] || 'all';
@@ -111,38 +135,48 @@ export default function CollegeLiveAttendance() {
               });
 
           return (
-            <View key={classId} className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+            <View
+              key={classId}
+              className="bg-[#FFFFFF] rounded-[16px] border border-[#E2E8F0] overflow-hidden"
+              style={cardShadow()}
+            >
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => toggleClass(classId)}
                 className="p-4 flex-row items-center justify-between"
               >
                 <View className="flex-row items-center flex-1">
-                  <Text className="font-bold text-zinc-900 text-lg">{classId}</Text>
-                  <View className="ml-3 bg-zinc-100 px-2.5 py-1 rounded-full border border-zinc-200">
-                    <Text className="text-xs font-semibold text-zinc-700">{students.length} Students</Text>
+                  <Text className="font-muller-bold text-[#0F172A] tracking-tight text-[17px]">{classId}</Text>
+                  <View className="ml-3 bg-[#F1F5F9] px-3 py-1.5 rounded-[10px] border border-[#E2E8F0]">
+                    <Text className="text-xs font-muller-bold text-[#475569]">{students.length} Students</Text>
                   </View>
                 </View>
-                {isExpanded ? <ChevronUp size={24} color="#71717a" /> : <ChevronDown size={24} color="#71717a" />}
+                {isExpanded ? <ChevronUp size={24} color="#94A3B8" /> : <ChevronDown size={24} color="#94A3B8" />}
               </TouchableOpacity>
 
               {isExpanded && (
-                <View className="px-4 pb-4 border-t border-zinc-100 pt-4">
-                  {/* Period Filter Buttons */}
-                  <View className="flex-row flex-wrap gap-2 mb-4">
+                <View className="px-4 pb-4 border-t border-[#E2E8F0] pt-4">
+                  {/* Period Filter Tabs */}
+                  <View className="flex-row flex-wrap gap-2.5 mb-5">
                     <TouchableOpacity
                       onPress={() => setPeriodFilters(prev => ({ ...prev, [classId]: 'all' }))}
-                      className={`px-3 py-1.5 rounded-lg border ${activeFilter === 'all' ? 'bg-zinc-900 border-zinc-900' : 'bg-white border-zinc-300'}`}
+                      activeOpacity={0.7}
+                      className={`px-4 py-2 rounded-[12px] border ${
+                        activeFilter === 'all' ? 'bg-[#1E40AF] border-[#1E40AF]' : 'bg-[#FFFFFF] border-[#E2E8F0]'
+                      }`}
                     >
-                      <Text className={`font-semibold text-xs ${activeFilter === 'all' ? 'text-white' : 'text-zinc-700'}`}>All</Text>
+                      <Text className={`font-muller-bold text-xs ${activeFilter === 'all' ? 'text-white' : 'text-[#475569]'}`}>All</Text>
                     </TouchableOpacity>
                     {periods.map((period, i) => (
                       <TouchableOpacity
                         key={period}
                         onPress={() => setPeriodFilters(prev => ({ ...prev, [classId]: period }))}
-                        className={`px-3 py-1.5 rounded-lg border ${activeFilter === period ? 'bg-zinc-900 border-zinc-900' : 'bg-white border-zinc-300'}`}
+                        activeOpacity={0.7}
+                        className={`px-4 py-2 rounded-[12px] border ${
+                          activeFilter === period ? 'bg-[#1E40AF] border-[#1E40AF]' : 'bg-[#FFFFFF] border-[#E2E8F0]'
+                        }`}
                       >
-                        <Text className={`font-semibold text-xs ${activeFilter === period ? 'text-white' : 'text-zinc-700'}`}>P{i + 1}</Text>
+                        <Text className={`font-muller-bold text-xs ${activeFilter === period ? 'text-white' : 'text-[#475569]'}`}>P{i + 1}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -153,54 +187,81 @@ export default function CollegeLiveAttendance() {
                       const detailForFilter = activeFilter !== 'all' ? student.today_attendance?.[activeFilter] as PeriodDetail : null;
 
                       return (
-                        <View key={student.uid} className="bg-zinc-50 p-4 rounded-xl border border-zinc-200">
-                          <View className="flex-row justify-between items-center mb-3">
-                            <Text className="font-bold text-zinc-900">{student.name}</Text>
+                        <View key={student.uid} className="bg-[#F8FAFC] p-4 rounded-[14px] border border-[#E2E8F0]">
+                          <View className="flex-row justify-between items-center mb-3.5">
+                            <Text className="font-muller-bold text-[#0F172A] text-[15px]">{student.name}</Text>
                             {activeFilter !== 'all' && detailForFilter && (
-                              <Text className={`text-xs font-semibold ${excusedAbsences.includes(detailForFilter.reason || '') ? 'text-blue-600' : 'text-red-600'}`}>
-                                {detailForFilter.reason || 'Absent'}
-                              </Text>
+                              <View className={`px-2.5 py-1 rounded-[8px] ${
+                                excusedAbsences.includes(detailForFilter.reason || '')
+                                  ? 'bg-[#1E40AF]/10 border border-[#1E40AF]/20'
+                                  : 'bg-[#DC2626]/10 border border-[#DC2626]/20'
+                              }`}>
+                                <Text className={`text-[11px] font-muller-bold ${
+                                  excusedAbsences.includes(detailForFilter.reason || '') ? 'text-[#1E40AF]' : 'text-[#DC2626]'
+                                }`}>
+                                  {detailForFilter.reason || 'Absent'}
+                                </Text>
+                              </View>
                             )}
                           </View>
 
                           {activeFilter === 'all' ? (
                             student.today_attendance?.is_leave_day ? (
-                              <Text className="text-sm font-semibold text-blue-600">Leave Day</Text>
+                              <View className="bg-[#1E40AF]/10 self-start px-3 py-1.5 rounded-[10px] border border-[#1E40AF]/20">
+                                <Text className="text-sm font-muller-bold text-[#1E40AF]">Leave Day</Text>
+                              </View>
                             ) : student.today_attendance ? (
-                              <View className="flex-row flex-wrap gap-1.5">
+                              <View className="flex-row flex-wrap gap-1.5 justify-between">
                                 {periods.map((period, i) => {
                                   const pDetail = student.today_attendance?.[period] as PeriodDetail;
                                   const isPresent = pDetail?.status === 'Present';
                                   const isExcused = excusedAbsences.includes(pDetail?.reason || '');
 
-                                  let IconComp = XCircle; let color = "#dc2626"; let bg = "bg-red-50"; let border = "border-red-200";
-                                  if (isPresent) { IconComp = CheckCircle2; color = "#16a34a"; bg = "bg-green-50"; border = "border-green-200"; }
-                                  else if (isExcused) { IconComp = AlertCircle; color = "#3b82f6"; bg = "bg-blue-50"; border = "border-blue-200"; }
+                                  let IconComp = XCircle; let color = COLORS.danger;
+                                  let bg = "bg-[#DC2626]/10"; let border = "border-[#DC2626]/20";
+
+                                  if (isPresent) {
+                                    IconComp = CheckCircle2; color = COLORS.success;
+                                    bg = "bg-[#16A34A]/10"; border = "border-[#16A34A]/20";
+                                  } else if (isExcused) {
+                                    IconComp = AlertCircle; color = COLORS.primary;
+                                    bg = "bg-[#1E40AF]/10"; border = "border-[#1E40AF]/20";
+                                  }
 
                                   return (
                                     <TouchableOpacity
                                       key={period}
                                       disabled={isPresent}
-                                      onPress={() => setSelectedAbsence({ name: student.name, period: i+1, reason: pDetail?.reason || 'Absent', desc: pDetail?.description || 'No description provided.' })}
-                                      className={`w-[23%] items-center justify-center py-2 rounded-lg border ${bg} ${border}`}
+                                      activeOpacity={0.6}
+                                      onPress={() => setSelectedAbsence({
+                                        name: student.name,
+                                        period: i+1,
+                                        reason: pDetail?.reason || 'Absent',
+                                        desc: pDetail?.description || 'No description provided.'
+                                      })}
+                                      className={`w-[23%] items-center justify-center py-2.5 rounded-[10px] border ${bg} ${border} mb-1.5`}
                                     >
-                                      <Text className="text-[10px] font-bold text-zinc-600 mb-1">P{i + 1}</Text>
+                                      <Text className="text-[11px] font-muller-bold text-[#475569] mb-1.5">P{i + 1}</Text>
                                       <IconComp size={16} color={color} />
                                     </TouchableOpacity>
                                   );
                                 })}
                               </View>
                             ) : (
-                              <Text className="text-sm text-zinc-400 italic">Pending...</Text>
+                              <Text className="text-sm font-muller text-[#94A3B8] italic">Pending submission...</Text>
                             )
                           ) : (
-                            <Text className="text-sm text-zinc-500 italic">{detailForFilter?.description || "No description provided."}</Text>
+                            <Text className="text-[13px] font-muller text-[#475569] leading-relaxed">
+                              {detailForFilter?.description || "No description provided."}
+                            </Text>
                           )}
                         </View>
                       );
                     })}
                     {studentsToDisplay.length === 0 && (
-                      <Text className="text-center text-zinc-500 py-4">No absentees for this period.</Text>
+                      <View className="bg-[#F8FAFC] p-5 rounded-[14px] border border-[#E2E8F0] items-center">
+                        <Text className="text-[#475569] font-muller">No absentees for this period.</Text>
+                      </View>
                     )}
                   </View>
                 </View>
@@ -212,18 +273,44 @@ export default function CollegeLiveAttendance() {
 
       {/* Absence Details Modal */}
       <Modal visible={!!selectedAbsence} transparent animationType="fade" onRequestClose={() => setSelectedAbsence(null)}>
-        <View className="flex-1 bg-black/50 justify-center items-center p-6">
-          <View className="bg-white rounded-3xl w-full p-6 shadow-xl">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-bold text-zinc-900">{selectedAbsence?.reason}</Text>
-              <TouchableOpacity onPress={() => setSelectedAbsence(null)}>
-                <X size={24} color="#71717a" />
+        <View className="flex-1 bg-black/40 justify-center items-center p-6">
+          <View
+            className="bg-[#FFFFFF] rounded-[20px] w-full p-6 border border-[#E2E8F0]"
+            style={cardShadow()}
+          >
+            <View className="flex-row justify-between items-center mb-5">
+              <Text className="text-xl font-muller-bold tracking-tight text-[#0F172A]">
+                {selectedAbsence?.reason}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSelectedAbsence(null)}
+                className="bg-[#F1F5F9] p-2 rounded-full"
+              >
+                <X size={20} color="#475569" />
               </TouchableOpacity>
             </View>
-            <Text className="text-zinc-700 mb-2 font-medium">
-              {selectedAbsence?.name} (Period {selectedAbsence?.period})
+
+            <View className="bg-[#F8FAFC] p-4 rounded-[14px] border border-[#E2E8F0] mb-5">
+              <Text className="text-[#0F172A] font-muller-bold mb-1.5 text-base">
+                {selectedAbsence?.name}
+              </Text>
+              <Text className="text-[#475569] font-muller text-sm">
+                Missed: <Text className="font-muller-bold">Period {selectedAbsence?.period}</Text>
+              </Text>
+            </View>
+
+            <Text className="text-[#0F172A] font-muller-bold mb-2">Description / Note</Text>
+            <Text className="text-[#475569] font-muller leading-relaxed">
+              {selectedAbsence?.desc}
             </Text>
-            <Text className="text-zinc-500">{selectedAbsence?.desc}</Text>
+
+            <TouchableOpacity
+              onPress={() => setSelectedAbsence(null)}
+              activeOpacity={0.8}
+              className="mt-8 bg-[#1E40AF] py-3.5 rounded-[14px] items-center"
+            >
+              <Text className="text-white font-muller-bold text-[15px]">Close Details</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

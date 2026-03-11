@@ -32,6 +32,7 @@ import {
   PlusCircle,
   Trash2,
 } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 import { ProfileInfoLine } from './profile/ProfileInfoLine';
 import { FamilyDataTab } from './profile/FamilyDataTab';
@@ -40,10 +41,10 @@ import { MarkEditorModal } from './profile/MarkEditorModal';
 
 function cardShadow() {
   return {
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   };
 }
@@ -59,11 +60,18 @@ function TabButton({
 }) {
   return (
     <TouchableOpacity
+      activeOpacity={0.7}
       onPress={onPress}
-      className={active ? 'flex-1 py-3 rounded-lg items-center bg-white' : 'flex-1 py-3 rounded-lg items-center'}
+      className={`flex-1 py-3 rounded-[14px] items-center justify-center ${
+        active ? 'bg-[#FFFFFF] border border-[#E2E8F0]' : 'border border-transparent'
+      }`}
       style={active ? cardShadow() : undefined}
     >
-      <Text className={active ? 'font-semibold text-zinc-900' : 'font-semibold text-zinc-500'}>
+      <Text
+        className={`font-muller-bold tracking-tight text-[15px] ${
+          active ? 'text-[#1E40AF]' : 'text-[#475569]'
+        }`}
+      >
         {label}
       </Text>
     </TouchableOpacity>
@@ -84,12 +92,15 @@ function InputField({
   keyboardType?: 'default' | 'numeric' | 'phone-pad' | 'email-address';
 }) {
   return (
-    <View className="mb-4">
-      <Text className="text-sm font-medium text-zinc-700 mb-1">{label}</Text>
+    <View className="mb-5">
+      <Text className="text-[13px] font-muller-bold text-[#475569] mb-1.5 ml-1">{label}</Text>
       <TextInput
-        className={`bg-white border border-zinc-200 rounded-xl p-4 text-base ${multiline ? 'h-24' : ''}`}
+        className={`bg-[#F8FAFC] border border-[#E2E8F0] font-muller text-[#0F172A] rounded-[14px] p-4 text-[15px] ${
+          multiline ? 'h-28' : ''
+        }`}
         value={value}
         onChangeText={onChangeText}
+        placeholderTextColor="#94A3B8"
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}
         keyboardType={keyboardType}
@@ -133,20 +144,21 @@ function SiblingCard({
 
   return (
     <View
-      className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
       style={cardShadow()}
     >
-      <View className="flex-row justify-between items-center mb-4">
-        <Text className="text-lg font-bold text-zinc-900 capitalize">{title}</Text>
+      <View className="flex-row justify-between items-center mb-5">
+        <Text className="text-lg font-muller-bold text-[#0F172A] capitalize tracking-tight">{title}</Text>
 
         <TouchableOpacity
+          activeOpacity={0.7}
           onPress={addSibling}
-          className="bg-zinc-900 px-3 py-2 rounded-xl flex-row items-center"
+          className="bg-[#1E40AF]/10 px-3.5 py-2.5 rounded-[12px] border border-[#1E40AF]/20 flex-row items-center"
         >
           <View style={{ marginRight: 6 }}>
-            <PlusCircle size={16} color="white" />
+            <PlusCircle size={16} color={COLORS.primary} />
           </View>
-          <Text className="text-white font-bold text-xs">Add</Text>
+          <Text className="text-[#1E40AF] font-muller-bold text-xs uppercase tracking-wider">Add</Text>
         </TouchableOpacity>
       </View>
 
@@ -154,18 +166,19 @@ function SiblingCard({
         siblings.map((sib: any, index: number) => (
           <View
             key={index}
-            className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200 mb-3"
+            className="bg-[#F8FAFC] p-4 rounded-[16px] border border-[#E2E8F0] mb-4"
           >
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="font-bold text-zinc-900">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="font-muller-bold text-[#0F172A] text-[15px]">
                 {title === 'brothers' ? 'Brother' : 'Sister'} {index + 1}
               </Text>
 
               <TouchableOpacity
+                activeOpacity={0.7}
                 onPress={() => removeSibling(index)}
-                className="p-2 bg-red-50 rounded-lg"
+                className="p-2.5 bg-[#DC2626]/10 rounded-[10px]"
               >
-                <Trash2 size={18} color="#ef4444" />
+                <Trash2 size={18} color={COLORS.danger} />
               </TouchableOpacity>
             </View>
 
@@ -213,7 +226,7 @@ function SiblingCard({
           </View>
         ))
       ) : (
-        <Text className="text-sm text-zinc-500">No {title} added.</Text>
+        <Text className="text-[13px] font-muller text-[#94A3B8]">No {title} added.</Text>
       )}
     </View>
   );
@@ -398,52 +411,57 @@ export default function ProfileSection() {
   };
 
   if (loading || !details) {
-    return <ActivityIndicator size="large" color="#09090b" style={{ marginVertical: 40 }} />;
+    return (
+      <View className="py-12 items-center justify-center">
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
   }
 
   return (
     <View className="pb-10">
       <View
-        className="bg-white rounded-3xl p-6 border border-zinc-200 items-center mb-6"
+        className="bg-[#FFFFFF] rounded-[18px] p-6 border border-[#E2E8F0] items-center mb-6"
         style={cardShadow()}
       >
         <TouchableOpacity
+          activeOpacity={0.8}
           onPress={handleAvatarUpdate}
           disabled={isSaving}
           className="relative mb-4"
         >
           <View
-            className="h-32 w-32 rounded-full border-4 border-zinc-50 items-center justify-center overflow-hidden bg-zinc-100"
+            className="h-32 w-32 rounded-full border-4 border-[#FFFFFF] overflow-hidden bg-[#F1F5F9] justify-center items-center"
             style={cardShadow()}
           >
             {personalForm.img_url ? (
               <Image source={{ uri: personalForm.img_url }} className="h-full w-full" />
             ) : (
-              <User size={48} color="#a1a1aa" />
+              <User size={48} color="#94A3B8" />
             )}
           </View>
 
-          <View className="absolute bottom-0 right-0 bg-blue-600 p-2.5 rounded-full border-2 border-white">
+          <View className="absolute bottom-0 right-0 bg-[#1E40AF] p-3.5 rounded-full border-2 border-[#FFFFFF] shadow-sm">
             {isSaving ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Camera size={16} color="white" />
+              <Camera size={18} color="white" />
             )}
           </View>
         </TouchableOpacity>
 
-        <Text className="text-2xl font-bold text-zinc-900">{details.name}</Text>
+        <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight">{details.name}</Text>
 
-        <View className="bg-zinc-100 px-3 py-1 rounded-full mt-2">
-          <Text className="text-xs font-bold text-zinc-600 uppercase tracking-wider">
+        <View className="bg-[#1E40AF]/10 px-4 py-1.5 rounded-[12px] mt-2.5 border border-[#1E40AF]/20">
+          <Text className="text-[11px] font-muller-bold text-[#1E40AF] uppercase tracking-wider">
             {details.role}
           </Text>
         </View>
 
-        <Text className="text-sm text-zinc-500 mt-2">{details.email}</Text>
+        <Text className="text-[14px] font-muller text-[#475569] mt-2.5">{details.email}</Text>
       </View>
 
-      <View className="flex-row bg-zinc-200 p-1 rounded-xl mb-6">
+      <View className="flex-row bg-[#E2E8F0]/60 p-1.5 rounded-[16px] mb-6">
         <TabButton
           label="Personal"
           active={activeTab === 'personal'}
@@ -467,11 +485,11 @@ export default function ProfileSection() {
       </View>
 
       <View
-        className="bg-white rounded-3xl p-5 border border-zinc-200"
+        className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0]"
         style={cardShadow()}
       >
         <View className="flex-row justify-between items-center mb-6">
-          <Text className="text-xl font-bold text-zinc-900">
+          <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">
             {activeTab === 'personal'
               ? 'Personal Details'
               : activeTab === 'academics'
@@ -481,10 +499,11 @@ export default function ProfileSection() {
 
           {(activeTab === 'personal' || (isStudent && activeTab === 'family')) && (
             <TouchableOpacity
+              activeOpacity={0.7}
               onPress={() => openEditModal(activeTab === 'family' ? 'family' : 'personal')}
-              className="bg-zinc-100 p-2.5 rounded-full"
+              className="bg-[#F1F5F9] p-3 rounded-full"
             >
-              <Pencil size={18} color="#09090b" />
+              <Pencil size={18} color="#0F172A" />
             </TouchableOpacity>
           )}
         </View>
@@ -534,16 +553,23 @@ export default function ProfileSection() {
         transparent={false}
         onRequestClose={() => setEditOpen(false)}
       >
-        <View className="flex-1 bg-zinc-100 pt-14 px-6">
+        <View className="flex-1 bg-[#F8FAFC] pt-14 px-5">
           <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-2xl font-bold text-zinc-900">Edit Profile</Text>
-            <TouchableOpacity onPress={() => setEditOpen(false)}>
-              <X size={24} color="#09090b" />
+            <View>
+              <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight">Edit Profile</Text>
+              <Text className="text-[#475569] font-muller text-sm mt-0.5">Update your details</Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setEditOpen(false)}
+              className="bg-[#E2E8F0]/60 p-2.5 rounded-full"
+            >
+              <X size={20} color="#0F172A" />
             </TouchableOpacity>
           </View>
 
           {isStudent && (
-            <View className="flex-row bg-zinc-200 p-1 rounded-xl mb-4">
+            <View className="flex-row bg-[#E2E8F0]/60 p-1.5 rounded-[16px] mb-5">
               <TabButton
                 label="Personal"
                 active={editModalTab === 'personal'}
@@ -562,7 +588,7 @@ export default function ProfileSection() {
             contentContainerStyle={{ paddingBottom: 40 }}
           >
             {(!isStudent || editModalTab === 'personal') && (
-              <View>
+              <View className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] shadow-sm mb-5 mt-2">
                 <InputField
                   label="Full Name"
                   value={personalForm.name || ''}
@@ -609,12 +635,12 @@ export default function ProfileSection() {
             )}
 
             {isStudent && editModalTab === 'family' && (
-              <View>
+              <View className="mt-2">
                 <View
-                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
                   style={cardShadow()}
                 >
-                  <Text className="text-lg font-bold text-zinc-900 mb-4">Household</Text>
+                  <Text className="text-lg font-muller-bold text-[#0F172A] tracking-tight mb-5">Household</Text>
 
                   <InputField
                     label="Total Family Members"
@@ -635,26 +661,27 @@ export default function ProfileSection() {
                   />
 
                   <View className="mb-2">
-                    <Text className="text-sm font-medium text-zinc-700 mb-2">
+                    <Text className="text-[13px] font-muller-bold text-[#475569] mb-2.5 ml-1">
                       Are there chronically ill members in the house?
                     </Text>
-                    <View className="flex-row items-center justify-between bg-white border border-zinc-200 rounded-xl p-4">
-                      <Text className="text-base text-zinc-900">
+                    <View className="flex-row items-center justify-between bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] p-4">
+                      <Text className="text-[15px] font-muller-bold text-[#0F172A]">
                         {familyData.chronically_ill_members ? 'Yes' : 'No'}
                       </Text>
                       <Switch
                         value={!!familyData.chronically_ill_members}
                         onValueChange={(v) => handleFamilyChange('chronically_ill_members', v)}
+                        trackColor={{ false: '#E2E8F0', true: COLORS.primary }}
                       />
                     </View>
                   </View>
                 </View>
 
                 <View
-                  className="bg-white rounded-3xl p-4 border border-zinc-200 mb-4"
+                  className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
                   style={cardShadow()}
                 >
-                  <Text className="text-lg font-bold text-zinc-900 mb-4">Parent Details</Text>
+                  <Text className="text-lg font-muller-bold text-[#0F172A] tracking-tight mb-5">Parent Details</Text>
 
                   <InputField
                     label="Father's Name"
@@ -710,19 +737,24 @@ export default function ProfileSection() {
               </View>
             )}
 
-            <TouchableOpacity
-              onPress={handleSaveProfile}
-              disabled={isSaving}
-              className="w-full py-4 rounded-xl flex-row justify-center items-center bg-zinc-900 mt-4"
-            >
-              {isSaving ? (
-                <ActivityIndicator color="white" style={{ marginRight: 8 }} />
-              ) : (
-                <Save size={20} color="white" />
-              )}
-              <Text className="text-white font-bold text-lg ml-2">Save Changes</Text>
-            </TouchableOpacity>
           </ScrollView>
+            <View className="py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+              <TouchableOpacity
+                onPress={handleSaveProfile}
+                disabled={isSaving}
+                activeOpacity={0.8}
+                className={`w-full py-4 rounded-[14px] flex-row justify-center items-center shadow-sm ${
+                  isSaving ? 'bg-[#1E40AF]/60' : 'bg-[#1E40AF]'
+                }`}
+              >
+                {isSaving ? (
+                  <ActivityIndicator color="white" style={{ marginRight: 8 }} />
+                ) : (
+                  <Save size={18} color="white" />
+                )}
+                <Text className="text-white font-muller-bold text-[16px] tracking-wide ml-2">Save Changes</Text>
+              </TouchableOpacity>
+            </View>
         </View>
       </Modal>
 

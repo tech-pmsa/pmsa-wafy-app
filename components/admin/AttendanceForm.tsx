@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
 import { useUserData } from '@/hooks/useUserData';
 import { CalendarIcon, Check, X, UserCheck, UserX, Lock, Save, Search, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 // Type Definitions
 interface Student { uid: string; name: string; }
@@ -17,6 +18,16 @@ interface AttendanceRecord { [period: string]: PeriodDetail }
 const periods = Array.from({ length: 8 }, (_, i) => `period_${i + 1}`);
 const absenceReasons = ['Home', 'Medical', 'Cic Related', 'Wsf Related', 'Exam Related'];
 const excusedAbsences = ['Cic Related', 'Wsf Related', 'Exam Related'];
+
+function cardShadow() {
+  return {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  };
+}
 
 export default function AttendanceForm() {
   const { details, loading: userLoading } = useUserData();
@@ -169,35 +180,42 @@ export default function AttendanceForm() {
   };
 
   if (userLoading || loading) {
-    return <ActivityIndicator size="large" color="#09090b" className="my-10" />;
+    return <ActivityIndicator size="large" color={COLORS.primary} className="my-10" />;
   }
 
   return (
-    <View className="space-y-6">
+    <View className="space-y-6 gap-3">
       {/* --- Controls Panel --- */}
-      <View className="bg-white rounded-3xl shadow-sm border border-zinc-200 p-5">
-        <Text className="font-bold text-zinc-900 text-lg mb-4">Controls</Text>
+      <View
+        className="bg-[#FFFFFF] rounded-[18px] border border-[#E2E8F0] p-5"
+        style={cardShadow()}
+      >
+        <Text className="font-muller-bold text-[#0F172A] tracking-tight text-lg mb-4">Controls</Text>
 
-        <View className="flex-row space-x-4 mb-4">
+        <View className="flex-row space-x-4 mb-5">
           <View className="flex-1">
-            <Text className="text-xs font-medium text-zinc-500 mb-1">Select Date</Text>
+            <Text className="text-xs font-muller-bold text-[#475569] mb-1.5">Select Date</Text>
             <TouchableOpacity
               onPress={() => setShowDatePicker(true)}
-              className="flex-row items-center border border-zinc-200 bg-zinc-50 rounded-xl px-3 py-3"
+              activeOpacity={0.7}
+              className="flex-row items-center border border-[#E2E8F0] bg-[#F8FAFC] rounded-[14px] px-3.5 py-3.5"
             >
-              <CalendarIcon size={16} color="#71717a" />
-              <Text className="ml-2 text-zinc-900">{format(selectedDate, 'PPP')}</Text>
+              <CalendarIcon size={18} color="#475569" />
+              <Text className="ml-2.5 font-muller text-[#0F172A]">{format(selectedDate, 'PPP')}</Text>
             </TouchableOpacity>
           </View>
 
           <View className="flex-1 ml-2">
-            <Text className="text-xs font-medium text-zinc-500 mb-1">Day Type</Text>
+            <Text className="text-xs font-muller-bold text-[#475569] mb-1.5">Day Type</Text>
             <TouchableOpacity
               onPress={() => !isLocked && setIsLeaveDay(!isLeaveDay)}
-              className={`border rounded-xl px-3 py-3 ${isLeaveDay ? 'border-blue-200 bg-blue-50' : 'border-zinc-200 bg-zinc-50'}`}
+              activeOpacity={0.7}
+              className={`border rounded-[14px] px-3.5 py-3.5 ${
+                isLeaveDay ? 'border-[#1E40AF]/30 bg-[#1E40AF]/10' : 'border-[#E2E8F0] bg-[#F8FAFC]'
+              }`}
               disabled={isLocked}
             >
-              <Text className={`font-medium ${isLeaveDay ? 'text-blue-700' : 'text-zinc-900'}`}>
+              <Text className={`font-muller-bold ${isLeaveDay ? 'text-[#1E40AF]' : 'text-[#0F172A]'}`}>
                 {isLeaveDay ? 'Leave Day' : 'Working Day'}
               </Text>
             </TouchableOpacity>
@@ -209,119 +227,136 @@ export default function AttendanceForm() {
         )}
 
         {/* Stats Row */}
-        <View className="flex-row gap-2 mt-2">
-          <View className="flex-1 bg-green-50 border border-green-200 rounded-2xl p-4 items-center flex-row justify-center">
-            <UserCheck size={24} color="#16a34a" />
+        <View className="flex-row gap-2 mt-1">
+          <View className="flex-1 bg-[#16A34A]/10 border border-[#16A34A]/20 rounded-[16px] p-4 items-center flex-row justify-center">
+            <UserCheck size={26} color={COLORS.success} />
             <View className="ml-3">
-              <Text className="text-2xl font-bold text-green-700">{attendanceSummary.present}</Text>
-              <Text className="text-xs font-medium text-green-600">Present</Text>
+              <Text className="text-2xl font-muller-bold text-[#16A34A]">{attendanceSummary.present}</Text>
+              <Text className="text-xs font-muller-bold text-[#16A34A]">Present</Text>
             </View>
           </View>
-          <View className="flex-1 bg-red-50 border border-red-200 rounded-2xl p-4 items-center flex-row justify-center">
-            <UserX size={24} color="#dc2626" />
+          <View className="flex-1 bg-[#DC2626]/10 border border-[#DC2626]/20 rounded-[16px] p-4 items-center flex-row justify-center">
+            <UserX size={26} color={COLORS.danger} />
             <View className="ml-3">
-              <Text className="text-2xl font-bold text-red-700">{attendanceSummary.absent}</Text>
-              <Text className="text-xs font-medium text-red-600">Absent</Text>
+              <Text className="text-2xl font-muller-bold text-[#DC2626]">{attendanceSummary.absent}</Text>
+              <Text className="text-xs font-muller-bold text-[#DC2626]">Absent</Text>
             </View>
           </View>
         </View>
       </View>
 
       {isLocked && (
-        <View className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex-row items-center">
-          <Lock size={20} color="#2563eb" />
-          <Text className="ml-2 text-blue-700 flex-1">Attendance for this date has been finalized and locked.</Text>
+        <View className="bg-[#1E40AF]/10 border border-[#1E40AF]/20 p-4 rounded-[14px] flex-row items-center">
+          <Lock size={20} color={COLORS.primary} />
+          <Text className="ml-3 text-[#1E40AF] font-muller flex-1">
+            Attendance for this date has been finalized and locked.
+          </Text>
         </View>
       )}
 
       {/* --- Search --- */}
-      <View className="flex-row items-center bg-white border border-zinc-200 rounded-xl px-4 py-3 shadow-sm">
-        <Search size={20} color="#a1a1aa" />
+      <View
+        className="flex-row items-center bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5"
+        style={cardShadow()}
+      >
+        <Search size={20} color="#94A3B8" />
         <TextInput
-          className="flex-1 ml-2 text-base text-zinc-900"
+          className="flex-1 ml-3 text-base font-muller text-[#0F172A]"
           placeholder="Search for a student..."
-          placeholderTextColor="#a1a1aa"
+          placeholderTextColor="#94A3B8"
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
       </View>
 
       {/* --- Student List (Custom Accordion) --- */}
-      <View className={`space-y-3 pb-4 ${isLocked || isLeaveDay ? 'opacity-60' : ''}`}>
+      <View className={`space-y-3 pb-4 gap-1 ${isLocked || isLeaveDay ? 'opacity-70' : ''}`}>
         {filteredStudents.map(student => {
           const isExpanded = expandedId === student.uid;
           const studentAttendance = attendance[student.uid];
 
           return (
-            <View key={student.uid} className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+            <View
+              key={student.uid}
+              className="bg-[#FFFFFF] rounded-[16px] border border-[#E2E8F0] overflow-hidden"
+              style={cardShadow()}
+            >
               <TouchableOpacity
                 activeOpacity={isLocked || isLeaveDay ? 1 : 0.7}
                 onPress={() => !(isLocked || isLeaveDay) && setExpandedId(isExpanded ? null : student.uid)}
                 className="p-4"
               >
                 <View className="flex-row justify-between items-center mb-3">
-                  <Text className="font-bold text-zinc-900 text-lg flex-1">{student.name}</Text>
-                  {isExpanded ? <ChevronUp size={24} color="#71717a" /> : <ChevronDown size={24} color="#71717a" />}
+                  <Text className="font-muller-bold text-[#0F172A] text-[17px] tracking-tight flex-1">
+                    {student.name}
+                  </Text>
+                  {isExpanded ? <ChevronUp size={24} color="#94A3B8" /> : <ChevronDown size={24} color="#94A3B8" />}
                 </View>
 
                 {/* Quick Action Buttons visible even when collapsed */}
-                <View className="flex-row gap-2">
+                <View className="flex-row gap-2.5">
                   <TouchableOpacity
                     onPress={(e) => { e.stopPropagation(); markAll(student.uid, true); }}
                     disabled={isLocked || isLeaveDay}
-                    className="flex-1 bg-zinc-100 py-2 rounded-lg flex-row justify-center items-center border border-zinc-200"
+                    activeOpacity={0.7}
+                    className="flex-1 bg-[#F8FAFC] py-2.5 rounded-[12px] flex-row justify-center items-center border border-[#E2E8F0]"
                   >
-                    <Check size={16} color="#09090b" />
-                    <Text className="ml-1 text-xs font-semibold text-zinc-900">All Present</Text>
+                    <Check size={16} color="#0F172A" />
+                    <Text className="ml-1.5 text-xs font-muller-bold text-[#0F172A]">All Present</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={(e) => { e.stopPropagation(); markAll(student.uid, false); }}
                     disabled={isLocked || isLeaveDay}
-                    className="flex-1 bg-zinc-100 py-2 rounded-lg flex-row justify-center items-center border border-zinc-200"
+                    activeOpacity={0.7}
+                    className="flex-1 bg-[#F8FAFC] py-2.5 rounded-[12px] flex-row justify-center items-center border border-[#E2E8F0]"
                   >
-                    <X size={16} color="#09090b" />
-                    <Text className="ml-1 text-xs font-semibold text-zinc-900">All Absent</Text>
+                    <X size={16} color="#0F172A" />
+                    <Text className="ml-1.5 text-xs font-muller-bold text-[#0F172A]">All Absent</Text>
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
 
               {isExpanded && (
-                <View className="px-4 pb-4 border-t border-zinc-100 pt-4">
-                  <View className="flex-row flex-wrap justify-between gap-y-2">
+                <View className="px-4 pb-4 border-t border-[#E2E8F0] pt-4">
+                  <View className="flex-row flex-wrap justify-between gap-y-2.5">
                     {periods.map((period, i) => {
                       const periodData = studentAttendance?.[period];
                       const isPresent = periodData?.status === 'Present';
                       const isExcused = !isPresent && excusedAbsences.includes(periodData?.reason || '');
 
-                      let bg = "bg-red-50"; let border = "border-red-200"; let text = "text-red-700";
-                      if (isPresent) { bg = "bg-green-600"; border = "border-green-600"; text = "text-white"; }
-                      else if (isExcused) { bg = "bg-white"; border = "border-blue-500"; text = "text-blue-600"; }
+                      let bg = "bg-[#DC2626]/10"; let border = "border-[#DC2626]/20"; let text = "text-[#DC2626]";
+                      if (isPresent) {
+                        bg = "bg-[#16A34A]"; border = "border-[#16A34A]"; text = "text-white";
+                      } else if (isExcused) {
+                        bg = "bg-[#FFFFFF]"; border = "border-[#1E40AF]"; text = "text-[#1E40AF]";
+                      }
 
                       return (
                         <TouchableOpacity
                           key={period}
                           disabled={isLocked || isLeaveDay}
                           onPress={() => handlePeriodClick(student.uid, period)}
-                          className={`w-[23%] py-2.5 rounded-lg border items-center justify-center ${bg} ${border}`}
+                          activeOpacity={0.7}
+                          className={`w-[23%] py-2.5 rounded-[10px] border items-center justify-center ${bg} ${border}`}
                         >
-                          <Text className={`font-bold text-xs ${text}`}>P{i + 1}</Text>
+                          <Text className={`font-muller-bold text-xs ${text}`}>P{i + 1}</Text>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
 
                   {/* Show absence reasons if any period is absent */}
-                  <View className="mt-3 bg-red-50 rounded-lg p-3">
+                  <View className="mt-4 bg-[#DC2626]/10 rounded-[12px] p-3 border border-[#DC2626]/20">
                     {periods.filter(p => studentAttendance?.[p]?.status === 'Absent').map((p, i) => {
                        const detail = studentAttendance[p];
                        return (
-                         <Text key={p} className="text-xs text-red-700 font-medium mb-1">
+                         <Text key={p} className="text-xs text-[#DC2626] font-muller-bold mb-1.5">
                            • P{i+1}: {detail.reason} {detail.description ? `(${detail.description})` : ''}
                          </Text>
                        );
                     })}
                     {periods.filter(p => studentAttendance?.[p]?.status === 'Absent').length === 0 && (
-                      <Text className="text-xs text-green-700 font-medium">100% Present Today.</Text>
+                      <Text className="text-xs text-[#16A34A] font-muller-bold">100% Present Today.</Text>
                     )}
                   </View>
                 </View>
@@ -332,54 +367,82 @@ export default function AttendanceForm() {
       </View>
 
       {/* --- Submit Buttons --- */}
-      <View className="flex-row gap-3 pt-4">
+      <View className="flex-row gap-3 pt-2 pb-2">
         <TouchableOpacity
           onPress={() => handleSubmission(false)}
           disabled={isLocked || isUpdating || isLocking}
-          className={`flex-1 py-4 rounded-xl flex-row justify-center items-center ${isLocked ? 'bg-zinc-300' : 'bg-white border-2 border-zinc-900'}`}
+          activeOpacity={0.8}
+          className={`flex-1 py-4 rounded-[14px] flex-row justify-center items-center ${
+            isLocked || isUpdating || isLocking
+              ? 'bg-[#E2E8F0] border-2 border-transparent opacity-60'
+              : 'bg-[#FFFFFF] border-2 border-[#1E40AF]'
+          }`}
         >
-          {isUpdating ? <ActivityIndicator size="small" color="#09090b" className="mr-2" /> : <Save size={18} color="#09090b" className="mr-2" />}
-          <Text className={`font-bold ${isLocked ? 'text-zinc-500' : 'text-zinc-900'}`}>Update</Text>
+          {isUpdating ? (
+            <ActivityIndicator size="small" color={COLORS.primary} className="mr-2.5" />
+          ) : (
+            <Save size={18} color={isLocked ? '#94A3B8' : COLORS.primary} className="mr-2.5" />
+          )}
+          <Text className={`font-muller-bold tracking-wide ${isLocked ? 'text-[#94A3B8]' : 'text-[#1E40AF]'}`}>
+            Update
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => handleSubmission(true)}
           disabled={isLocked || isUpdating || isLocking}
-          className={`flex-1 py-4 rounded-xl flex-row justify-center items-center ${isLocked ? 'bg-zinc-300' : 'bg-zinc-900'}`}
+          activeOpacity={0.8}
+          className={`flex-1 py-4 rounded-[14px] flex-row justify-center items-center ${
+            isLocked || isUpdating || isLocking ? 'bg-[#94A3B8] opacity-60' : 'bg-[#1E40AF]'
+          }`}
         >
-          {isLocking ? <ActivityIndicator size="small" color="white" className="mr-2" /> : <Lock size={18} color="white" className="mr-2" />}
-          <Text className={`font-bold ${isLocked ? 'text-zinc-500' : 'text-white'}`}>Lock & Submit</Text>
+          {isLocking ? (
+            <ActivityIndicator size="small" color="white" className="mr-2.5" />
+          ) : (
+            <Lock size={18} color="white" className="mr-2.5" />
+          )}
+          <Text className={`font-muller-bold tracking-wide ${isLocked ? 'text-[#E2E8F0]' : 'text-white'}`}>
+            Lock & Submit
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* --- Reason Modal --- */}
       <Modal visible={modalState.isOpen} transparent animationType="slide">
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6 shadow-xl pb-10">
+        <View className="flex-1 bg-black/40 justify-end">
+          <View className="bg-[#FFFFFF] rounded-t-[24px] p-6 shadow-xl pb-10 border-t border-[#E2E8F0]">
             <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-xl font-bold text-zinc-900">Mark Absent</Text>
-              <TouchableOpacity onPress={() => setModalState({ isOpen: false, studentUid: null, period: null })}>
-                <X size={24} color="#71717a" />
+              <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">Mark Absent</Text>
+              <TouchableOpacity
+                onPress={() => setModalState({ isOpen: false, studentUid: null, period: null })}
+                className="bg-[#F1F5F9] p-2 rounded-full"
+              >
+                <X size={20} color="#475569" />
               </TouchableOpacity>
             </View>
 
-            <Text className="text-sm font-medium text-zinc-500 mb-2">Reason for Absence</Text>
-            <View className="flex-row flex-wrap gap-2 mb-6">
+            <Text className="text-sm font-muller-bold text-[#475569] mb-3">Reason for Absence</Text>
+            <View className="flex-row flex-wrap gap-2.5 mb-6">
               {absenceReasons.map(r => (
                 <TouchableOpacity
                   key={r} onPress={() => setReasonDraft(r as any)}
-                  className={`px-4 py-2 rounded-full border ${reasonDraft === r ? 'bg-zinc-900 border-zinc-900' : 'bg-white border-zinc-300'}`}
+                  activeOpacity={0.7}
+                  className={`px-4 py-2.5 rounded-full border ${
+                    reasonDraft === r ? 'bg-[#1E40AF] border-[#1E40AF]' : 'bg-[#FFFFFF] border-[#E2E8F0]'
+                  }`}
                 >
-                  <Text className={`font-semibold text-sm ${reasonDraft === r ? 'text-white' : 'text-zinc-700'}`}>{r}</Text>
+                  <Text className={`font-muller-bold text-sm ${reasonDraft === r ? 'text-white' : 'text-[#475569]'}`}>
+                    {r}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text className="text-sm font-medium text-zinc-500 mb-2">Description (Optional)</Text>
+            <Text className="text-sm font-muller-bold text-[#475569] mb-3">Description (Optional)</Text>
             <TextInput
-              className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 text-base mb-6 h-24"
+              className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] p-4 text-base font-muller text-[#0F172A] mb-8 h-24"
               placeholder="e.g., Attending family function"
-              placeholderTextColor="#a1a1aa"
+              placeholderTextColor="#94A3B8"
               multiline
               textAlignVertical="top"
               value={descDraft}
@@ -388,9 +451,10 @@ export default function AttendanceForm() {
 
             <TouchableOpacity
               onPress={saveAbsence}
-              className="bg-zinc-900 py-4 rounded-xl items-center"
+              activeOpacity={0.8}
+              className="bg-[#1E40AF] py-4 rounded-[14px] items-center"
             >
-              <Text className="text-white font-bold text-lg">Save Absence</Text>
+              <Text className="text-white font-muller-bold text-lg tracking-wide">Save Absence</Text>
             </TouchableOpacity>
           </View>
         </View>

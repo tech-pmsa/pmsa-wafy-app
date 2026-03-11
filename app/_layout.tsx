@@ -228,15 +228,15 @@ export default function RootLayout() {
 
   if (!fontsAreReady || !isInitialized) {
     return (
-      <View className="flex-1 justify-center items-center bg-zinc-900">
-        <ActivityIndicator size="large" color="white" />
+      <View className="flex-1 justify-center items-center bg-[#F8FAFC]">
+        <ActivityIndicator size="large" color="#1E40AF" />
       </View>
     );
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="dark" backgroundColor="#ffffff" />
+      <StatusBar style="dark" />
       <Slot />
     </GestureHandlerRootView>
   );

@@ -22,6 +22,7 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { utils, write } from 'xlsx';
+import { COLORS } from '@/constants/theme';
 
 interface StaffMember {
   id: string;
@@ -38,10 +39,10 @@ interface AttendanceRecord {
 
 function cardShadow() {
   return {
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   };
 }
@@ -60,26 +61,26 @@ const formatTime12 = (time24: string | null): string => {
 function StatusBadge({ record }: { record?: AttendanceRecord }) {
   if (record?.is_staying) {
     return (
-      <View className="bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-md flex-row items-center">
-        <BedDouble size={14} color="#7e22ce" />
-        <Text className="text-[10px] font-bold text-purple-700 ml-1">STAYING</Text>
+      <View className="bg-[#7E22CE]/10 border border-[#7E22CE]/20 px-2.5 py-1.5 rounded-[8px] flex-row items-center">
+        <BedDouble size={14} color="#7E22CE" />
+        <Text className="text-[10px] font-muller-bold text-[#7E22CE] ml-1.5 tracking-wider uppercase">STAYING</Text>
       </View>
     );
   }
 
   if (record?.time_in || record?.time_out) {
     return (
-      <View className="bg-green-100 border border-green-200 px-2.5 py-1 rounded-md flex-row items-center">
-        <CheckCircle2 size={14} color="#15803d" />
-        <Text className="text-[10px] font-bold text-green-700 ml-1">PRESENT</Text>
+      <View className="bg-[#16A34A]/10 border border-[#16A34A]/20 px-2.5 py-1.5 rounded-[8px] flex-row items-center">
+        <CheckCircle2 size={14} color={COLORS.success} />
+        <Text className="text-[10px] font-muller-bold text-[#16A34A] ml-1.5 tracking-wider uppercase">PRESENT</Text>
       </View>
     );
   }
 
   return (
-    <View className="bg-red-100 border border-red-200 px-2.5 py-1 rounded-md flex-row items-center">
-      <XCircle size={14} color="#b91c1c" />
-      <Text className="text-[10px] font-bold text-red-700 ml-1">ABSENT</Text>
+    <View className="bg-[#DC2626]/10 border border-[#DC2626]/20 px-2.5 py-1.5 rounded-[8px] flex-row items-center">
+      <XCircle size={14} color={COLORS.danger} />
+      <Text className="text-[10px] font-muller-bold text-[#DC2626] ml-1.5 tracking-wider uppercase">ABSENT</Text>
     </View>
   );
 }
@@ -187,33 +188,35 @@ export default function AllStaffRegister() {
 
   return (
     <View
-      className="bg-white rounded-3xl p-5 border border-zinc-200"
+      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0]"
       style={cardShadow()}
     >
-      <View className="mb-4">
-        <Text className="text-xl font-bold text-zinc-900">Daily Staff Register</Text>
-        <Text className="text-sm text-zinc-500 mt-1">
+      <View className="mb-5">
+        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">Daily Staff Register</Text>
+        <Text className="text-sm font-muller text-[#475569] mt-1">
           Overview of staff attendance.
         </Text>
       </View>
 
-      <View className="flex-row mb-4">
+      <View className="flex-row mb-5">
         <TouchableOpacity
+          activeOpacity={0.7}
           onPress={() => setShowDatePicker(true)}
-          className="flex-1 flex-row items-center border border-zinc-200 bg-zinc-50 rounded-xl px-3 py-3 mr-2"
+          className="flex-1 flex-row items-center border border-[#E2E8F0] bg-[#F8FAFC] rounded-[14px] px-4 py-3.5 mr-3"
         >
-          <CalendarIcon size={16} color="#71717a" />
-          <Text className="ml-2 text-zinc-900 font-medium">
+          <CalendarIcon size={18} color="#475569" />
+          <Text className="ml-2.5 text-[#0F172A] font-muller-bold text-[15px]">
             {format(selectedDate, 'PPP')}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
+          activeOpacity={0.8}
           onPress={handleExport}
-          className="bg-zinc-900 rounded-xl px-4 py-3 flex-row items-center"
+          className="bg-[#1E40AF] rounded-[14px] px-5 py-3.5 flex-row items-center"
         >
-          <Download size={16} color="white" />
-          <Text className="text-white font-bold ml-2">Export</Text>
+          <Download size={18} color="white" />
+          <Text className="text-white font-muller-bold ml-2 text-[15px]">Export</Text>
         </TouchableOpacity>
       </View>
 
@@ -226,58 +229,59 @@ export default function AllStaffRegister() {
         />
       )}
 
-      <View className="flex-row items-center bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 mb-4">
-        <Search size={20} color="#a1a1aa" />
+      <View className="flex-row items-center bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5 mb-5 shadow-sm">
+        <Search size={20} color="#94A3B8" />
         <TextInput
-          className="flex-1 ml-2 text-base text-zinc-900"
+          className="flex-1 ml-3 text-base font-muller text-[#0F172A]"
           placeholder="Search staff by name..."
-          placeholderTextColor="#a1a1aa"
+          placeholderTextColor="#94A3B8"
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
       </View>
 
       {loading ? (
-        <View className="py-10 items-center">
-          <ActivityIndicator size="large" color="#09090b" />
+        <View className="py-12 items-center justify-center">
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text className="mt-4 text-[#475569] font-muller font-medium">Loading register...</Text>
         </View>
       ) : filteredStaff.length === 0 ? (
-        <View className="items-center py-10 border-2 border-dashed border-zinc-200 rounded-2xl bg-zinc-50">
-          <Search size={32} color="#a1a1aa" />
-          <Text className="mt-2 font-semibold text-zinc-700">No staff found.</Text>
+        <View className="items-center py-12 border border-dashed border-[#E2E8F0] rounded-[16px] bg-[#F8FAFC]">
+          <Search size={32} color="#94A3B8" />
+          <Text className="mt-3 font-muller-bold text-[#0F172A]">No staff found.</Text>
         </View>
       ) : (
-        <View className="pb-4">
+        <View className="pb-2">
           {filteredStaff.map((staff) => {
             const record = records[staff.id];
 
             return (
               <View
                 key={staff.id}
-                className="bg-white border border-zinc-200 rounded-xl p-4 flex-row items-center justify-between mb-3"
+                className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[16px] p-4 flex-row items-center justify-between mb-3"
                 style={cardShadow()}
               >
                 <View className="flex-1">
-                  <Text className="font-bold text-zinc-900">{staff.name}</Text>
-                  <Text className="text-xs text-zinc-500">
+                  <Text className="font-muller-bold text-[#0F172A] text-[15px] tracking-tight">{staff.name}</Text>
+                  <Text className="text-xs font-muller text-[#475569] mt-0.5">
                     {staff.designation || 'N/A'}
                   </Text>
 
-                  <View className="flex-row items-center mt-2">
-                    <View>
-                      <Text className="text-[10px] uppercase text-zinc-400 font-bold mb-0.5">
+                  <View className="flex-row items-center mt-3">
+                    <View className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[10px] px-3 py-2 mr-2.5">
+                      <Text className="text-[10px] uppercase text-[#94A3B8] font-muller-bold tracking-wider mb-1">
                         Time In
                       </Text>
-                      <Text className="text-sm font-medium text-zinc-700">
+                      <Text className="text-[13px] font-muller-bold text-[#0F172A]">
                         {formatTime12(record?.time_in || null)}
                       </Text>
                     </View>
 
-                    <View style={{ marginLeft: 16 }}>
-                      <Text className="text-[10px] uppercase text-zinc-400 font-bold mb-0.5">
+                    <View className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[10px] px-3 py-2">
+                      <Text className="text-[10px] uppercase text-[#94A3B8] font-muller-bold tracking-wider mb-1">
                         Time Out
                       </Text>
-                      <Text className="text-sm font-medium text-zinc-700">
+                      <Text className="text-[13px] font-muller-bold text-[#0F172A]">
                         {formatTime12(record?.time_out || null)}
                       </Text>
                     </View>

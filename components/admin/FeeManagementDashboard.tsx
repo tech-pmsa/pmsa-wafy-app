@@ -4,18 +4,32 @@ import { CheckCircle2, XCircle, MinusCircle, Search, Inbox, ChevronDown, Chevron
 import { BarChart } from 'react-native-chart-kit';
 import { useUserData } from '@/hooks/useUserData';
 import { supabase } from '@/lib/supabaseClient';
+import { COLORS } from '@/constants/theme';
 
 const screenWidth = Dimensions.get("window").width;
 
 type SheetData = Record<string, { headers: string[]; rows: string[][] }>;
 
+function cardShadow() {
+  return {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  };
+}
+
 // --- Reusable Stat Card ---
 function StatCard({ title, value, description }: { title: string; value: string; description: string }) {
   return (
-    <View className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-100 flex-1 min-w-[140px] m-1">
-      <Text className="text-sm font-medium text-zinc-600 mb-1">{title}</Text>
-      <Text className="text-2xl font-bold text-zinc-900">{value}</Text>
-      <Text className="text-xs text-zinc-500 mt-1">{description}</Text>
+    <View
+      className="bg-[#FFFFFF] p-4 rounded-[14px] border border-[#E2E8F0] flex-1 min-w-[140px] m-1"
+      style={cardShadow()}
+    >
+      <Text className="text-[13px] font-muller-bold text-[#475569] mb-1">{title}</Text>
+      <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight">{value}</Text>
+      <Text className="text-[11px] font-muller text-[#94A3B8] mt-1 uppercase tracking-wider">{description}</Text>
     </View>
   );
 }
@@ -26,16 +40,16 @@ function StudentFeeList({ rows, monthHeaders }: { rows: string[][]; monthHeaders
 
   if (rows.length === 0) {
     return (
-      <View className="items-center justify-center py-10 border-2 border-dashed border-zinc-200 rounded-2xl bg-zinc-50 mt-4">
-        <Search size={32} color="#a1a1aa" />
-        <Text className="mt-2 font-semibold text-zinc-700">No Students Found</Text>
-        <Text className="text-sm text-zinc-500">Your search returned no results.</Text>
+      <View className="items-center justify-center py-10 border border-dashed border-[#E2E8F0] rounded-[16px] bg-[#F8FAFC] mt-2">
+        <Search size={32} color="#94A3B8" />
+        <Text className="mt-3 font-muller-bold text-[#0F172A]">No Students Found</Text>
+        <Text className="text-sm font-muller text-[#475569] mt-1">Your search returned no results.</Text>
       </View>
     );
   }
 
   return (
-    <View className="mt-4 space-y-3 pb-10">
+    <View className="mt-2 space-y-3 gap-1 pb-10">
       {rows.map((row, idx) => {
         const studentCIC = row[1];
         const studentName = row[2];
@@ -55,40 +69,44 @@ function StudentFeeList({ rows, monthHeaders }: { rows: string[][]; monthHeaders
         const isExpanded = expandedId === idx;
 
         return (
-          <View key={idx} className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+          <View
+            key={idx}
+            className="bg-[#FFFFFF] rounded-[16px] border border-[#E2E8F0] overflow-hidden"
+            style={cardShadow()}
+          >
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setExpandedId(isExpanded ? null : idx)}
               className="p-4 flex-row items-center justify-between"
             >
-              <View className="flex-1">
-                <Text className="font-bold text-zinc-900 text-base">{studentName}</Text>
-                <Text className="text-sm text-zinc-500">CIC: {studentCIC}</Text>
+              <View className="flex-1 pr-2">
+                <Text className="font-muller-bold text-[#0F172A] text-[16px] tracking-tight mb-0.5">{studentName}</Text>
+                <Text className="text-[13px] font-muller text-[#475569]">CIC: {studentCIC}</Text>
               </View>
               <View className="items-end flex-row">
-                <View className="items-end mr-3">
-                  <Text className="text-xs text-zinc-500 mb-0.5">Total Paid</Text>
-                  <View className="bg-zinc-100 px-2 py-1 rounded-md">
-                    <Text className="font-bold text-zinc-800">
+                <View className="items-end mr-3.5">
+                  <Text className="text-[11px] font-muller-bold text-[#94A3B8] mb-1 uppercase tracking-wider">Total Paid</Text>
+                  <View className="bg-[#F8FAFC] border border-[#E2E8F0] px-2.5 py-1 rounded-[8px]">
+                    <Text className="font-muller-bold text-[#0F172A] text-xs">
                       ₹{totalAmountPaid.toLocaleString('en-IN')}
                     </Text>
                   </View>
                 </View>
-                {isExpanded ? <ChevronUp size={20} color="#71717a" /> : <ChevronDown size={20} color="#71717a" />}
+                {isExpanded ? <ChevronUp size={22} color="#94A3B8" /> : <ChevronDown size={22} color="#94A3B8" />}
               </View>
             </TouchableOpacity>
 
             {isExpanded && (
-              <View className="px-4 pb-4 border-t border-zinc-100 pt-3">
-                <View className="flex-row flex-wrap justify-between">
+              <View className="px-4 pb-4 border-t border-[#E2E8F0] pt-4">
+                <View className="flex-row flex-wrap justify-between gap-y-3">
                   {payments.map((payment) => (
-                    <View key={payment.month} className="w-[48%] flex-row items-center mb-3">
-                      {payment.status === 'paid' && <CheckCircle2 size={20} color="#16a34a" />}
-                      {payment.status === 'unpaid' && <XCircle size={20} color="#dc2626" />}
-                      {payment.status === 'not_applicable' && <MinusCircle size={20} color="#a1a1aa" />}
-                      <View className="ml-2 flex-1">
-                        <Text className="text-sm font-medium text-zinc-900">{payment.month}</Text>
-                        <Text className="text-xs text-zinc-500">
+                    <View key={payment.month} className="w-[48%] flex-row items-center">
+                      {payment.status === 'paid' && <CheckCircle2 size={18} color={COLORS.success} />}
+                      {payment.status === 'unpaid' && <XCircle size={18} color={COLORS.danger} />}
+                      {payment.status === 'not_applicable' && <MinusCircle size={18} color="#94A3B8" />}
+                      <View className="ml-2.5 flex-1">
+                        <Text className="text-[13px] font-muller-bold text-[#0F172A] mb-0.5">{payment.month}</Text>
+                        <Text className="text-[11px] font-muller-bold text-[#475569]">
                           {payment.status === 'paid' ? `₹${payment.amount.toLocaleString('en-IN')}` :
                            payment.status === 'unpaid' ? 'Not Paid' : 'N/A'}
                         </Text>
@@ -165,10 +183,14 @@ function FeeSheetContent({ sheetName, sheetData, role, cic }: { sheetName: strin
 
       {/* Chart */}
       {role !== 'student' && chartData.length > 0 && (
-        <View className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-100 mb-6">
-          <Text className="font-bold text-zinc-900 mb-1">Top 10 Payments</Text>
-          <Text className="text-xs text-zinc-500 mb-4">Ranked by highest amount paid</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View
+          className="bg-[#FFFFFF] p-5 rounded-[18px] border border-[#E2E8F0] mb-6"
+          style={cardShadow()}
+        >
+          <Text className="text-lg font-muller-bold text-[#0F172A] tracking-tight mb-1">Top 10 Payments</Text>
+          <Text className="text-[13px] font-muller text-[#475569] mb-6">Ranked by highest amount paid</Text>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-ml-3">
             <BarChart
               data={{
                 labels: chartData.map(d => d.cic), // Using CIC here!
@@ -181,11 +203,12 @@ function FeeSheetContent({ sheetName, sheetData, role, cic }: { sheetName: strin
               chartConfig={{
                 backgroundGradientFrom: "#ffffff",
                 backgroundGradientTo: "#ffffff",
-                color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`, // Switched to a nice blue
-                labelColor: (opacity = 1) => `rgba(113, 113, 122, ${opacity})`,
+                color: (opacity = 1) => `rgba(30, 64, 175, ${opacity})`, // COLORS.primary
+                labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`, // Slate 600
                 barPercentage: 0.5,
                 decimalPlaces: 0,
                 propsForBackgroundLines: { strokeWidth: 0 },
+                propsForLabels: { fontFamily: 'System', fontWeight: '600' }
               }}
               verticalLabelRotation={70}
               showValuesOnTopOfBars={false}
@@ -196,12 +219,15 @@ function FeeSheetContent({ sheetName, sheetData, role, cic }: { sheetName: strin
       )}
 
       {/* Search & List */}
-      <View className="flex-row items-center bg-white border border-zinc-200 rounded-xl px-4 py-3 shadow-sm">
-        <Search size={20} color="#a1a1aa" />
+      <View
+        className="flex-row items-center bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5 mb-2"
+        style={cardShadow()}
+      >
+        <Search size={20} color="#94A3B8" />
         <TextInput
-          className="flex-1 ml-2 text-base text-zinc-900"
+          className="flex-1 ml-3 text-base font-muller text-[#0F172A]"
           placeholder="Search by Student Name or CIC..."
-          placeholderTextColor="#a1a1aa"
+          placeholderTextColor="#94A3B8"
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
@@ -260,19 +286,25 @@ export default function FeeManagementDashboard() {
 
   if (userLoading || isFetching) {
     return (
-      <View className="bg-white p-6 rounded-3xl items-center justify-center h-64 border border-zinc-200 shadow-sm">
-        <ActivityIndicator size="large" color="#09090b" />
-        <Text className="mt-4 text-zinc-500 font-medium">Loading Fee Dashboard...</Text>
+      <View
+        className="bg-[#FFFFFF] p-8 rounded-[18px] items-center justify-center my-4 border border-[#E2E8F0]"
+        style={cardShadow()}
+      >
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text className="mt-4 text-[#475569] font-muller font-medium">Loading Fee Dashboard...</Text>
       </View>
     );
   }
 
   if (!sheetData) {
     return (
-      <View className="bg-white p-6 rounded-3xl items-center justify-center border border-zinc-200 shadow-sm py-10">
-        <Inbox size={40} color="#a1a1aa" />
-        <Text className="mt-4 text-lg font-bold text-zinc-900">No Data Available</Text>
-        <Text className="text-zinc-500 mt-1 text-center">There is no fee data to display at this time.</Text>
+      <View
+        className="bg-[#FFFFFF] p-8 rounded-[18px] items-center justify-center border border-[#E2E8F0] my-4 py-12"
+        style={cardShadow()}
+      >
+        <Inbox size={44} color="#94A3B8" />
+        <Text className="mt-5 text-lg font-muller-bold text-[#0F172A] tracking-tight">No Data Available</Text>
+        <Text className="text-[#475569] font-muller mt-1 text-center">There is no fee data to display at this time.</Text>
       </View>
     );
   }
@@ -280,10 +312,10 @@ export default function FeeManagementDashboard() {
   const sheetNames = Object.keys(sheetData);
 
   return (
-    <View className="bg-zinc-100 rounded-3xl pb-6">
-      <View className="mb-4">
-        <Text className="text-xl font-bold text-zinc-900">Fee Management</Text>
-        <Text className="text-sm text-zinc-500">
+    <View className="pb-6">
+      <View className="mb-5 mt-2">
+        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mb-0.5">Fee Management</Text>
+        <Text className="text-sm font-muller text-[#475569]">
           {role === 'officer' ? "Select a class to view fee details." : "Fee overview for your batch."}
         </Text>
       </View>
@@ -294,9 +326,16 @@ export default function FeeManagementDashboard() {
             <TouchableOpacity
               key={name}
               onPress={() => setActiveTab(name)}
-              className={`mr-3 px-5 py-2.5 rounded-full border ${activeTab === name ? 'bg-zinc-900 border-zinc-900' : 'bg-white border-zinc-300'}`}
+              activeOpacity={0.7}
+              className={`mr-2.5 px-5 py-2.5 rounded-[14px] border ${
+                activeTab === name
+                  ? 'bg-[#1E40AF] border-[#1E40AF]'
+                  : 'bg-[#FFFFFF] border-[#E2E8F0]'
+              }`}
             >
-              <Text className={`font-semibold ${activeTab === name ? 'text-white' : 'text-zinc-700'}`}>{name}</Text>
+              <Text className={`font-muller-bold text-[13px] tracking-wide ${
+                activeTab === name ? 'text-white' : 'text-[#475569]'
+              }`}>{name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -305,7 +344,9 @@ export default function FeeManagementDashboard() {
       {activeTab && sheetData[activeTab] ? (
         <FeeSheetContent sheetName={activeTab} sheetData={sheetData[activeTab]} role={role} cic={details?.cic} />
       ) : (
-        <Text className="text-zinc-500 text-center mt-10">Select a valid sheet.</Text>
+        <View className="items-center mt-10">
+          <Text className="text-[#475569] font-muller">Select a valid sheet.</Text>
+        </View>
       )}
     </View>
   );

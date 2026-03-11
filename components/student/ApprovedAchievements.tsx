@@ -2,8 +2,18 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Image, Modal, ScrollView, Linking } from 'react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useUserData } from '@/hooks/useUserData';
-import { Link } from 'expo-router';
-import { Trophy, User as UserIcon, Link as LinkIcon, ArrowRight, X } from 'lucide-react-native';
+import { Trophy, User as UserIcon, Link as LinkIcon, X } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
+
+function cardShadow() {
+  return {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  };
+}
 
 // --- Sub-components ---
 
@@ -13,27 +23,27 @@ function AchievementListItem({ achievement, onClick }: { achievement: any, onCli
     <TouchableOpacity
       onPress={onClick}
       activeOpacity={0.7}
-      className="flex-row items-center p-3 mb-2 bg-zinc-50 rounded-2xl border border-zinc-100"
+      className="flex-row items-center p-3 mb-2.5 bg-[#F8FAFC] rounded-[16px] border border-[#E2E8F0]"
     >
-      <View className="h-12 w-12 rounded-xl bg-blue-100 items-center justify-center overflow-hidden border border-blue-200">
+      <View className="h-12 w-12 rounded-[12px] bg-[#1E40AF]/10 items-center justify-center overflow-hidden border border-[#1E40AF]/10">
         {achievement.students?.img_url ? (
           <Image source={{ uri: achievement.students.img_url }} className="h-full w-full" />
         ) : (
-          <Trophy size={20} color="#2563eb" />
+          <Trophy size={20} color={COLORS.primary} />
         )}
       </View>
-      <View className="flex-1 ml-3 mr-2">
-        <Text className="font-bold text-zinc-900 text-base" numberOfLines={1}>
+      <View className="flex-1 ml-3 mr-3">
+        <Text className="font-muller-bold text-[#0F172A] text-[15px] tracking-tight" numberOfLines={1}>
           {achievement.title}
         </Text>
         <View className="flex-row items-center mt-1">
-          <UserIcon size={12} color="#71717a" />
-          <Text className="text-xs text-zinc-500 ml-1 truncate" numberOfLines={1}>
+          <UserIcon size={12} color="#94A3B8" />
+          <Text className="text-[13px] font-muller text-[#475569] ml-1.5 truncate" numberOfLines={1}>
             {achievement.name} ({achievement.cic})
           </Text>
         </View>
       </View>
-      <Text className="text-xs font-medium text-zinc-400">
+      <Text className="text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
         {new Date(achievement.submitted_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}
       </Text>
     </TouchableOpacity>
@@ -48,33 +58,37 @@ function AchievementDetailsModal({ achievement, isOpen, onClose }: { achievement
 
   return (
     <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 bg-black/50 justify-end">
-        <View className="bg-white rounded-t-3xl p-6 shadow-xl max-h-[85%]">
+      <View className="flex-1 bg-black/40 justify-end">
+        <View className="bg-[#FFFFFF] rounded-t-[24px] p-6 shadow-xl max-h-[85%] border-t border-[#E2E8F0]">
 
           <View className="flex-row justify-between items-start mb-6">
             <View className="flex-row flex-1 pr-4">
-              <View className="bg-blue-50 p-3 rounded-xl mr-4 self-start">
-                <Trophy size={28} color="#2563eb" />
+              <View className="bg-[#1E40AF]/10 p-3.5 rounded-[14px] mr-4 self-start border border-[#1E40AF]/10">
+                <Trophy size={26} color={COLORS.primary} />
               </View>
               <View className="flex-1">
-                <Text className="text-xl font-bold text-zinc-900">{achievement.title}</Text>
-                <Text className="text-xs text-zinc-500 mt-1">
+                <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight leading-snug">{achievement.title}</Text>
+                <Text className="text-[11px] font-muller-bold text-[#94A3B8] mt-2 uppercase tracking-wider">
                   Submitted on {new Date(achievement.submitted_at).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </Text>
               </View>
             </View>
-            <TouchableOpacity onPress={onClose} className="bg-zinc-100 p-2 rounded-full">
-              <X size={20} color="#09090b" />
+            <TouchableOpacity
+              onPress={onClose}
+              activeOpacity={0.7}
+              className="bg-[#F1F5F9] p-2.5 rounded-full"
+            >
+              <X size={20} color="#0F172A" />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} className="mb-6">
-            <Text className="text-zinc-700 text-base leading-6 mb-6">
+            <Text className="text-[#475569] font-muller text-[15px] leading-relaxed mb-6">
               {achievement.description}
             </Text>
 
             {isImageProof && (
-              <View className="rounded-2xl border border-zinc-200 overflow-hidden mb-4 bg-zinc-50">
+              <View className="rounded-[16px] border border-[#E2E8F0] overflow-hidden mb-5 bg-[#F8FAFC]">
                 <Image
                   source={{ uri: achievement.proof_url }}
                   className="w-full h-64"
@@ -86,25 +100,26 @@ function AchievementDetailsModal({ achievement, isOpen, onClose }: { achievement
             {achievement.proof_url && (
               <TouchableOpacity
                 onPress={() => Linking.openURL(achievement.proof_url)}
-                className="flex-row items-center justify-center bg-zinc-100 py-3 rounded-xl border border-zinc-200"
+                activeOpacity={0.7}
+                className="flex-row items-center justify-center bg-[#F8FAFC] py-3.5 rounded-[14px] border border-[#E2E8F0]"
               >
-                <LinkIcon size={18} color="#09090b" />
-                <Text className="ml-2 font-bold text-zinc-900">View Full Proof</Text>
+                <LinkIcon size={18} color="#0F172A" />
+                <Text className="ml-2.5 font-muller-bold text-[#0F172A]">View Full Proof</Text>
               </TouchableOpacity>
             )}
           </ScrollView>
 
-          <View className="border-t border-zinc-100 pt-4 flex-row items-center">
-            <View className="h-10 w-10 rounded-full bg-zinc-200 items-center justify-center overflow-hidden">
+          <View className="border-t border-[#E2E8F0] pt-5 flex-row items-center">
+            <View className="h-11 w-11 rounded-[12px] bg-[#F1F5F9] items-center justify-center overflow-hidden border border-[#E2E8F0]">
               {achievement.students?.img_url ? (
                 <Image source={{ uri: achievement.students.img_url }} className="h-full w-full" />
               ) : (
-                <UserIcon size={20} color="#71717a" />
+                <UserIcon size={20} color="#94A3B8" />
               )}
             </View>
-            <View className="ml-3">
-              <Text className="text-sm font-bold text-zinc-900">{achievement.name}</Text>
-              <Text className="text-xs text-zinc-500">{achievement.cic}</Text>
+            <View className="ml-3.5">
+              <Text className="text-[15px] font-muller-bold text-[#0F172A] tracking-tight">{achievement.name}</Text>
+              <Text className="text-xs font-muller text-[#475569] mt-0.5">{achievement.cic}</Text>
             </View>
           </View>
 
@@ -153,21 +168,24 @@ export default function ApprovedAchievements() {
   }, [role]);
 
   return (
-    <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-200">
-      <View className="mb-4">
-        <Text className="text-xl font-bold text-zinc-900">{title}</Text>
-        <Text className="text-sm text-zinc-500 mt-1">A showcase of recent accomplishments.</Text>
+    <View
+      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] my-2"
+      style={cardShadow()}
+    >
+      <View className="mb-5">
+        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">{title}</Text>
+        <Text className="text-sm font-muller text-[#475569] mt-1">A showcase of recent accomplishments.</Text>
       </View>
 
       {isLoading || userLoading ? (
-        <ActivityIndicator size="large" color="#09090b" className="my-6" />
+        <ActivityIndicator size="large" color={COLORS.primary} className="my-6" />
       ) : achievements.length === 0 ? (
-        <View className="items-center justify-center py-10 border-2 border-dashed border-zinc-200 rounded-2xl bg-zinc-50">
-          <Trophy size={32} color="#a1a1aa" />
-          <Text className="mt-2 text-sm font-medium text-zinc-500">No approved achievements yet.</Text>
+        <View className="items-center justify-center py-10 border border-dashed border-[#E2E8F0] rounded-[16px] bg-[#F8FAFC]">
+          <Trophy size={32} color="#94A3B8" />
+          <Text className="mt-3 text-[13px] font-muller text-[#475569]">No approved achievements yet.</Text>
         </View>
       ) : (
-        <View>
+        <View className="pb-1">
           {achievements.map((ach) => (
             <AchievementListItem
               key={ach.id}
@@ -176,16 +194,6 @@ export default function ApprovedAchievements() {
             />
           ))}
         </View>
-      )}
-
-      {/* View All Button for Non-Students */}
-      {role !== 'student' && achievements.length > 0 && (
-        <Link href="/(admin)/achievements" asChild>
-          <TouchableOpacity className="mt-2 flex-row justify-center items-center py-3">
-            <Text className="text-blue-600 font-bold mr-1">View All Achievements</Text>
-            <ArrowRight size={16} color="#2563eb" />
-          </TouchableOpacity>
-        </Link>
       )}
 
       <AchievementDetailsModal
