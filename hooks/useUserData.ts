@@ -2,16 +2,38 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
 
+export type AppRole =
+  | 'student'
+  | 'officer'
+  | 'class'
+  | 'class-leader'
+  | 'chef'
+  | 'staff';
+
 interface UserData {
   loading: boolean;
   user: User | null;
-  role: string | null;
+  role: AppRole | null;
   details: { [key: string]: any } | null;
 }
 
-function normalizeRole(role: string | null | undefined): string | null {
+function normalizeRole(role: string | null | undefined): AppRole | null {
   if (!role) return null;
-  return role.toLowerCase().trim().replace(/_/g, '-').replace(/ /g, '-');
+
+  const normalized = role.toLowerCase().trim().replace(/_/g, '-').replace(/ /g, '-');
+
+  const validRoles: AppRole[] = [
+    'student',
+    'officer',
+    'class',
+    'class-leader',
+    'chef',
+    'staff',
+  ];
+
+  return validRoles.includes(normalized as AppRole)
+    ? (normalized as AppRole)
+    : null;
 }
 
 function withTimeout<T>(
@@ -38,7 +60,7 @@ export function useUserData(): UserData {
 
     const fetchData = async () => {
       let finalUser: User | null = null;
-      let finalRole: string | null = null;
+      let finalRole: AppRole | null = null;
       let finalDetails: any = null;
 
       try {

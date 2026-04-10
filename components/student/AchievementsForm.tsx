@@ -1,47 +1,62 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, ActivityIndicator, Alert as NativeAlert, Image } from 'react-native';
-import { supabase } from '@/lib/supabaseClient';
-import { useUserData } from '@/hooks/useUserData';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { decode } from 'base64-arraybuffer';
-import { Award, FileText, X } from 'lucide-react-native';
-import { COLORS } from '@/constants/theme';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  ActivityIndicator,
+  Alert as NativeAlert,
+  Image,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
+import { supabase } from "@/lib/supabaseClient";
+import { useUserData } from "@/hooks/useUserData";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { decode } from "base64-arraybuffer";
+import { Award, FileText, X, Upload, Sparkles } from "lucide-react-native";
+import { theme } from "@/theme/theme";
 
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
-}
+const STORAGE_BUCKET = "achievements";
 
 export default function AchievementsForm() {
   const { user, details } = useUserData();
   const [isOpen, setIsOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [proofFile, setProofFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [proofFile, setProofFile] =
+    useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setProofFile(null);
+  };
 
   const handleFileSelect = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'application/pdf'],
+        type: ["image/*", "application/pdf"],
         copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets.length > 0) {
         const file = result.assets[0];
+
         if (file.size && file.size > 5 * 1024 * 1024) {
-          return NativeAlert.alert("File Too Large", "Please select a file smaller than 5MB.");
+          return NativeAlert.alert(
+            "File Too Large",
+            "Please select a file smaller than 5MB."
+          );
         }
+
         setProofFile(file);
       }
-    } catch (err) {
-      console.log(err);
+    } catch (err: any) {
+      NativeAlert.alert("File Error", err?.message || "Could not select file.");
     }
   };
 
@@ -49,147 +64,416 @@ export default function AchievementsForm() {
     if (!title.trim() || !description.trim()) {
       return NativeAlert.alert("Required", "Title and description are required.");
     }
+
     if (!user || !details?.name) {
       return NativeAlert.alert("Error", "User data incomplete.");
     }
 
     setLoading(true);
-    let proofUrl = null;
+    let proofUrl: string | null = null;
 
     try {
       if (proofFile) {
-        // In React Native, to upload to Supabase Storage we must read the file to Base64 first
-        const base64 = await FileSystem.readAsStringAsync(proofFile.uri, { encoding: FileSystem.EncodingType.Base64 });
-        const filePath = `${user.id}/${Date.now()}-${proofFile.name}`;
+        const base64 = await FileSystem.readAsStringAsync(proofFile.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        const fileExt = proofFile.name?.split(".").pop() || "bin";
+        const fileName = `${details.cic || user.id}-${Date.now()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('achievements')
-          .upload(filePath, decode(base64), { contentType: proofFile.mimeType });
+          .from(STORAGE_BUCKET)
+          .upload(filePath, decode(base64), {
+            contentType: proofFile.mimeType || "application/octet-stream",
+            upsert: false,
+          });
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage.from('achievements').getPublicUrl(filePath);
-        proofUrl = urlData.publicUrl;
+        const { data: publicUrlData } = supabase.storage
+          .from(STORAGE_BUCKET)
+          .getPublicUrl(filePath);
+
+        proofUrl = publicUrlData.publicUrl;
       }
 
-      const { error: insertError } = await supabase.from('achievements').insert([{
-        title, description, proof_url: proofUrl,
-        student_uid: user.id, name: details.name, cic: details.cic,
-        batch: details.batch, approved: false
-      }]);
+      const insertPayload = {
+        title: title.trim(),
+        description: description.trim(),
+        proof_url: proofUrl,
+        student_uid: user.id,
+        name: details.name,
+        cic: details.cic || null,
+        batch: details.batch || null,
+        approved: false,
+      };
 
-      if (insertError) throw insertError;
+      const { error } = await supabase.from("achievements").insert([insertPayload]);
 
-      NativeAlert.alert("Success", "Achievement submitted for review!");
-      setTitle(''); setDescription(''); setProofFile(null);
+      if (error) throw error;
+
+      NativeAlert.alert(
+        "Submitted",
+        "Your achievement has been submitted for approval."
+      );
+
+      resetForm();
       setIsOpen(false);
-
-    } catch (error: any) {
-      NativeAlert.alert('Submission failed', error.message);
+    } catch (err: any) {
+      NativeAlert.alert("Error", err?.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <View className="my-2">
-      {/* Trigger Card */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setIsOpen(true)}
-        className="bg-[#1E40AF]/5 border border-dashed border-[#1E40AF]/30 rounded-[18px] p-6 items-center justify-center"
-      >
-        <View className="bg-[#1E40AF]/10 p-4 rounded-[16px] mb-4">
-          <Award size={36} color={COLORS.primary} />
-        </View>
-        <Text className="text-lg font-muller-bold text-[#0F172A] tracking-tight">Submit an Achievement</Text>
-        <Text className="text-sm font-muller text-[#475569] text-center mt-1.5 px-4">
-          Won an award? Published a paper? Tap here to share with the college.
-        </Text>
-      </TouchableOpacity>
+  const isImage =
+    proofFile?.mimeType?.startsWith("image/") ||
+    /\.(jpg|jpeg|png|webp)$/i.test(proofFile?.name || "");
 
-      {/* Submission Modal */}
-      <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setIsOpen(false)}>
-        <View className="flex-1 bg-[#F8FAFC] pt-6 px-6">
-          <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight">New Achievement</Text>
-            <TouchableOpacity
-              onPress={() => setIsOpen(false)}
-              className="bg-[#E2E8F0]/60 p-2.5 rounded-full"
-            >
-              <X size={20} color="#0F172A" />
-            </TouchableOpacity>
+  return (
+    <>
+      <View style={styles.triggerCard}>
+        <View style={styles.triggerTopRow}>
+          <View style={styles.triggerIconWrap}>
+            <Award size={22} color={theme.colors.primary} />
           </View>
 
-          <Text className="text-sm font-muller-bold text-[#475569] mb-2.5 ml-1">Title</Text>
-          <TextInput
-            className="bg-[#FFFFFF] border border-[#E2E8F0] font-muller text-[#0F172A] rounded-[14px] p-4 text-base mb-5 shadow-sm"
-            placeholder="e.g., First Prize in Hackathon"
-            placeholderTextColor="#94A3B8"
-            value={title} onChangeText={setTitle} editable={!loading}
-          />
+          <View style={styles.triggerPill}>
+            <Sparkles size={13} color={theme.colors.accent} />
+            <Text style={styles.triggerPillText}>Submit</Text>
+          </View>
+        </View>
 
-          <Text className="text-sm font-muller-bold text-[#475569] mb-2.5 ml-1">Description</Text>
-          <TextInput
-            className="bg-[#FFFFFF] border border-[#E2E8F0] font-muller text-[#0F172A] rounded-[14px] p-4 text-base mb-5 h-32 shadow-sm"
-            placeholder="Describe the event and your accomplishment..."
-            placeholderTextColor="#94A3B8"
-            value={description} onChangeText={setDescription} editable={!loading}
-            multiline textAlignVertical="top"
-          />
+        <Text style={styles.sectionTitle}>Add Achievement</Text>
+        <Text style={styles.sectionSubtitle}>
+          Submit your new achievement with title, description, and optional proof.
+        </Text>
 
-          <Text className="text-sm font-muller-bold text-[#475569] mb-2.5 ml-1">Proof (Optional)</Text>
-          {!proofFile ? (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={handleFileSelect} disabled={loading}
-              className="bg-[#FFFFFF] border border-dashed border-[#94A3B8] rounded-[14px] p-5 items-center justify-center mb-8"
-            >
-              <FileText size={26} color="#94A3B8" className="mb-2" />
-              <Text className="text-[#475569] font-muller-bold text-[15px]">Tap to select Image or PDF</Text>
-              <Text className="text-[#94A3B8] font-muller text-xs mt-1.5 uppercase tracking-wider">Max size: 5MB</Text>
-            </TouchableOpacity>
-          ) : (
-            <View
-              className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] p-3.5 flex-row items-center mb-8"
-              style={cardShadow()}
-            >
-              {proofFile.mimeType?.startsWith('image/') ? (
-                <Image source={{ uri: proofFile.uri }} className="w-12 h-12 rounded-[10px]" />
-              ) : (
-                <View className="w-12 h-12 bg-[#F1F5F9] rounded-[10px] items-center justify-center border border-[#E2E8F0]">
-                  <FileText size={20} color="#475569" />
-                </View>
-              )}
-              <View className="ml-3.5 flex-1">
-                <Text className="font-muller-bold text-[#0F172A] text-[15px] tracking-tight truncate" numberOfLines={1}>
-                  {proofFile.name}
-                </Text>
-                <Text className="text-xs font-muller text-[#475569] mt-0.5">
-                  {((proofFile.size || 0)/1024).toFixed(1)} KB
-                </Text>
-              </View>
+        <TouchableOpacity
+          onPress={() => setIsOpen(true)}
+          activeOpacity={0.86}
+          style={styles.primaryButton}
+        >
+          <Text style={styles.primaryButtonText}>Open Submission Form</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={isOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsOpen(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalTopRow}>
+              <Text style={styles.modalTitle}>Submit Achievement</Text>
               <TouchableOpacity
-                onPress={() => setProofFile(null)}
-                className="bg-[#DC2626]/10 p-2.5 rounded-full"
+                onPress={() => setIsOpen(false)}
+                activeOpacity={0.84}
+                style={styles.closeButton}
               >
-                <X size={18} color={COLORS.danger} />
+                <X size={18} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          )}
 
-          <TouchableOpacity
-            onPress={handleSubmit} disabled={loading}
-            activeOpacity={0.8}
-            className={`w-full py-4 rounded-[14px] flex-row justify-center items-center ${loading ? 'bg-[#1E40AF]/60' : 'bg-[#1E40AF]'}`}
-          >
-            {loading && <ActivityIndicator color="white" className="mr-2.5" />}
-            <Text className="text-white font-muller-bold text-lg tracking-wide">
-              {loading ? 'Submitting...' : 'Submit for Review'}
-            </Text>
-          </TouchableOpacity>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.modalScrollContent}
+            >
+              <Text style={styles.label}>Title</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. District Level Speech Winner"
+                placeholderTextColor={
+                  theme.colors.inputPlaceholder ?? theme.colors.textMuted
+                }
+                value={title}
+                onChangeText={setTitle}
+              />
+
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                style={styles.textarea}
+                placeholder="Describe the achievement clearly..."
+                placeholderTextColor={
+                  theme.colors.inputPlaceholder ?? theme.colors.textMuted
+                }
+                multiline
+                textAlignVertical="top"
+                value={description}
+                onChangeText={setDescription}
+              />
+
+              <Text style={styles.label}>Proof File (Optional)</Text>
+              <TouchableOpacity
+                onPress={handleFileSelect}
+                activeOpacity={0.84}
+                style={styles.uploadButton}
+              >
+                <Upload size={17} color={theme.colors.text} />
+                <Text style={styles.uploadButtonText}>
+                  {proofFile ? "Change File" : "Choose File"}
+                </Text>
+              </TouchableOpacity>
+
+              {proofFile && (
+                <View style={styles.filePreviewCard}>
+                  {isImage ? (
+                    <Image source={{ uri: proofFile.uri }} style={styles.previewImage} />
+                  ) : (
+                    <View style={styles.fileIconWrap}>
+                      <FileText size={22} color={theme.colors.primary} />
+                    </View>
+                  )}
+
+                  <View style={styles.fileInfoWrap}>
+                    <Text style={styles.fileName} numberOfLines={1}>
+                      {proofFile.name}
+                    </Text>
+                    <Text style={styles.fileMeta}>
+                      {proofFile.size
+                        ? `${(proofFile.size / 1024 / 1024).toFixed(2)} MB`
+                        : "File selected"}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={handleSubmit}
+                activeOpacity={0.86}
+                style={[styles.primaryButtonFull, loading && styles.buttonDisabled]}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color={theme.colors.textOnDark} />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Submit for Approval</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
         </View>
       </Modal>
-    </View>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  triggerCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.medium,
+  },
+  triggerTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  triggerIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+  },
+  triggerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: theme.colors.accentSoft,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  triggerPillText: {
+    color: theme.colors.accent,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  sectionTitle: {
+    color: theme.colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: "MullerBold",
+  },
+  sectionSubtitle: {
+    marginTop: 6,
+    marginBottom: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+  primaryButton: {
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryButtonFull: {
+    marginTop: 18,
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryButtonText: {
+    color: theme.colors.textOnDark,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerBold",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlayStrong ?? "rgba(15,23,42,0.28)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 430,
+    maxHeight: "88%",
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.floating,
+  },
+  modalScrollContent: {
+    paddingBottom: 4,
+  },
+  modalTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  modalTitle: {
+    color: theme.colors.text,
+    fontSize: 20,
+    lineHeight: 25,
+    fontFamily: "MullerBold",
+  },
+  closeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  label: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerBold",
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  input: {
+    minHeight: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    paddingHorizontal: 14,
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    marginBottom: 14,
+  },
+  textarea: {
+    minHeight: 110,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    padding: 14,
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+    marginBottom: 14,
+  },
+  uploadButton: {
+    minHeight: 48,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  uploadButtonText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  filePreviewCard: {
+    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 18,
+    padding: 12,
+  },
+  previewImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  fileIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  fileInfoWrap: {
+    flex: 1,
+  },
+  fileName: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  fileMeta: {
+    marginTop: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerMedium",
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+});

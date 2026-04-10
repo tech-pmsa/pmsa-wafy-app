@@ -1,29 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert as NativeAlert } from 'react-native';
-import { useUserData } from '@/hooks/useUserData';
-import { supabase } from '@/lib/supabaseClient';
-import { Pencil, Crown, Banknote, ShieldCheck, Users, Speaker, Save, X } from 'lucide-react-native';
-import { COLORS } from '@/constants/theme';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert as NativeAlert,
+  StyleSheet,
+} from "react-native";
+import { useUserData } from "@/hooks/useUserData";
+import { supabase } from "@/lib/supabaseClient";
+import {
+  Pencil,
+  Crown,
+  Banknote,
+  ShieldCheck,
+  Users,
+  Speaker,
+  Save,
+  X,
+} from "lucide-react-native";
+import { theme } from "@/theme/theme";
 
 const councilPositions = [
-  { key: 'batch', label: 'Batch', icon: Users },
-  { key: 'president', label: 'President', icon: Crown },
-  { key: 'vicepresident', label: 'Vice President', icon: Users },
-  { key: 'secretary', label: 'Secretary', icon: Pencil },
-  { key: 'treasurer', label: 'Treasurer', icon: Banknote },
-  { key: 'auditor', label: 'Auditor', icon: ShieldCheck },
-  { key: 'pro', label: 'PRO', icon: Speaker },
+  { key: "batch", label: "Batch", icon: Users },
+  { key: "president", label: "President", icon: Crown },
+  { key: "vicepresident", label: "Vice President", icon: Users },
+  { key: "secretary", label: "Secretary", icon: Pencil },
+  { key: "treasurer", label: "Treasurer", icon: Banknote },
+  { key: "auditor", label: "Auditor", icon: ShieldCheck },
+  { key: "pro", label: "PRO", icon: Speaker },
 ];
-
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
-}
 
 export default function ClassCouncil() {
   const { user, loading: userLoading } = useUserData();
@@ -39,87 +46,102 @@ export default function ClassCouncil() {
         if (!userLoading) setLoading(false);
         return;
       }
-      const { data } = await supabase.from('class_council').select('*').eq('uid', user.id).single();
+
+      const { data } = await supabase
+        .from("class_council")
+        .select("*")
+        .eq("uid", user.id)
+        .single();
 
       if (data) {
-        setCouncil(data); setOriginalCouncil(data);
+        setCouncil(data);
+        setOriginalCouncil(data);
       } else {
-        const blank = councilPositions.reduce((acc, pos) => ({ ...acc, [pos.key]: '' }), { uid: user.id });
-        setCouncil(blank); setOriginalCouncil(blank);
+        const blank = councilPositions.reduce(
+          (acc, pos) => ({ ...acc, [pos.key]: "" }),
+          { uid: user.id }
+        );
+        setCouncil(blank);
+        setOriginalCouncil(blank);
       }
+
       setLoading(false);
     };
+
     fetchCouncil();
   }, [user, userLoading]);
 
   const handleSubmit = async () => {
     setIsSaving(true);
-    const { error } = await supabase.from('class_council').upsert({ ...council, uid: user?.id });
+
+    const { error } = await supabase
+      .from("class_council")
+      .upsert({ ...council, uid: user?.id });
 
     if (error) {
-      NativeAlert.alert('Error', error.message);
+      NativeAlert.alert("Error", error.message);
     } else {
-      NativeAlert.alert('Success', 'Class council updated successfully!');
+      NativeAlert.alert("Success", "Class council updated successfully!");
       setOriginalCouncil(council);
       setEditMode(false);
     }
+
     setIsSaving(false);
   };
 
   if (loading || userLoading) {
     return (
-      <View
-        className="bg-[#FFFFFF] p-8 rounded-[18px] items-center justify-center my-2 border border-[#E2E8F0]"
-        style={cardShadow()}
-      >
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="mt-4 text-[#475569] font-muller font-medium">Loading Council Details...</Text>
+      <View style={styles.loadingCard}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading Council Details...</Text>
       </View>
     );
   }
 
   return (
-    <View
-      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] my-2"
-      style={cardShadow()}
-    >
-      <View className="flex-row justify-between items-start mb-6">
-        <View className="flex-1">
-          <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">Class Council</Text>
-          <Text className="text-sm font-muller text-[#475569] mt-0.5">
-            {editMode ? 'Update assigned names' : `Batch: ${council?.batch || 'N/A'}`}
+    <View style={styles.rootCard}>
+      <View style={styles.header}>
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text style={styles.title}>Class Council</Text>
+          <Text style={styles.subtitle}>
+            {editMode ? "Update assigned names" : `Batch: ${council?.batch || "N/A"}`}
           </Text>
         </View>
+
         {!editMode && (
           <TouchableOpacity
-            activeOpacity={0.7}
+            activeOpacity={0.84}
             onPress={() => setEditMode(true)}
-            className="bg-[#F1F5F9] p-3 rounded-full"
+            style={styles.iconButton}
           >
-            <Pencil size={20} color="#0F172A" />
+            <Pencil size={18} color={theme.colors.text} />
           </TouchableOpacity>
         )}
       </View>
 
-      <View className="space-y-3.5">
+      <View style={styles.stack}>
         {councilPositions.map(({ key, label, icon: Icon }) => (
-          <View key={key} className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[16px] p-4 flex-row items-center">
-            <View className="bg-[#FFFFFF] p-3 rounded-[12px] border border-[#E2E8F0]">
-              <Icon size={22} color="#475569" />
+          <View key={key} style={styles.positionCard}>
+            <View style={styles.positionIconWrap}>
+              <Icon size={20} color={theme.colors.textSecondary} />
             </View>
-            <View className="ml-4 flex-1">
-              <Text className="text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">{label}</Text>
+
+            <View style={styles.positionContent}>
+              <Text style={styles.positionLabel}>{label}</Text>
+
               {editMode ? (
                 <TextInput
-                  className="border-b border-[#E2E8F0] py-1.5 text-[15px] text-[#0F172A] font-muller-bold mt-1"
-                  value={council?.[key] || ''}
+                  style={styles.positionInput}
+                  value={council?.[key] || ""}
                   onChangeText={(t) => setCouncil({ ...council, [key]: t })}
                   placeholder="Enter name"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={
+                    theme.colors.inputPlaceholder ?? theme.colors.textMuted
+                  }
                 />
               ) : (
-                <Text className="text-[15px] font-muller-bold text-[#0F172A] mt-1.5 tracking-tight">
-                  {council?.[key] || 'Not Assigned'}
+                <Text style={styles.positionValue}>
+                  {council?.[key] || "Not Assigned"}
                 </Text>
               )}
             </View>
@@ -128,27 +150,187 @@ export default function ClassCouncil() {
       </View>
 
       {editMode && (
-        <View className="flex-row mt-8 pt-5 border-t border-[#E2E8F0] gap-3">
+        <View style={styles.footerRow}>
           <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => { setCouncil(originalCouncil); setEditMode(false); }}
-            className="flex-1 py-3.5 rounded-[14px] bg-[#F1F5F9] border border-[#E2E8F0] items-center justify-center"
+            activeOpacity={0.84}
+            onPress={() => {
+              setCouncil(originalCouncil);
+              setEditMode(false);
+            }}
+            style={styles.cancelButton}
           >
-            <Text className="font-muller-bold text-[#0F172A] text-[15px] tracking-wide">Cancel</Text>
+            <X size={16} color={theme.colors.text} />
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.86}
             onPress={handleSubmit}
             disabled={isSaving}
-            className={`flex-1 py-3.5 rounded-[14px] flex-row items-center justify-center shadow-sm ${
-              isSaving ? 'bg-[#1E40AF]/60' : 'bg-[#1E40AF]'
-            }`}
+            style={[styles.saveButton, isSaving && styles.buttonDisabled]}
           >
-            {isSaving ? <ActivityIndicator color="white" className="mr-2.5" /> : <Save size={18} color="white" className="mr-2.5" />}
-            <Text className="font-muller-bold text-white text-[15px] tracking-wide">Save Changes</Text>
+            {isSaving ? (
+              <ActivityIndicator size="small" color={theme.colors.textOnDark} />
+            ) : (
+              <Save size={16} color={theme.colors.textOnDark} />
+            )}
+            <Text style={styles.saveButtonText}>Save Changes</Text>
           </TouchableOpacity>
         </View>
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  rootCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.medium,
+  },
+  loadingCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.medium,
+  },
+  loadingText: {
+    marginTop: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  title: {
+    color: theme.colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: "MullerBold",
+  },
+  subtitle: {
+    marginTop: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stack: {
+    gap: 12,
+  },
+  positionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 18,
+    padding: 14,
+  },
+  positionIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  positionContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  positionLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  positionValue: {
+    marginTop: 6,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  positionInput: {
+    marginTop: 6,
+    minHeight: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerBold",
+    paddingVertical: 6,
+  },
+  footerRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  cancelButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  cancelButtonText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  saveButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  saveButtonText: {
+    color: theme.colors.textOnDark,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+});

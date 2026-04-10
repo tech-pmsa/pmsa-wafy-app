@@ -1,8 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
-import { supabase } from '@/lib/supabaseClient';
-import { User, Shield, X } from 'lucide-react-native';
-import { COLORS } from '@/constants/theme';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase } from "@/lib/supabaseClient";
+import { User, Shield, X } from "lucide-react-native";
+import { theme } from "@/theme/theme";
 
 export function ViewStaffModal({ isOpen, setIsOpen, staff }: any) {
   const [councilDetails, setCouncilDetails] = useState<any | null>(null);
@@ -11,11 +21,18 @@ export function ViewStaffModal({ isOpen, setIsOpen, staff }: any) {
   useEffect(() => {
     const handleViewClick = async () => {
       if (!staff) return;
+
       setCouncilDetails(null);
-      if (staff.designation?.endsWith(' Class')) {
+
+      if (staff.designation?.endsWith(" Class")) {
         setIsLoadingCouncil(true);
         try {
-          const { data, error } = await supabase.from('class_council').select('*').eq('uid', staff.uid).single();
+          const { data } = await supabase
+            .from("class_council")
+            .select("*")
+            .eq("uid", staff.uid)
+            .single();
+
           if (data) setCouncilDetails(data);
         } catch (err: any) {
           console.error(err);
@@ -24,74 +41,211 @@ export function ViewStaffModal({ isOpen, setIsOpen, staff }: any) {
         }
       }
     };
+
     if (isOpen) handleViewClick();
   }, [staff, isOpen]);
 
   if (!staff) return null;
 
   const councilMembers = [
-    { role: 'President', name: councilDetails?.president }, { role: 'Secretary', name: councilDetails?.secretary },
-    { role: 'Treasurer', name: councilDetails?.treasurer }, { role: 'Auditor', name: councilDetails?.auditor },
-    { role: 'Vice President', name: councilDetails?.vicepresident }, { role: 'Joint Secretary', name: councilDetails?.jointsecretary },
-    { role: 'PRO', name: councilDetails?.pro },
+    { role: "President", name: councilDetails?.president },
+    { role: "Secretary", name: councilDetails?.secretary },
+    { role: "Treasurer", name: councilDetails?.treasurer },
+    { role: "Auditor", name: councilDetails?.auditor },
+    { role: "Vice President", name: councilDetails?.vicepresident },
+    { role: "Joint Secretary", name: councilDetails?.jointsecretary },
+    { role: "PRO", name: councilDetails?.pro },
   ];
 
   return (
-    <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setIsOpen(false)}>
-      <View className="flex-1 bg-[#F8FAFC] pt-6 px-5">
-
-        <View className="flex-row justify-end mb-4">
-          <TouchableOpacity
-            onPress={() => setIsOpen(false)}
-            className="bg-[#E2E8F0]/60 p-2.5 rounded-full"
-            activeOpacity={0.7}
-          >
-            <X size={20} color="#0F172A" />
-          </TouchableOpacity>
-        </View>
-
-        <View className="items-center mb-8">
-          <View className="h-28 w-28 rounded-full border-4 border-[#FFFFFF] shadow-sm overflow-hidden bg-[#F1F5F9] justify-center items-center">
-            {staff.img_url ? (
-              <Image source={{ uri: staff.img_url }} className="h-full w-full" />
-            ) : (
-              <User size={44} color="#94A3B8" />
-            )}
+    <Modal
+      visible={isOpen}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setIsOpen(false)}
+    >
+      <SafeAreaView style={styles.screen}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.topRow}>
+            <TouchableOpacity
+              onPress={() => setIsOpen(false)}
+              activeOpacity={0.84}
+              style={styles.closeButton}
+            >
+              <X size={18} color={theme.colors.text} />
+            </TouchableOpacity>
           </View>
-          <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight mt-4">{staff.name}</Text>
-          <Text className="text-[15px] font-muller text-[#475569] mt-1">{staff.designation || staff.role}</Text>
-        </View>
 
-        {staff.designation?.endsWith(' Class') && (
-          <View className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0]">
-            <View className="flex-row items-center mb-5 border-b border-[#E2E8F0] pb-4">
-              <Shield size={20} color={COLORS.primary} />
-              <Text className="text-lg font-muller-bold text-[#0F172A] tracking-tight ml-2.5">
-                Class Council ({councilDetails?.batch || 'N/A'})
-              </Text>
+          <View style={styles.profileSection}>
+            <View style={styles.avatarWrap}>
+              {staff.img_url ? (
+                <Image source={{ uri: staff.img_url }} style={styles.avatarImage} />
+              ) : (
+                <User size={44} color={theme.colors.textMuted} />
+              )}
             </View>
 
-            {isLoadingCouncil ? (
-              <ActivityIndicator size="small" color={COLORS.primary} className="py-4" />
-            ) : councilDetails ? (
-              <View className="flex-row flex-wrap gap-y-5">
-                {councilMembers.map(member => (
-                  <View key={member.role} className="w-1/2 pr-2">
-                    <Text className="text-[11px] text-[#94A3B8] font-muller-bold uppercase tracking-wider">
-                      {member.role}
-                    </Text>
-                    <Text className="text-[15px] font-muller-bold text-[#0F172A] mt-1">
-                      {member.name || 'N/A'}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text className="text-center font-muller text-[#475569] py-4">No council data found.</Text>
-            )}
+            <Text style={styles.name}>{staff.name}</Text>
+            <Text style={styles.designation}>{staff.designation || staff.role}</Text>
           </View>
-        )}
-      </View>
+
+          {staff.designation?.endsWith(" Class") && (
+            <View style={styles.councilCard}>
+              <View style={styles.councilHeader}>
+                <Shield size={20} color={theme.colors.primary} />
+                <Text style={styles.councilTitle}>
+                  Class Council ({councilDetails?.batch || "N/A"})
+                </Text>
+              </View>
+
+              {isLoadingCouncil ? (
+                <View style={styles.loadingWrap}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                </View>
+              ) : councilDetails ? (
+                <View style={styles.councilGrid}>
+                  {councilMembers.map((member) => (
+                    <View key={member.role} style={styles.councilItem}>
+                      <Text style={styles.councilRole}>{member.role}</Text>
+                      <Text style={styles.councilName}>{member.name || "N/A"}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptyCouncilText}>No council data found.</Text>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 28,
+  },
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 8,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileSection: {
+    alignItems: "center",
+    marginBottom: 26,
+  },
+  avatarWrap: {
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    borderWidth: 4,
+    borderColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    ...theme.shadows.medium,
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  name: {
+    marginTop: 16,
+    color: theme.colors.text,
+    fontSize: 26,
+    lineHeight: 32,
+    fontFamily: "MullerBold",
+    textAlign: "center",
+  },
+  designation: {
+    marginTop: 6,
+    color: theme.colors.textSecondary,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+    textAlign: "center",
+  },
+  councilCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.medium,
+  },
+  councilHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingBottom: 14,
+    marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  councilTitle: {
+    marginLeft: 10,
+    color: theme.colors.text,
+    fontSize: 18,
+    lineHeight: 23,
+    fontFamily: "MullerBold",
+  },
+  loadingWrap: {
+    paddingVertical: 18,
+    alignItems: "center",
+  },
+  councilGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    rowGap: 18,
+  },
+  councilItem: {
+    width: "50%",
+    paddingRight: 10,
+  },
+  councilRole: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  councilName: {
+    marginTop: 5,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  emptyCouncilText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+    textAlign: "center",
+    paddingVertical: 10,
+  },
+});

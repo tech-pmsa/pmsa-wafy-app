@@ -1,31 +1,39 @@
-import React from 'react';
-import { View, Text } from 'react-native';
-import { ProfileInfoLine } from './ProfileInfoLine';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { ProfileInfoLine } from "./ProfileInfoLine";
 import {
   User,
   Briefcase,
   Home,
   Shield,
   Users as FamilyIcon,
-} from 'lucide-react-native';
+} from "lucide-react-native";
+import { theme } from "@/theme/theme";
 
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.sectionCard}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {children}
+    </View>
+  );
 }
 
 export function FamilyDataTab({ data }: { data: any }) {
   if (!data || Object.keys(data).length === 0) {
     return (
-      <View className="items-center justify-center p-8 bg-[#F8FAFC] rounded-[16px] border border-dashed border-[#E2E8F0] h-64">
-        <FamilyIcon size={48} color="#94A3B8" />
-        <Text className="mt-5 font-muller-bold text-[#0F172A] text-lg tracking-tight">No Family Data</Text>
-        <Text className="text-[14px] text-[#475569] font-muller mt-1.5 text-center">
+      <View style={styles.emptyState}>
+        <View style={styles.emptyIconWrap}>
+          <FamilyIcon size={42} color={theme.colors.textMuted} />
+        </View>
+        <Text style={styles.emptyTitle}>No Family Data</Text>
+        <Text style={styles.emptyText}>
           Family information has not been added yet.
         </Text>
       </View>
@@ -34,14 +42,7 @@ export function FamilyDataTab({ data }: { data: any }) {
 
   return (
     <View>
-      <View
-        className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
-        style={cardShadow()}
-      >
-        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mb-5">
-          Parent & Household
-        </Text>
-
+      <SectionCard title="Parent & Household">
         <ProfileInfoLine icon={User} label="Father's Name" value={data.father_name} />
         <ProfileInfoLine
           icon={Briefcase}
@@ -55,7 +56,7 @@ export function FamilyDataTab({ data }: { data: any }) {
         />
         <ProfileInfoLine
           icon={Shield}
-          label="Father's Public Responsibilities"
+          label="Father's Responsibilities"
           value={data.father_responsibilities}
           isList
         />
@@ -70,83 +71,161 @@ export function FamilyDataTab({ data }: { data: any }) {
           label="Total Family Members"
           value={data.total_family_members?.toString()}
         />
-        <ProfileInfoLine icon={Home} label="House Type" value={data.house_type} />
         <ProfileInfoLine
-          icon={FamilyIcon}
-          label="Chronically Ill Members"
-          value={data.chronically_ill_members ? 'Yes' : 'No'}
+          icon={Home}
+          label="House Type"
+          value={data.house_type}
         />
-      </View>
+        <ProfileInfoLine
+          icon={Shield}
+          label="Chronically Ill Members"
+          value={
+            typeof data.chronically_ill_members === "boolean"
+              ? data.chronically_ill_members
+                ? "Yes"
+                : "No"
+              : data.chronically_ill_members
+          }
+        />
+      </SectionCard>
 
-      <View
-        className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0]"
-        style={cardShadow()}
-      >
-        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mb-5">
-          Sibling Information
-        </Text>
-
-        <Text className="font-muller-bold text-lg text-[#0F172A] tracking-tight mb-4">Brothers</Text>
-
+      <SectionCard title="Brothers">
         {data.brothers && data.brothers.length > 0 ? (
           data.brothers.map((bro: any, i: number) => (
-            <View
-              key={i}
-              className="bg-[#F8FAFC] p-4 rounded-[16px] border border-[#E2E8F0] mb-3.5"
-            >
-              <Text className="font-muller-bold text-[#0F172A] text-[15px] mb-3">
-                {bro.name}
+            <View key={i} style={styles.siblingCard}>
+              <Text style={styles.siblingName}>{bro.name || "Unnamed"}</Text>
+
+              <Text style={styles.siblingLine}>
+                <Text style={styles.siblingLabel}>Education: </Text>
+                {(bro.education || []).join(", ") || "N/A"}
               </Text>
 
-              <Text className="text-[13px] font-muller text-[#475569] mb-1.5 leading-relaxed">
-                <Text className="font-muller-bold text-[#0F172A]">Education: </Text>
-                {(bro.education || []).join(', ') || 'N/A'}
+              <Text style={styles.siblingLine}>
+                <Text style={styles.siblingLabel}>Occupation: </Text>
+                {bro.occupation || "N/A"}
               </Text>
 
-              <Text className="text-[13px] font-muller text-[#475569] mb-1.5 leading-relaxed">
-                <Text className="font-muller-bold text-[#0F172A]">Occupation: </Text>
-                {bro.occupation || 'N/A'}
-              </Text>
-
-              <Text className="text-[13px] font-muller text-[#475569] leading-relaxed">
-                <Text className="font-muller-bold text-[#0F172A]">Responsibilities: </Text>
-                {(bro.responsibilities || []).join(', ') || 'N/A'}
+              <Text style={styles.siblingLine}>
+                <Text style={styles.siblingLabel}>Responsibilities: </Text>
+                {(bro.responsibilities || []).join(", ") || "N/A"}
               </Text>
             </View>
           ))
         ) : (
-          <Text className="text-[13px] font-muller text-[#94A3B8] mb-5">No brothers added.</Text>
+          <Text style={styles.emptyInlineText}>No brothers added.</Text>
         )}
+      </SectionCard>
 
-        <Text className="font-muller-bold text-lg text-[#0F172A] tracking-tight mb-4 mt-5 border-t border-[#E2E8F0] pt-5">
-          Sisters
-        </Text>
-
+      <SectionCard title="Sisters">
         {data.sisters && data.sisters.length > 0 ? (
           data.sisters.map((sis: any, i: number) => (
-            <View
-              key={i}
-              className="bg-[#F8FAFC] p-4 rounded-[16px] border border-[#E2E8F0] mb-3.5"
-            >
-              <Text className="font-muller-bold text-[#0F172A] text-[15px] mb-3">
-                {sis.name}
+            <View key={i} style={styles.siblingCard}>
+              <Text style={styles.siblingName}>{sis.name || "Unnamed"}</Text>
+
+              <Text style={styles.siblingLine}>
+                <Text style={styles.siblingLabel}>Education: </Text>
+                {(sis.education || []).join(", ") || "N/A"}
               </Text>
 
-              <Text className="text-[13px] font-muller text-[#475569] mb-1.5 leading-relaxed">
-                <Text className="font-muller-bold text-[#0F172A]">Education: </Text>
-                {(sis.education || []).join(', ') || 'N/A'}
-              </Text>
-
-              <Text className="text-[13px] font-muller text-[#475569] leading-relaxed">
-                <Text className="font-muller-bold text-[#0F172A]">Occupation: </Text>
-                {sis.occupation || 'N/A'}
+              <Text style={styles.siblingLine}>
+                <Text style={styles.siblingLabel}>Occupation: </Text>
+                {sis.occupation || "N/A"}
               </Text>
             </View>
           ))
         ) : (
-          <Text className="text-[13px] font-muller text-[#94A3B8] mb-2">No sisters added.</Text>
+          <Text style={styles.emptyInlineText}>No sisters added.</Text>
         )}
-      </View>
+      </SectionCard>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  sectionCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    marginBottom: 14,
+    ...theme.shadows.medium,
+  },
+  sectionTitle: {
+    color: theme.colors.text,
+    fontSize: 18,
+    lineHeight: 23,
+    fontFamily: "MullerBold",
+    marginBottom: 14,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 36,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.border,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surfaceSoft,
+  },
+  emptyIconWrap: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    color: theme.colors.text,
+    fontSize: 20,
+    lineHeight: 25,
+    fontFamily: "MullerBold",
+  },
+  emptyText: {
+    marginTop: 6,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    fontFamily: "MullerMedium",
+  },
+  siblingCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+  },
+  siblingName: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+    marginBottom: 8,
+  },
+  siblingLine: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: "MullerMedium",
+    marginBottom: 4,
+  },
+  siblingLabel: {
+    color: theme.colors.text,
+    fontFamily: "MullerBold",
+  },
+  emptyInlineText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+});

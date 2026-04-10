@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,13 @@ import {
   Image,
   Alert as NativeAlert,
   Switch,
-} from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { decode } from 'base64-arraybuffer';
-import { supabase } from '@/lib/supabaseClient';
+  StyleSheet,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { decode } from "base64-arraybuffer";
+import { supabase } from "@/lib/supabaseClient";
 import {
   Camera,
   Save,
@@ -25,19 +27,9 @@ import {
   Pencil,
   ChevronDown,
   ChevronUp,
-} from 'lucide-react-native';
-import { MarkEditorModal } from '@/components/settings/profile/MarkEditorModal';
-import { COLORS } from '@/constants/theme';
-
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
-}
+} from "lucide-react-native";
+import { MarkEditorModal } from "@/components/settings/profile/MarkEditorModal";
+import { theme } from "@/theme/theme";
 
 function TabButton({
   label,
@@ -50,18 +42,11 @@ function TabButton({
 }) {
   return (
     <TouchableOpacity
-      activeOpacity={0.7}
+      activeOpacity={0.84}
       onPress={onPress}
-      className={`flex-1 py-3 rounded-[14px] items-center justify-center ${
-        active ? 'bg-[#FFFFFF] border border-[#E2E8F0]' : 'border border-transparent'
-      }`}
-      style={active ? cardShadow() : undefined}
+      style={[styles.tabButton, active && styles.tabButtonActive]}
     >
-      <Text
-        className={`font-muller-bold tracking-tight text-[15px] ${
-          active ? 'text-[#1E40AF]' : 'text-[#475569]'
-        }`}
-      >
+      <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -74,28 +59,26 @@ function InputField({
   onChangeText,
   placeholder,
   multiline = false,
-  keyboardType = 'default',
+  keyboardType = "default",
 }: {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
   multiline?: boolean;
-  keyboardType?: 'default' | 'numeric' | 'phone-pad' | 'email-address';
+  keyboardType?: "default" | "numeric" | "phone-pad" | "email-address";
 }) {
   return (
-    <View className="mb-5">
-      <Text className="text-sm font-muller-bold text-[#475569] mb-2 ml-1">{label}</Text>
+    <View style={styles.inputFieldWrap}>
+      <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
-        className={`bg-[#FFFFFF] border border-[#E2E8F0] font-muller text-[#0F172A] rounded-[14px] p-4 text-[16px] shadow-sm ${
-          multiline ? 'h-28' : ''
-        }`}
+        style={[styles.input, multiline && styles.textarea]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={theme.colors.inputPlaceholder ?? theme.colors.textMuted}
         multiline={multiline}
-        textAlignVertical={multiline ? 'top' : 'center'}
+        textAlignVertical={multiline ? "top" : "center"}
         keyboardType={keyboardType}
       />
     </View>
@@ -108,7 +91,7 @@ function SiblingCard({
   onChange,
   showResponsibilities,
 }: {
-  title: 'brothers' | 'sisters';
+  title: "brothers" | "sisters";
   siblings: any[];
   onChange: (next: any[]) => void;
   showResponsibilities: boolean;
@@ -117,9 +100,9 @@ function SiblingCard({
     onChange([
       ...siblings,
       {
-        name: '',
+        name: "",
         education: [],
-        occupation: '',
+        occupation: "",
         responsibilities: [],
       },
     ]);
@@ -136,60 +119,52 @@ function SiblingCard({
   };
 
   return (
-    <View
-      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
-      style={cardShadow()}
-    >
-      <View className="flex-row justify-between items-center mb-5">
-        <Text className="text-lg font-muller-bold text-[#0F172A] capitalize">{title}</Text>
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitleCaps}>{title}</Text>
 
         <TouchableOpacity
-          activeOpacity={0.7}
+          activeOpacity={0.84}
           onPress={addSibling}
-          className="bg-[#1E40AF]/10 px-3.5 py-2.5 rounded-[12px] border border-[#1E40AF]/20 flex-row items-center"
+          style={styles.addMiniButton}
         >
-          <View style={{ marginRight: 6 }}>
-            <PlusCircle size={16} color={COLORS.primary} />
-          </View>
-          <Text className="text-[#1E40AF] font-muller-bold text-xs uppercase tracking-wider">Add</Text>
+          <PlusCircle size={15} color={theme.colors.primary} />
+          <Text style={styles.addMiniButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
 
       {siblings.length > 0 ? (
         siblings.map((sib, index) => (
-          <View
-            key={index}
-            className="bg-[#F8FAFC] p-4 rounded-[16px] border border-[#E2E8F0] mb-4"
-          >
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="font-muller-bold text-[#0F172A] text-[15px]">
-                {title === 'brothers' ? 'Brother' : 'Sister'} {index + 1}
+          <View key={index} style={styles.siblingEditorCard}>
+            <View style={styles.siblingEditorHeader}>
+              <Text style={styles.siblingEditorTitle}>
+                {title === "brothers" ? "Brother" : "Sister"} {index + 1}
               </Text>
 
               <TouchableOpacity
-                activeOpacity={0.7}
+                activeOpacity={0.84}
                 onPress={() => removeSibling(index)}
-                className="p-2.5 bg-[#DC2626]/10 rounded-[10px]"
+                style={styles.removeMiniButton}
               >
-                <Trash2 size={18} color={COLORS.danger} />
+                <Trash2 size={16} color={theme.colors.error} />
               </TouchableOpacity>
             </View>
 
             <InputField
               label="Name"
-              value={sib.name || ''}
-              onChangeText={(t) => updateSibling(index, 'name', t)}
+              value={sib.name || ""}
+              onChangeText={(t) => updateSibling(index, "name", t)}
             />
 
             <InputField
               label="Education (comma separated)"
-              value={Array.isArray(sib.education) ? sib.education.join(', ') : sib.education || ''}
+              value={Array.isArray(sib.education) ? sib.education.join(", ") : sib.education || ""}
               onChangeText={(t) =>
                 updateSibling(
                   index,
-                  'education',
+                  "education",
                   t
-                    .split(',')
+                    .split(",")
                     .map((s) => s.trim())
                     .filter(Boolean)
                 )
@@ -198,8 +173,8 @@ function SiblingCard({
 
             <InputField
               label="Occupation"
-              value={sib.occupation || ''}
-              onChangeText={(t) => updateSibling(index, 'occupation', t)}
+              value={sib.occupation || ""}
+              onChangeText={(t) => updateSibling(index, "occupation", t)}
             />
 
             {showResponsibilities && (
@@ -207,15 +182,15 @@ function SiblingCard({
                 label="Responsibilities (comma separated)"
                 value={
                   Array.isArray(sib.responsibilities)
-                    ? sib.responsibilities.join(', ')
-                    : sib.responsibilities || ''
+                    ? sib.responsibilities.join(", ")
+                    : sib.responsibilities || ""
                 }
                 onChangeText={(t) =>
                   updateSibling(
                     index,
-                    'responsibilities',
+                    "responsibilities",
                     t
-                      .split(',')
+                      .split(",")
                       .map((s) => s.trim())
                       .filter(Boolean)
                   )
@@ -225,18 +200,18 @@ function SiblingCard({
           </View>
         ))
       ) : (
-        <Text className="text-sm font-muller text-[#94A3B8]">No {title} added.</Text>
+        <Text style={styles.emptyInlineText}>No {title} added.</Text>
       )}
     </View>
   );
 }
 
 export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
-  const [activeTab, setActiveTab] = useState<'personal' | 'academics' | 'family'>(
-    'personal'
+  const [activeTab, setActiveTab] = useState<"personal" | "academics" | "family">(
+    "personal"
   );
   const [personalForm, setPersonalForm] = useState<any>({});
-  const [fatherResponsibilitiesText, setFatherResponsibilitiesText] = useState('');
+  const [fatherResponsibilitiesText, setFatherResponsibilitiesText] = useState("");
   const [familyForm, setFamilyForm] = useState<any>({});
   const [academicEntries, setAcademicEntries] = useState<any[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<any | null>(null);
@@ -250,33 +225,33 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
     if (!student) return;
 
     const [familyRes, academicsRes] = await Promise.all([
-      supabase.from('family_data').select('*').eq('student_uid', student.uid).single(),
+      supabase.from("family_data").select("*").eq("student_uid", student.uid).single(),
       supabase
-        .from('academic_entries')
-        .select('*, subject_marks(*)')
-        .eq('student_uid', student.uid)
-        .order('created_at', { ascending: true }),
+        .from("academic_entries")
+        .select("*, subject_marks(*)")
+        .eq("student_uid", student.uid)
+        .order("created_at", { ascending: true }),
     ]);
 
     if (familyRes.data) {
       setFamilyForm(familyRes.data);
       setFatherResponsibilitiesText(
         Array.isArray(familyRes.data.father_responsibilities)
-          ? familyRes.data.father_responsibilities.join(', ')
-          : ''
+          ? familyRes.data.father_responsibilities.join(", ")
+          : ""
       );
-    }
-    if (!familyRes.data) {
+    } else {
       setFamilyForm({});
-      setFatherResponsibilitiesText('');
+      setFatherResponsibilitiesText("");
     }
+
     setAcademicEntries(academicsRes.data || []);
   }, [student]);
 
   useEffect(() => {
     if (!student || !isOpen) return;
 
-    setActiveTab('personal');
+    setActiveTab("personal");
     setExpandedAcademicId(null);
     setSelectedEntry(null);
     setPersonalForm(student);
@@ -293,7 +268,7 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
     setFamilyForm((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const handleSiblingsUpdate = (type: 'brothers' | 'sisters', updated: any[]) => {
+  const handleSiblingsUpdate = (type: "brothers" | "sisters", updated: any[]) => {
     setFamilyForm((prev: any) => ({ ...prev, [type]: updated }));
   };
 
@@ -317,15 +292,15 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
         const filePath = `avatars/${student.uid}/${Date.now()}-avatar.png`;
 
         const { error: uploadError } = await supabase.storage
-          .from('avatars')
+          .from("avatars")
           .upload(filePath, decode(base64), {
-            contentType: 'image/png',
+            contentType: "image/png",
             upsert: true,
           });
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
         const newUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
         setPreview(newUrl);
@@ -333,22 +308,22 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
         setPersonalForm((prev: any) => ({ ...prev, img_url: newUrl }));
       }
     } catch (error: any) {
-      NativeAlert.alert('Error', error?.message || 'Could not upload image.');
+      NativeAlert.alert("Error", error?.message || "Could not upload image.");
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleEntryDelete = async (entryId: number) => {
-    const { error } = await supabase.from('academic_entries').delete().eq('id', entryId);
+    const { error } = await supabase.from("academic_entries").delete().eq("id", entryId);
 
     if (error) {
-      NativeAlert.alert('Error', error.message || 'Failed to delete record.');
+      NativeAlert.alert("Error", error.message || "Failed to delete record.");
       return;
     }
 
     await fetchAllData();
-    NativeAlert.alert('Success', 'Academic record deleted.');
+    NativeAlert.alert("Success", "Academic record deleted.");
   };
 
   const handleSave = async () => {
@@ -365,31 +340,31 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
       };
 
       const { error: studentError } = await supabase
-        .from('students')
+        .from("students")
         .update(finalUpdateData)
-        .eq('uid', student.uid);
+        .eq("uid", student.uid);
 
       if (studentError) throw studentError;
 
       const familyPayload = {
         ...familyForm,
         father_responsibilities: fatherResponsibilitiesText
-          .split(',')
+          .split(",")
           .map((s) => s.trim())
           .filter(Boolean),
         student_uid: student.uid,
       };
 
-      const { error: familyError } = await supabase.from('family_data').upsert(familyPayload);
+      const { error: familyError } = await supabase.from("family_data").upsert(familyPayload);
 
       if (familyError) throw familyError;
 
-      NativeAlert.alert('Success', 'Student profile updated successfully.');
+      NativeAlert.alert("Success", "Student profile updated successfully.");
       await fetchAllData();
       onSave?.();
       setIsOpen(false);
     } catch (error: any) {
-      NativeAlert.alert('Error', error?.message || 'Failed to save changes.');
+      NativeAlert.alert("Error", error?.message || "Failed to save changes.");
     } finally {
       setIsSaving(false);
     }
@@ -399,17 +374,17 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
 
   const personalFields = useMemo(
     () => [
-      ['Full Name', 'name'],
-      ['Class ID', 'class_id'],
-      ['Batch', 'batch'],
-      ['Council', 'council'],
-      ['CIC', 'cic'],
-      ['Phone', 'phone'],
-      ['Guardian Name', 'guardian'],
-      ['Guardian Phone', 'g_phone'],
-      ['SSLC Board', 'sslc'],
-      ['Plus Two Board', 'plustwo'],
-      ['Plus Two Stream', 'plustwo_streams'],
+      ["Full Name", "name"],
+      ["Class ID", "class_id"],
+      ["Batch", "batch"],
+      ["Council", "council"],
+      ["CIC", "cic"],
+      ["Phone", "phone"],
+      ["Guardian Name", "guardian"],
+      ["Guardian Phone", "g_phone"],
+      ["SSLC Board", "sslc"],
+      ["Plus Two Board", "plustwo"],
+      ["Plus Two Stream", "plustwo_streams"],
     ],
     []
   );
@@ -424,122 +399,109 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
         transparent={false}
         onRequestClose={() => setIsOpen(false)}
       >
-        <View className="flex-1 bg-[#F8FAFC] pt-14 px-5">
-          <View className="flex-row justify-between items-center mb-6">
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.header}>
             <View>
-              <Text className="text-2xl font-muller-bold text-[#0F172A] tracking-tight">Edit Profile</Text>
-              <Text className="text-[#475569] font-muller text-sm mt-0.5">Editing {student.name}</Text>
+              <Text style={styles.title}>Edit Profile</Text>
+              <Text style={styles.subtitle}>Editing {student.name}</Text>
             </View>
 
             <TouchableOpacity
-              activeOpacity={0.7}
+              activeOpacity={0.84}
               onPress={() => setIsOpen(false)}
-              className="bg-[#E2E8F0]/60 p-2.5 rounded-full"
+              style={styles.closeButton}
             >
-              <X size={20} color="#0F172A" />
+              <X size={18} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
 
-          <View className="flex-row bg-[#E2E8F0]/60 p-1.5 rounded-[16px] mb-6">
+          <View style={styles.tabWrap}>
             <TabButton
               label="Personal"
-              active={activeTab === 'personal'}
-              onPress={() => setActiveTab('personal')}
+              active={activeTab === "personal"}
+              onPress={() => setActiveTab("personal")}
             />
             <TabButton
               label="Academics"
-              active={activeTab === 'academics'}
-              onPress={() => setActiveTab('academics')}
+              active={activeTab === "academics"}
+              onPress={() => setActiveTab("academics")}
             />
             <TabButton
               label="Family"
-              active={activeTab === 'family'}
-              onPress={() => setActiveTab('family')}
+              active={activeTab === "family"}
+              onPress={() => setActiveTab("family")}
             />
           </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 40 }}
+            contentContainerStyle={styles.scrollContent}
           >
-            {activeTab === 'personal' && (
-              <View>
-                <View
-                  className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
-                  style={cardShadow()}
-                >
-                  <View className="items-center mb-6 mt-2">
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={handleAvatarUpdate}
-                      disabled={isSaving}
-                      className="relative"
-                    >
-                      <View
-                        className="h-28 w-28 rounded-full border-4 border-[#FFFFFF] overflow-hidden bg-[#F1F5F9] justify-center items-center"
-                        style={cardShadow()}
-                      >
-                        {preview ? (
-                          <Image source={{ uri: preview }} className="h-full w-full" />
-                        ) : (
-                          <User size={44} color="#94A3B8" />
-                        )}
-                      </View>
+            {activeTab === "personal" && (
+              <View style={styles.sectionCard}>
+                <View style={styles.avatarSection}>
+                  <TouchableOpacity
+                    activeOpacity={0.86}
+                    onPress={handleAvatarUpdate}
+                    disabled={isSaving}
+                    style={styles.avatarTouchable}
+                  >
+                    <View style={styles.avatarWrap}>
+                      {preview ? (
+                        <Image source={{ uri: preview }} style={styles.avatarImage} />
+                      ) : (
+                        <User size={44} color={theme.colors.textMuted} />
+                      )}
+                    </View>
 
-                      <View className="absolute bottom-0 right-0 bg-[#1E40AF] p-3 rounded-full border-2 border-[#FFFFFF] shadow-sm">
-                        {isSaving ? (
-                          <ActivityIndicator size="small" color="white" />
-                        ) : (
-                          <Camera size={16} color="white" />
-                        )}
-                      </View>
-                    </TouchableOpacity>
+                    <View style={styles.cameraBadge}>
+                      {isSaving ? (
+                        <ActivityIndicator size="small" color={theme.colors.textOnDark} />
+                      ) : (
+                        <Camera size={16} color={theme.colors.textOnDark} />
+                      )}
+                    </View>
+                  </TouchableOpacity>
 
-                    <Text className="text-[11px] font-muller-bold text-[#94A3B8] mt-3 uppercase tracking-wider">Tap to change photo</Text>
-                  </View>
-
-                  {personalFields.map(([label, key]) => (
-                    <InputField
-                      key={key}
-                      label={label}
-                      value={personalForm[key] || ''}
-                      onChangeText={(t) => handlePersonalChange(key, t)}
-                      keyboardType={
-                        key === 'phone' || key === 'g_phone' ? 'phone-pad' : 'default'
-                      }
-                    />
-                  ))}
-
-                  <InputField
-                    label="Address"
-                    value={personalForm.address || ''}
-                    onChangeText={(t) => handlePersonalChange('address', t)}
-                    multiline
-                  />
+                  <Text style={styles.avatarHint}>Tap to change photo</Text>
                 </View>
+
+                {personalFields.map(([label, key]) => (
+                  <InputField
+                    key={key}
+                    label={label}
+                    value={personalForm[key] || ""}
+                    onChangeText={(t) => handlePersonalChange(key, t)}
+                    keyboardType={
+                      key === "phone" || key === "g_phone" ? "phone-pad" : "default"
+                    }
+                  />
+                ))}
+
+                <InputField
+                  label="Address"
+                  value={personalForm.address || ""}
+                  onChangeText={(t) => handlePersonalChange("address", t)}
+                  multiline
+                />
               </View>
             )}
 
-            {activeTab === 'academics' && (
-              <View
-                className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
-                style={cardShadow()}
-              >
-                <View className="flex-row justify-between items-center mb-5">
-                  <Text className="text-lg font-muller-bold text-[#0F172A] tracking-tight">Academic Records</Text>
+            {activeTab === "academics" && (
+              <View style={styles.sectionCard}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionTitle}>Academic Records</Text>
 
                   <TouchableOpacity
-                    activeOpacity={0.7}
+                    activeOpacity={0.84}
                     onPress={() => {
                       setSelectedEntry(null);
                       setIsMarkModalOpen(true);
                     }}
-                    className="bg-[#1E40AF]/10 px-3.5 py-2.5 rounded-[12px] border border-[#1E40AF]/20 flex-row items-center"
+                    style={styles.addMiniButton}
                   >
-                    <View style={{ marginRight: 6 }}>
-                      <PlusCircle size={16} color={COLORS.primary} />
-                    </View>
-                    <Text className="text-[#1E40AF] font-muller-bold text-xs uppercase tracking-wider">Add</Text>
+                    <PlusCircle size={15} color={theme.colors.primary} />
+                    <Text style={styles.addMiniButtonText}>Add</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -548,98 +510,98 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                     const isExpanded = expandedAcademicId === entry.id;
 
                     return (
-                      <View
-                        key={entry.id}
-                        className="bg-[#F8FAFC] rounded-[16px] border border-[#E2E8F0] mb-3.5 overflow-hidden"
-                      >
+                      <View key={entry.id} style={styles.academicCard}>
                         <TouchableOpacity
-                          activeOpacity={0.7}
+                          activeOpacity={0.84}
                           onPress={() =>
                             setExpandedAcademicId(isExpanded ? null : entry.id)
                           }
-                          className="p-4 flex-row items-center justify-between"
+                          style={styles.academicHeader}
                         >
-                          <Text className="font-muller-bold text-[#0F172A] text-[15px] flex-1 pr-3">
-                            {entry.title}
-                          </Text>
+                          <Text style={styles.academicTitle}>{entry.title}</Text>
 
-                          <View className="flex-row items-center">
+                          <View style={styles.academicHeaderActions}>
                             <TouchableOpacity
-                              activeOpacity={0.6}
+                              activeOpacity={0.7}
                               onPress={() => {
                                 setSelectedEntry(entry);
                                 setIsMarkModalOpen(true);
                               }}
-                              className="p-2 bg-[#FFFFFF] rounded-[10px] border border-[#E2E8F0] mr-2"
+                              style={styles.iconActionButton}
                             >
-                              <Pencil size={16} color={COLORS.primary} />
+                              <Pencil size={16} color={theme.colors.primary} />
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                              activeOpacity={0.6}
+                              activeOpacity={0.7}
                               onPress={() => handleEntryDelete(entry.id)}
-                              className="p-2 bg-[#FFFFFF] rounded-[10px] border border-[#E2E8F0] mr-2.5"
+                              style={styles.iconActionButton}
                             >
-                              <Trash2 size={16} color={COLORS.danger} />
+                              <Trash2 size={16} color={theme.colors.error} />
                             </TouchableOpacity>
 
                             {isExpanded ? (
-                              <ChevronUp size={22} color="#94A3B8" />
+                              <ChevronUp size={20} color={theme.colors.textMuted} />
                             ) : (
-                              <ChevronDown size={22} color="#94A3B8" />
+                              <ChevronDown size={20} color={theme.colors.textMuted} />
                             )}
                           </View>
                         </TouchableOpacity>
 
                         {isExpanded && (
-                          <View className="px-4 pb-4 border-t border-[#E2E8F0] pt-3.5">
-                            <View className="flex-row border-b border-[#E2E8F0] pb-2 mb-2.5">
-                              <Text className="flex-1 text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
+                          <View style={styles.academicBody}>
+                            <View style={styles.subjectHeader}>
+                              <Text style={[styles.subjectHeadText, { flex: 1 }]}>
                                 Subject
                               </Text>
-                              <Text className="w-20 text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
+                              <Text style={[styles.subjectHeadText, { width: 70 }]}>
                                 Mark
                               </Text>
-                              <Text className="w-20 text-right text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
+                              <Text
+                                style={[
+                                  styles.subjectHeadText,
+                                  { width: 82, textAlign: "right" },
+                                ]}
+                              >
                                 Status
                               </Text>
                             </View>
 
                             {entry.subject_marks && entry.subject_marks.length > 0 ? (
                               entry.subject_marks.map((subject: any) => (
-                                <View
-                                  key={subject.id}
-                                  className="flex-row items-center py-2.5 border-b border-[#E2E8F0]/60"
-                                >
-                                  <Text className="flex-1 font-muller-bold text-[#0F172A] text-[13px] pr-2">
+                                <View key={subject.id} style={styles.subjectRow}>
+                                  <Text style={[styles.subjectName, { flex: 1 }]}>
                                     {subject.subject_name}
                                   </Text>
-
-                                  <Text className="w-20 font-muller-bold text-[#0F172A] text-[13px]">
+                                  <Text style={[styles.subjectMark, { width: 70 }]}>
                                     {subject.marks_obtained}
                                   </Text>
 
-                                  {subject.status ? (
-                                    <View className="w-20 items-end">
-                                      <View className="bg-[#16A34A]/10 px-2.5 py-1.5 rounded-[8px] border border-[#16A34A]/20">
-                                        <Text className="text-[10px] font-muller-bold text-[#16A34A] uppercase tracking-wider">
-                                          Passed
-                                        </Text>
-                                      </View>
+                                  <View style={{ width: 82, alignItems: "flex-end" }}>
+                                    <View
+                                      style={[
+                                        styles.statusPill,
+                                        subject.status
+                                          ? styles.passPill
+                                          : styles.failPill,
+                                      ]}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.statusPillText,
+                                          subject.status
+                                            ? styles.passText
+                                            : styles.failText,
+                                        ]}
+                                      >
+                                        {subject.status ? "Passed" : "Failed"}
+                                      </Text>
                                     </View>
-                                  ) : (
-                                    <View className="w-20 items-end">
-                                      <View className="bg-[#DC2626]/10 px-2.5 py-1.5 rounded-[8px] border border-[#DC2626]/20">
-                                        <Text className="text-[10px] font-muller-bold text-[#DC2626] uppercase tracking-wider">
-                                          Failed
-                                        </Text>
-                                      </View>
-                                    </View>
-                                  )}
+                                  </View>
                                 </View>
                               ))
                             ) : (
-                              <Text className="text-[13px] font-muller text-[#94A3B8] py-3 text-center">
+                              <Text style={styles.emptyInlineText}>
                                 No subjects added.
                               </Text>
                             )}
@@ -649,27 +611,24 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
                     );
                   })
                 ) : (
-                  <Text className="text-[13px] font-muller text-[#94A3B8] py-4 text-center">
+                  <Text style={styles.emptyInlineText}>
                     No academic records found.
                   </Text>
                 )}
               </View>
             )}
 
-            {activeTab === 'family' && (
+            {activeTab === "family" && (
               <View>
-                <View
-                  className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
-                  style={cardShadow()}
-                >
-                  <Text className="text-lg font-muller-bold text-[#0F172A] mb-5 tracking-tight">Household</Text>
+                <View style={styles.sectionCard}>
+                  <Text style={styles.sectionTitle}>Household</Text>
 
                   <InputField
                     label="Total Family Members"
-                    value={familyForm.total_family_members?.toString() || ''}
+                    value={familyForm.total_family_members?.toString() || ""}
                     onChangeText={(t) =>
                       handleFamilyChange(
-                        'total_family_members',
+                        "total_family_members",
                         t ? parseInt(t, 10) || null : null
                       )
                     }
@@ -678,54 +637,46 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
 
                   <InputField
                     label="House Type"
-                    value={familyForm.house_type || ''}
-                    onChangeText={(t) => handleFamilyChange('house_type', t)}
+                    value={familyForm.house_type || ""}
+                    onChangeText={(t) => handleFamilyChange("house_type", t)}
                   />
 
-                  <View className="mb-2">
-                    <Text className="text-sm font-muller-bold text-[#475569] mb-2.5 ml-1">
-                      Are there chronically ill members in the house?
-                    </Text>
-                    <View className="flex-row items-center justify-between bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-[14px] p-4">
-                      <Text className="text-[16px] font-muller-bold text-[#0F172A]">
-                        {chronicallyIllChecked ? 'Yes' : 'No'}
+                  <View style={styles.toggleFieldWrap}>
+                    <Text style={styles.fieldLabel}>Are there chronically ill members?</Text>
+                    <View style={styles.switchRow}>
+                      <Text style={styles.switchText}>
+                        {chronicallyIllChecked ? "Yes" : "No"}
                       </Text>
                       <Switch
                         value={chronicallyIllChecked}
-                        onValueChange={(v) =>
-                          handleFamilyChange('chronically_ill_members', v)
+                        onValueChange={(value) =>
+                          handleFamilyChange("chronically_ill_members", value)
                         }
-                        trackColor={{ false: '#E2E8F0', true: COLORS.primary }}
+                        trackColor={{
+                          false: theme.colors.border,
+                          true: theme.colors.primary,
+                        }}
                       />
                     </View>
                   </View>
-                </View>
-
-                <View
-                  className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mb-5"
-                  style={cardShadow()}
-                >
-                  <Text className="text-lg font-muller-bold text-[#0F172A] mb-5 tracking-tight">
-                    Parent Details
-                  </Text>
 
                   <InputField
                     label="Father's Name"
-                    value={familyForm.father_name || ''}
-                    onChangeText={(t) => handleFamilyChange('father_name', t)}
+                    value={familyForm.father_name || ""}
+                    onChangeText={(t) => handleFamilyChange("father_name", t)}
                   />
 
                   <InputField
                     label="Father's Occupation"
-                    value={familyForm.father_occupation || ''}
-                    onChangeText={(t) => handleFamilyChange('father_occupation', t)}
+                    value={familyForm.father_occupation || ""}
+                    onChangeText={(t) => handleFamilyChange("father_occupation", t)}
                   />
 
                   <InputField
                     label="Father's Staying Place"
-                    value={familyForm.father_staying_place || ''}
+                    value={familyForm.father_staying_place || ""}
                     onChangeText={(t) =>
-                      handleFamilyChange('father_staying_place', t)
+                      handleFamilyChange("father_staying_place", t)
                     }
                   />
 
@@ -738,54 +689,50 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
 
                   <InputField
                     label="Mother's Name"
-                    value={familyForm.mother_name || ''}
-                    onChangeText={(t) => handleFamilyChange('mother_name', t)}
+                    value={familyForm.mother_name || ""}
+                    onChangeText={(t) => handleFamilyChange("mother_name", t)}
                   />
 
                   <InputField
                     label="Mother's Occupation"
-                    value={familyForm.mother_occupation || ''}
-                    onChangeText={(t) => handleFamilyChange('mother_occupation', t)}
+                    value={familyForm.mother_occupation || ""}
+                    onChangeText={(t) => handleFamilyChange("mother_occupation", t)}
                   />
                 </View>
 
                 <SiblingCard
                   title="brothers"
                   siblings={familyForm.brothers || []}
-                  onChange={(next) => handleSiblingsUpdate('brothers', next)}
+                  onChange={(next) => handleSiblingsUpdate("brothers", next)}
                   showResponsibilities={true}
                 />
 
                 <SiblingCard
                   title="sisters"
                   siblings={familyForm.sisters || []}
-                  onChange={(next) => handleSiblingsUpdate('sisters', next)}
+                  onChange={(next) => handleSiblingsUpdate("sisters", next)}
                   showResponsibilities={false}
                 />
               </View>
             )}
           </ScrollView>
 
-          <View className="py-4 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+          <View style={styles.footer}>
             <TouchableOpacity
-              activeOpacity={0.8}
+              activeOpacity={0.86}
               onPress={handleSave}
               disabled={isSaving}
-              className={`w-full py-4 rounded-[14px] flex-row justify-center items-center ${
-                isSaving ? 'bg-[#1E40AF]/60' : 'bg-[#1E40AF]'
-              }`}
+              style={[styles.primaryButton, isSaving && styles.buttonDisabled]}
             >
               {isSaving ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator size="small" color={theme.colors.textOnDark} />
               ) : (
-                <View style={{ marginRight: 8 }}>
-                  <Save size={20} color="white" />
-                </View>
+                <Save size={18} color={theme.colors.textOnDark} />
               )}
-              <Text className="text-white font-muller-bold text-[16px] tracking-wide ml-1.5">Save Changes</Text>
+              <Text style={styles.primaryButtonText}>Save Changes</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       {student && (
@@ -800,3 +747,379 @@ export function EditStudentModal({ isOpen, setIsOpen, student, onSave }: any) {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  title: {
+    color: theme.colors.text,
+    fontSize: 24,
+    lineHeight: 30,
+    fontFamily: "MullerBold",
+  },
+  subtitle: {
+    marginTop: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: "MullerMedium",
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabWrap: {
+    flexDirection: "row",
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 18,
+    padding: 6,
+    marginBottom: 16,
+    gap: 8,
+  },
+  tabButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabButtonActive: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    ...theme.shadows.soft,
+  },
+  tabButtonText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  tabButtonTextActive: {
+    color: theme.colors.primary,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  sectionCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    marginBottom: 14,
+    ...theme.shadows.medium,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    color: theme.colors.text,
+    fontSize: 18,
+    lineHeight: 23,
+    fontFamily: "MullerBold",
+  },
+  sectionTitleCaps: {
+    color: theme.colors.text,
+    fontSize: 18,
+    lineHeight: 23,
+    fontFamily: "MullerBold",
+    textTransform: "capitalize",
+  },
+  avatarSection: {
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  avatarTouchable: {
+    position: "relative",
+  },
+  avatarWrap: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    borderWidth: 4,
+    borderColor: theme.colors.surface,
+    overflow: "hidden",
+    backgroundColor: theme.colors.surfaceSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.medium,
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  cameraBadge: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary,
+    borderWidth: 2,
+    borderColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarHint: {
+    marginTop: 12,
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  inputFieldWrap: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerBold",
+    marginBottom: 8,
+    marginLeft: 2,
+  },
+  input: {
+    minHeight: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    paddingHorizontal: 14,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerMedium",
+  },
+  textarea: {
+    minHeight: 110,
+    paddingTop: 14,
+    paddingBottom: 14,
+  },
+  addMiniButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+  },
+  addMiniButtonText: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+    textTransform: "uppercase",
+  },
+  siblingEditorCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    marginBottom: 12,
+  },
+  siblingEditorHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  siblingEditorTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  removeMiniButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: theme.colors.errorSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  academicCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    marginBottom: 10,
+  },
+  academicHeader: {
+    padding: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+  },
+  academicTitle: {
+    flex: 1,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  academicHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  iconActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  academicBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  subjectHeader: {
+    flexDirection: "row",
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  subjectHeadText: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "MullerBold",
+    textTransform: "uppercase",
+  },
+  subjectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(216,225,236,0.6)",
+  },
+  subjectName: {
+    color: theme.colors.text,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+    paddingRight: 10,
+  },
+  subjectMark: {
+    color: theme.colors.text,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  passPill: {
+    backgroundColor: theme.colors.successSoft,
+    borderColor: "rgba(22,163,74,0.14)",
+  },
+  failPill: {
+    backgroundColor: theme.colors.errorSoft,
+    borderColor: "rgba(220,38,38,0.14)",
+  },
+  statusPillText: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontFamily: "MullerBold",
+    textTransform: "uppercase",
+  },
+  passText: {
+    color: theme.colors.success,
+  },
+  failText: {
+    color: theme.colors.error,
+  },
+  toggleFieldWrap: {
+    marginBottom: 14,
+  },
+  switchRow: {
+    minHeight: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  switchText: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerBold",
+  },
+  emptyInlineText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+  footer: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+    paddingTop: 14,
+    paddingBottom: 18,
+  },
+  primaryButton: {
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: theme.colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  primaryButtonText: {
+    color: theme.colors.textOnDark,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerBold",
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+});

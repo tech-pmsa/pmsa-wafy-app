@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import {
   Pencil,
   Trash2,
@@ -7,99 +7,75 @@ import {
   BookMarked,
   ChevronDown,
   ChevronUp,
-} from 'lucide-react-native';
-import { COLORS } from '@/constants/theme';
-
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
-}
+} from "lucide-react-native";
+import { theme } from "@/theme/theme";
 
 export function AcademicsTab({ entries, onAdd, onEdit, onDelete }: any) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   return (
-    <View
-      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0]"
-      style={cardShadow()}
-    >
-      <View className="flex-row justify-between items-start mb-6">
-        <View className="flex-1 pr-3">
-          <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">Academic Records</Text>
-          <Text className="text-sm font-muller text-[#475569] mt-1">
-            A record of your performance.
-          </Text>
+    <View style={styles.rootCard}>
+      <View style={styles.headerRow}>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.title}>Academic Records</Text>
+          <Text style={styles.subtitle}>A record of your performance.</Text>
         </View>
 
         <TouchableOpacity
-          activeOpacity={0.7}
+          activeOpacity={0.84}
           onPress={onAdd}
-          className="bg-[#1E40AF]/10 px-3.5 py-2.5 rounded-[12px] border border-[#1E40AF]/20 flex-row items-center"
+          style={styles.addButton}
         >
-          <PlusCircle size={16} color={COLORS.primary} />
-          <Text className="text-[#1E40AF] font-muller-bold ml-1.5 text-xs uppercase tracking-wider">Add</Text>
+          <PlusCircle size={16} color={theme.colors.primary} />
+          <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
 
       {entries && entries.length > 0 ? (
-        <View>
+        <View style={styles.stack}>
           {entries.map((entry: any) => {
             const isExpanded = expandedId === entry.id;
 
             return (
-              <View
-                key={entry.id}
-                className="bg-[#FFFFFF] rounded-[16px] border border-[#E2E8F0] overflow-hidden mb-3.5 shadow-sm"
-              >
+              <View key={entry.id} style={styles.entryCard}>
                 <TouchableOpacity
-                  activeOpacity={0.7}
+                  activeOpacity={0.84}
                   onPress={() => setExpandedId(isExpanded ? null : entry.id)}
-                  className="p-4 flex-row items-center justify-between bg-[#F8FAFC]"
+                  style={styles.entryHeader}
                 >
-                  <Text className="font-muller-bold text-[#0F172A] text-[15px] flex-1 pr-3">
-                    {entry.title}
-                  </Text>
+                  <Text style={styles.entryTitle}>{entry.title}</Text>
 
-                  <View className="flex-row items-center">
+                  <View style={styles.entryActions}>
                     <TouchableOpacity
-                      activeOpacity={0.6}
+                      activeOpacity={0.7}
                       onPress={() => onEdit(entry)}
-                      className="p-2 bg-[#FFFFFF] rounded-[10px] border border-[#E2E8F0] mr-2"
+                      style={styles.iconButton}
                     >
-                      <Pencil size={16} color={COLORS.primary} />
+                      <Pencil size={16} color={theme.colors.primary} />
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      activeOpacity={0.6}
+                      activeOpacity={0.7}
                       onPress={() => onDelete(entry.id)}
-                      className="p-2 bg-[#FFFFFF] rounded-[10px] border border-[#E2E8F0] mr-2.5"
+                      style={styles.iconButton}
                     >
-                      <Trash2 size={16} color={COLORS.danger} />
+                      <Trash2 size={16} color={theme.colors.error} />
                     </TouchableOpacity>
 
                     {isExpanded ? (
-                      <ChevronUp size={22} color="#94A3B8" />
+                      <ChevronUp size={22} color={theme.colors.textMuted} />
                     ) : (
-                      <ChevronDown size={22} color="#94A3B8" />
+                      <ChevronDown size={22} color={theme.colors.textMuted} />
                     )}
                   </View>
                 </TouchableOpacity>
 
                 {isExpanded && (
-                  <View className="px-4 pb-4 border-t border-[#E2E8F0] pt-3.5">
-                    <View className="flex-row border-b border-[#E2E8F0] pb-2 mb-2.5">
-                      <Text className="flex-1 text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
-                        Subject
-                      </Text>
-                      <Text className="w-16 text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
-                        Mark
-                      </Text>
-                      <Text className="w-16 text-right text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
+                  <View style={styles.entryBody}>
+                    <View style={styles.tableHeader}>
+                      <Text style={[styles.tableHeadText, { flex: 1 }]}>Subject</Text>
+                      <Text style={[styles.tableHeadText, { width: 64 }]}>Mark</Text>
+                      <Text style={[styles.tableHeadText, { width: 72, textAlign: "right" }]}>
                         Status
                       </Text>
                     </View>
@@ -109,42 +85,37 @@ export function AcademicsTab({ entries, onAdd, onEdit, onDelete }: any) {
                         const passed = !!sub.status;
 
                         return (
-                          <View
-                            key={sub.id}
-                            className="flex-row items-center py-2.5 border-b border-[#E2E8F0]/60"
-                          >
-                            <Text className="flex-1 font-muller-bold text-[#0F172A] text-[13px] pr-2">
+                          <View key={sub.id} style={styles.subjectRow}>
+                            <Text style={[styles.subjectName, { flex: 1 }]}>
                               {sub.subject_name}
                             </Text>
 
-                            <Text className="w-16 font-muller-bold text-[#0F172A] text-[13px]">
+                            <Text style={[styles.subjectMark, { width: 64 }]}>
                               {sub.marks_obtained}
                             </Text>
 
-                            {passed ? (
-                              <View className="w-16 items-end">
-                                <View className="bg-[#16A34A]/10 px-2.5 py-1.5 rounded-[8px] border border-[#16A34A]/20">
-                                  <Text className="text-[10px] font-muller-bold text-[#16A34A] uppercase tracking-wider">
-                                    PASS
-                                  </Text>
-                                </View>
+                            <View style={{ width: 72, alignItems: "flex-end" }}>
+                              <View
+                                style={[
+                                  styles.statusPill,
+                                  passed ? styles.passPill : styles.failPill,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.statusPillText,
+                                    passed ? styles.passText : styles.failText,
+                                  ]}
+                                >
+                                  {passed ? "PASS" : "FAIL"}
+                                </Text>
                               </View>
-                            ) : (
-                              <View className="w-16 items-end">
-                                <View className="bg-[#DC2626]/10 px-2.5 py-1.5 rounded-[8px] border border-[#DC2626]/20">
-                                  <Text className="text-[10px] font-muller-bold text-[#DC2626] uppercase tracking-wider">
-                                    FAIL
-                                  </Text>
-                                </View>
-                              </View>
-                            )}
+                            </View>
                           </View>
                         );
                       })
                     ) : (
-                      <Text className="text-[13px] font-muller text-[#94A3B8] py-4 text-center">
-                        No subjects added.
-                      </Text>
+                      <Text style={styles.emptyInlineText}>No subjects added.</Text>
                     )}
                   </View>
                 )}
@@ -153,13 +124,202 @@ export function AcademicsTab({ entries, onAdd, onEdit, onDelete }: any) {
           })}
         </View>
       ) : (
-        <View className="items-center justify-center p-8 bg-[#F8FAFC] rounded-[16px] border border-dashed border-[#E2E8F0]">
-          <BookMarked size={48} color="#94A3B8" />
-          <Text className="mt-4 font-muller-bold text-[#0F172A] text-lg tracking-tight">
-            No Records Found
-          </Text>
+        <View style={styles.emptyState}>
+          <BookMarked size={48} color={theme.colors.textMuted} />
+          <Text style={styles.emptyTitle}>No Records Found</Text>
+          <Text style={styles.emptyText}>Add your first academic record.</Text>
         </View>
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  rootCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.medium,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  headerTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  title: {
+    color: theme.colors.text,
+    fontSize: 20,
+    lineHeight: 25,
+    fontFamily: "MullerBold",
+  },
+  subtitle: {
+    marginTop: 5,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+  },
+  addButtonText: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    lineHeight: 16,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  stack: {
+    gap: 12,
+  },
+  entryCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  entryHeader: {
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  entryTitle: {
+    flex: 1,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  entryActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  entryBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  tableHeader: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  tableHeadText: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  subjectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(216,225,236,0.6)",
+  },
+  subjectName: {
+    color: theme.colors.text,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+    paddingRight: 8,
+  },
+  subjectMark: {
+    color: theme.colors.text,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  passPill: {
+    backgroundColor: theme.colors.successSoft,
+    borderColor: "rgba(22,163,74,0.14)",
+  },
+  failPill: {
+    backgroundColor: theme.colors.errorSoft,
+    borderColor: "rgba(220,38,38,0.14)",
+  },
+  statusPillText: {
+    fontSize: 10,
+    lineHeight: 13,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  passText: {
+    color: theme.colors.success,
+  },
+  failText: {
+    color: theme.colors.error,
+  },
+  emptyInlineText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    paddingVertical: 12,
+    fontFamily: "MullerMedium",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 30,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.border,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceSoft,
+  },
+  emptyTitle: {
+    marginTop: 14,
+    color: theme.colors.text,
+    fontSize: 18,
+    lineHeight: 23,
+    fontFamily: "MullerBold",
+  },
+  emptyText: {
+    marginTop: 6,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    fontFamily: "MullerMedium",
+  },
+});

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,12 @@ import {
   ActivityIndicator,
   Platform,
   Alert as NativeAlert,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { supabase } from '@/lib/supabaseClient';
-import { format } from 'date-fns';
+  StyleSheet,
+  ScrollView,
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { supabase } from "@/lib/supabaseClient";
+import { format } from "date-fns";
 import {
   CalendarIcon,
   Download,
@@ -18,11 +20,13 @@ import {
   CheckCircle2,
   XCircle,
   BedDouble,
-} from 'lucide-react-native';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
-import { utils, write } from 'xlsx';
-import { COLORS } from '@/constants/theme';
+  Users,
+  Clock3,
+} from "lucide-react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
+import { utils, write } from "xlsx";
+import { theme } from "@/theme/theme";
 
 interface StaffMember {
   id: string;
@@ -37,50 +41,46 @@ interface AttendanceRecord {
   is_staying: boolean;
 }
 
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
-}
-
 const formatTime12 = (time24: string | null): string => {
-  if (!time24) return '-';
+  if (!time24) return "-";
 
   try {
     const date = new Date(`1970-01-01T${time24}`);
-    return format(date, 'hh:mm a');
+    return format(date, "hh:mm a");
   } catch {
-    return 'Invalid Time';
+    return "Invalid Time";
   }
 };
 
 function StatusBadge({ record }: { record?: AttendanceRecord }) {
   if (record?.is_staying) {
     return (
-      <View className="bg-[#7E22CE]/10 border border-[#7E22CE]/20 px-2.5 py-1.5 rounded-[8px] flex-row items-center">
+      <View style={[styles.statusBadge, styles.statusBadgeStaying]}>
         <BedDouble size={14} color="#7E22CE" />
-        <Text className="text-[10px] font-muller-bold text-[#7E22CE] ml-1.5 tracking-wider uppercase">STAYING</Text>
+        <Text style={[styles.statusBadgeText, { color: "#7E22CE" }]}>
+          Staying
+        </Text>
       </View>
     );
   }
 
   if (record?.time_in || record?.time_out) {
     return (
-      <View className="bg-[#16A34A]/10 border border-[#16A34A]/20 px-2.5 py-1.5 rounded-[8px] flex-row items-center">
-        <CheckCircle2 size={14} color={COLORS.success} />
-        <Text className="text-[10px] font-muller-bold text-[#16A34A] ml-1.5 tracking-wider uppercase">PRESENT</Text>
+      <View style={[styles.statusBadge, styles.statusBadgePresent]}>
+        <CheckCircle2 size={14} color={theme.colors.success} />
+        <Text style={[styles.statusBadgeText, { color: theme.colors.success }]}>
+          Present
+        </Text>
       </View>
     );
   }
 
   return (
-    <View className="bg-[#DC2626]/10 border border-[#DC2626]/20 px-2.5 py-1.5 rounded-[8px] flex-row items-center">
-      <XCircle size={14} color={COLORS.danger} />
-      <Text className="text-[10px] font-muller-bold text-[#DC2626] ml-1.5 tracking-wider uppercase">ABSENT</Text>
+    <View style={[styles.statusBadge, styles.statusBadgeAbsent]}>
+      <XCircle size={14} color={theme.colors.error} />
+      <Text style={[styles.statusBadgeText, { color: theme.colors.error }]}>
+        Absent
+      </Text>
     </View>
   );
 }
@@ -92,24 +92,20 @@ export default function AllStaffRegister() {
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchDataForDate = async () => {
       setLoading(true);
 
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
 
       const [{ data: staffData }, { data: attendanceData }] = await Promise.all([
-        supabase.from('staff').select('*').eq('is_active', true).order('name'),
-        supabase.from('staff_attendance').select('*').eq('date', formattedDate),
+        supabase.from("staff").select("*").eq("is_active", true).order("name"),
+        supabase.from("staff_attendance").select("*").eq("date", formattedDate),
       ]);
 
-      if (staffData) {
-        setStaffList(staffData);
-      } else {
-        setStaffList([]);
-      }
+      setStaffList(staffData || []);
 
       if (attendanceData) {
         const recordsMap = attendanceData.reduce((acc, record: any) => {
@@ -130,20 +126,19 @@ export default function AllStaffRegister() {
 
   const filteredStaff = useMemo(() => {
     if (!searchTerm) return staffList;
-
     return staffList.filter((staff) =>
       staff.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [staffList, searchTerm]);
 
-  const handleDateChange = (event: any, date?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
+  const handleDateChange = (_event: any, date?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
     if (date) setSelectedDate(date);
   };
 
   const handleExport = async () => {
     if (filteredStaff.length === 0) {
-      NativeAlert.alert('Export Failed', 'No data to export for the selected day.');
+      NativeAlert.alert("Export Failed", "No data to export for the selected day.");
       return;
     }
 
@@ -153,22 +148,22 @@ export default function AllStaffRegister() {
 
         return {
           Name: staff.name,
-          Designation: staff.designation || 'N/A',
-          'Time In': record ? formatTime12(record.time_in) : 'Absent',
-          'Time Out': record ? formatTime12(record.time_out) : 'Absent',
-          Status: record?.is_staying ? 'Staying' : record ? 'Present' : 'Absent',
+          Designation: staff.designation || "N/A",
+          "Time In": record ? formatTime12(record.time_in) : "Absent",
+          "Time Out": record ? formatTime12(record.time_out) : "Absent",
+          Status: record?.is_staying ? "Staying" : record ? "Present" : "Absent",
         };
       });
 
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
-      utils.book_append_sheet(workbook, worksheet, 'Attendance');
+      utils.book_append_sheet(workbook, worksheet, "Attendance");
 
-      const wbout = write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const wbout = write(workbook, { type: "base64", bookType: "xlsx" });
 
       const uri = `${FileSystem.cacheDirectory}Staff_Register_${format(
         selectedDate,
-        'yyyy-MM-dd'
+        "yyyy-MM-dd"
       )}.xlsx`;
 
       await FileSystem.writeAsStringAsync(uri, wbout, {
@@ -177,46 +172,43 @@ export default function AllStaffRegister() {
 
       await Sharing.shareAsync(uri, {
         mimeType:
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        dialogTitle: 'Export Staff Register',
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        dialogTitle: "Export Staff Register",
       });
     } catch (e) {
-      NativeAlert.alert('Error', 'Failed to generate Excel file.');
+      NativeAlert.alert("Error", "Failed to generate Excel file.");
       console.error(e);
     }
   };
 
   return (
-    <View
-      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0]"
-      style={cardShadow()}
-    >
-      <View className="mb-5">
-        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">Daily Staff Register</Text>
-        <Text className="text-sm font-muller text-[#475569] mt-1">
-          Overview of staff attendance.
-        </Text>
+    <View style={styles.rootCard}>
+      <View style={styles.headerTopRow}>
+        <View style={styles.headerIconWrap}>
+          <Users size={22} color={theme.colors.primary} />
+        </View>
       </View>
 
-      <View className="flex-row mb-5">
+      <Text style={styles.sectionTitle}>Daily Staff Register</Text>
+      <Text style={styles.sectionSubtitle}>Overview of staff attendance.</Text>
+
+      <View style={styles.controlsRow}>
         <TouchableOpacity
-          activeOpacity={0.7}
+          activeOpacity={0.84}
           onPress={() => setShowDatePicker(true)}
-          className="flex-1 flex-row items-center border border-[#E2E8F0] bg-[#F8FAFC] rounded-[14px] px-4 py-3.5 mr-3"
+          style={styles.dateButton}
         >
-          <CalendarIcon size={18} color="#475569" />
-          <Text className="ml-2.5 text-[#0F172A] font-muller-bold text-[15px]">
-            {format(selectedDate, 'PPP')}
-          </Text>
+          <CalendarIcon size={18} color={theme.colors.textSecondary} />
+          <Text style={styles.dateButtonText}>{format(selectedDate, "PPP")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.86}
           onPress={handleExport}
-          className="bg-[#1E40AF] rounded-[14px] px-5 py-3.5 flex-row items-center"
+          style={styles.exportButton}
         >
-          <Download size={18} color="white" />
-          <Text className="text-white font-muller-bold ml-2 text-[15px]">Export</Text>
+          <Download size={17} color={theme.colors.textOnDark} />
+          <Text style={styles.exportButtonText}>Export</Text>
         </TouchableOpacity>
       </View>
 
@@ -229,67 +221,72 @@ export default function AllStaffRegister() {
         />
       )}
 
-      <View className="flex-row items-center bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5 mb-5 shadow-sm">
-        <Search size={20} color="#94A3B8" />
+      <View style={styles.searchWrap}>
+        <Search size={18} color={theme.colors.icon ?? theme.colors.textMuted} />
         <TextInput
-          className="flex-1 ml-3 text-base font-muller text-[#0F172A]"
+          style={styles.searchInput}
           placeholder="Search staff by name..."
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={
+            theme.colors.inputPlaceholder ?? theme.colors.textMuted
+          }
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
       </View>
 
       {loading ? (
-        <View className="py-12 items-center justify-center">
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-[#475569] font-muller font-medium">Loading register...</Text>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading register...</Text>
         </View>
       ) : filteredStaff.length === 0 ? (
-        <View className="items-center py-12 border border-dashed border-[#E2E8F0] rounded-[16px] bg-[#F8FAFC]">
-          <Search size={32} color="#94A3B8" />
-          <Text className="mt-3 font-muller-bold text-[#0F172A]">No staff found.</Text>
+        <View style={styles.emptyState}>
+          <Search size={30} color={theme.colors.textMuted} />
+          <Text style={styles.emptyTitle}>No staff found</Text>
+          <Text style={styles.emptyText}>
+            There are no matching staff records for this day.
+          </Text>
         </View>
       ) : (
-        <View className="pb-2">
+        <View style={styles.stack}>
           {filteredStaff.map((staff) => {
             const record = records[staff.id];
 
             return (
-              <View
-                key={staff.id}
-                className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[16px] p-4 flex-row items-center justify-between mb-3"
-                style={cardShadow()}
-              >
-                <View className="flex-1">
-                  <Text className="font-muller-bold text-[#0F172A] text-[15px] tracking-tight">{staff.name}</Text>
-                  <Text className="text-xs font-muller text-[#475569] mt-0.5">
-                    {staff.designation || 'N/A'}
-                  </Text>
+              <View key={staff.id} style={styles.staffCard}>
+                <View style={styles.staffTopRow}>
+                  <View style={styles.staffMain}>
+                    <Text style={styles.staffName}>{staff.name}</Text>
+                    <Text style={styles.staffDesignation}>
+                      {staff.designation || "N/A"}
+                    </Text>
+                  </View>
 
-                  <View className="flex-row items-center mt-3">
-                    <View className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[10px] px-3 py-2 mr-2.5">
-                      <Text className="text-[10px] uppercase text-[#94A3B8] font-muller-bold tracking-wider mb-1">
-                        Time In
-                      </Text>
-                      <Text className="text-[13px] font-muller-bold text-[#0F172A]">
-                        {formatTime12(record?.time_in || null)}
-                      </Text>
-                    </View>
-
-                    <View className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[10px] px-3 py-2">
-                      <Text className="text-[10px] uppercase text-[#94A3B8] font-muller-bold tracking-wider mb-1">
-                        Time Out
-                      </Text>
-                      <Text className="text-[13px] font-muller-bold text-[#0F172A]">
-                        {formatTime12(record?.time_out || null)}
-                      </Text>
-                    </View>
+                  <View style={styles.staffBadgeWrap}>
+                    <StatusBadge record={record} />
                   </View>
                 </View>
 
-                <View className="items-end pl-2">
-                  <StatusBadge record={record} />
+                <View style={styles.timeRow}>
+                  <View style={styles.timeCard}>
+                    <View style={styles.timeLabelRow}>
+                      <Clock3 size={12} color={theme.colors.textMuted} />
+                      <Text style={styles.timeLabel}>Time In</Text>
+                    </View>
+                    <Text style={styles.timeValue}>
+                      {formatTime12(record?.time_in || null)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.timeCard}>
+                    <View style={styles.timeLabelRow}>
+                      <Clock3 size={12} color={theme.colors.textMuted} />
+                      <Text style={styles.timeLabel}>Time Out</Text>
+                    </View>
+                    <Text style={styles.timeValue}>
+                      {formatTime12(record?.time_out || null)}
+                    </Text>
+                  </View>
                 </View>
               </View>
             );
@@ -299,3 +296,230 @@ export default function AllStaffRegister() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  rootCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.medium,
+  },
+  headerTopRow: {
+    marginBottom: 12,
+  },
+  headerIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+  },
+  sectionTitle: {
+    color: theme.colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: "MullerBold",
+  },
+  sectionSubtitle: {
+    marginTop: 6,
+    marginBottom: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+  controlsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+  },
+  dateButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+  },
+  dateButtonText: {
+    marginLeft: 10,
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  exportButton: {
+    minWidth: 110,
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: theme.colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  exportButtonText: {
+    color: theme.colors.textOnDark,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  searchWrap: {
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.inputBorder ?? theme.colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    ...theme.shadows.soft,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+  loadingWrap: {
+    alignItems: "center",
+    paddingVertical: 28,
+  },
+  loadingText: {
+    marginTop: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 28,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+  },
+  emptyTitle: {
+    marginTop: 10,
+    color: theme.colors.text,
+    fontSize: 16,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  emptyText: {
+    marginTop: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    textAlign: "center",
+  },
+  stack: { gap: 12, paddingBottom: 4 },
+  staffCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    ...theme.shadows.soft,
+  },
+  staffTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12,
+  },
+  staffMain: {
+    flex: 1,
+  },
+  staffName: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  staffDesignation: {
+    marginTop: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerMedium",
+  },
+  staffBadgeWrap: {
+    paddingTop: 2,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 6,
+  },
+  statusBadgePresent: {
+    backgroundColor: theme.colors.successSoft,
+    borderColor: "rgba(22,163,74,0.14)",
+  },
+  statusBadgeAbsent: {
+    backgroundColor: theme.colors.errorSoft,
+    borderColor: "rgba(220,38,38,0.14)",
+  },
+  statusBadgeStaying: {
+    backgroundColor: "rgba(126,34,206,0.10)",
+    borderColor: "rgba(126,34,206,0.18)",
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    lineHeight: 13,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  timeRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  timeCard: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 16,
+    padding: 12,
+  },
+  timeLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+    gap: 5,
+  },
+  timeLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    lineHeight: 13,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  timeValue: {
+    color: theme.colors.text,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerBold",
+  },
+});

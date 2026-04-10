@@ -1,63 +1,66 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Linking } from 'react-native';
-import { Trophy, User as UserIcon, Search, Inbox, ExternalLink } from 'lucide-react-native';
-import { supabase } from '@/lib/supabaseClient';
-import { COLORS } from '@/constants/theme';
-
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
-}
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Linking,
+  StyleSheet,
+} from "react-native";
+import {
+  Trophy,
+  User as UserIcon,
+  Search,
+  Inbox,
+  ExternalLink,
+  Sparkles,
+} from "lucide-react-native";
+import { supabase } from "@/lib/supabaseClient";
+import { theme } from "@/theme/theme";
 
 function AchievementDisplayCard({ achievement }: { achievement: any }) {
   return (
-    <View
-      className="bg-[#FFFFFF] rounded-[16px] mb-4 border border-[#E2E8F0] overflow-hidden"
-      style={cardShadow()}
-    >
-      <View className="p-4 flex-row items-start gap-3.5">
-        <View className="bg-[#1E40AF]/10 p-3 rounded-[12px] border border-[#1E40AF]/10">
-          <Trophy size={22} color={COLORS.primary} />
+    <View style={styles.achievementCard}>
+      <View style={styles.achievementTop}>
+        <View style={styles.achievementIconWrap}>
+          <Trophy size={20} color={theme.colors.primary} />
         </View>
-        <View className="flex-1 pr-2">
-          <Text className="text-[15px] font-muller-bold text-[#0F172A] tracking-tight leading-snug">
-            {achievement.title}
-          </Text>
-          <Text className="text-[11px] font-muller-bold text-[#94A3B8] mt-1.5 uppercase tracking-wider">
-            {new Date(achievement.submitted_at).toLocaleDateString('en-GB', {
-              year: 'numeric', month: 'short', day: 'numeric'
+
+        <View style={styles.achievementTextWrap}>
+          <Text style={styles.achievementTitle}>{achievement.title}</Text>
+          <Text style={styles.achievementDate}>
+            {new Date(achievement.submitted_at).toLocaleDateString("en-GB", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
             })}
           </Text>
         </View>
       </View>
 
-      <View className="px-4 pb-4">
-        <Text className="text-[13px] font-muller text-[#475569] leading-relaxed" numberOfLines={3}>
-          {achievement.description}
-        </Text>
-      </View>
+      <Text style={styles.achievementDescription} numberOfLines={3}>
+        {achievement.description}
+      </Text>
 
-      <View className="bg-[#F8FAFC] p-4 border-t border-[#E2E8F0] flex-row items-center justify-between">
-        <View className="flex-row items-center flex-1 pr-3">
-          <UserIcon size={16} color="#94A3B8" />
-          <Text className="text-[13px] font-muller-bold text-[#0F172A] ml-2 truncate" numberOfLines={1}>
-            {achievement.name} <Text className="text-[#94A3B8] font-muller">({achievement.cic})</Text>
+      <View style={styles.achievementFooter}>
+        <View style={styles.achievementStudentWrap}>
+          <UserIcon size={15} color={theme.colors.textMuted} />
+          <Text style={styles.achievementStudentText} numberOfLines={1}>
+            {achievement.name}{" "}
+            <Text style={styles.achievementStudentCic}>({achievement.cic})</Text>
           </Text>
         </View>
 
         {achievement.proof_url && (
           <TouchableOpacity
-            activeOpacity={0.7}
-            className="flex-row items-center bg-[#1E40AF]/10 px-3 py-1.5 rounded-[8px] border border-[#1E40AF]/20"
+            activeOpacity={0.84}
+            style={styles.proofButton}
             onPress={() => Linking.openURL(achievement.proof_url)}
           >
-            <Text className="text-[11px] font-muller-bold text-[#1E40AF] mr-1.5 uppercase tracking-wider">Proof</Text>
-            <ExternalLink size={14} color={COLORS.primary} />
+            <Text style={styles.proofButtonText}>Proof</Text>
+            <ExternalLink size={13} color={theme.colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -68,36 +71,44 @@ function AchievementDisplayCard({ achievement }: { achievement: any }) {
 export default function AchievementViewer() {
   const [allAchievements, setAllAchievements] = useState<any[]>([]);
   const [batches, setBatches] = useState<string[]>([]);
-  const [search, setSearch] = useState('');
-  const [selectedBatch, setSelectedBatch] = useState('All');
+  const [search, setSearch] = useState("");
+  const [selectedBatch, setSelectedBatch] = useState("All");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsLoading(true);
+
       const { data, error } = await supabase
-        .from('achievements')
-        .select('*')
-        .eq('approved', true)
-        .order('submitted_at', { ascending: false });
+        .from("achievements")
+        .select("*")
+        .eq("approved", true)
+        .order("submitted_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching achievements:", error);
       } else if (data) {
         setAllAchievements(data);
-        const uniqueBatches = ['All', ...[...new Set(data.map((a) => a.batch))].filter(Boolean).sort()];
+        const uniqueBatches = [
+          "All",
+          ...[...new Set(data.map((a) => a.batch))].filter(Boolean).sort(),
+        ];
         setBatches(uniqueBatches);
       }
+
       setIsLoading(false);
     };
+
     fetchInitialData();
   }, []);
 
   const filteredAchievements = useMemo(() => {
     let filtered = allAchievements;
-    if (selectedBatch !== 'All') {
+
+    if (selectedBatch !== "All") {
       filtered = filtered.filter((a) => a.batch === selectedBatch);
     }
+
     if (search) {
       const lowercasedSearch = search.toLowerCase();
       return filtered.filter(
@@ -107,48 +118,61 @@ export default function AchievementViewer() {
           a.title.toLowerCase().includes(lowercasedSearch)
       );
     }
+
     return filtered;
   }, [search, selectedBatch, allAchievements]);
 
   return (
-    <View
-      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0]"
-      style={cardShadow()}
-    >
-      <View className="mb-5">
-        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">Approved Achievements</Text>
-        <Text className="text-sm font-muller text-[#475569] mt-0.5">Browse student achievements.</Text>
+    <View style={styles.rootCard}>
+      <View style={styles.headerTopRow}>
+        <View style={styles.headerIconWrap}>
+          <Trophy size={22} color={theme.colors.primary} />
+        </View>
+
+        <View style={styles.headerPill}>
+          <Sparkles size={13} color={theme.colors.accent} />
+          <Text style={styles.headerPillText}>Approved</Text>
+        </View>
       </View>
 
-      {/* Search Input */}
-      <View className="flex-row items-center bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5 mb-5 shadow-sm">
-        <Search size={20} color="#94A3B8" />
+      <Text style={styles.sectionTitle}>Approved Achievements</Text>
+      <Text style={styles.sectionSubtitle}>Browse student achievements.</Text>
+
+      <View style={styles.searchWrap}>
+        <Search size={18} color={theme.colors.icon ?? theme.colors.textMuted} />
         <TextInput
-          className="flex-1 ml-3 text-base font-muller text-[#0F172A]"
+          style={styles.searchInput}
           placeholder="Search by name, CIC, or title..."
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={
+            theme.colors.inputPlaceholder ?? theme.colors.textMuted
+          }
           value={search}
           onChangeText={setSearch}
         />
       </View>
 
-      {/* Mobile Tabs (Horizontal ScrollView) */}
       {batches.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-5 -ml-1 pl-1">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.batchRow}
+        >
           {batches.map((b) => (
             <TouchableOpacity
               key={b}
-              activeOpacity={0.7}
+              activeOpacity={0.84}
               onPress={() => setSelectedBatch(b)}
-              className={`mr-2.5 px-5 py-2.5 rounded-[14px] border ${
-                selectedBatch === b
-                  ? 'bg-[#1E40AF] border-[#1E40AF]'
-                  : 'bg-[#FFFFFF] border-[#E2E8F0]'
-              }`}
+              style={[
+                styles.batchChip,
+                selectedBatch === b && styles.batchChipActive,
+              ]}
             >
-              <Text className={`font-muller-bold text-[13px] tracking-wide ${
-                selectedBatch === b ? 'text-white' : 'text-[#475569]'
-              }`}>
+              <Text
+                style={[
+                  styles.batchChipText,
+                  selectedBatch === b && styles.batchChipTextActive,
+                ]}
+              >
                 {b}
               </Text>
             </TouchableOpacity>
@@ -156,19 +180,20 @@ export default function AchievementViewer() {
         </ScrollView>
       )}
 
-      {/* Results List */}
       {isLoading ? (
-        <View className="py-12 items-center justify-center">
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-[#475569] font-muller font-medium">Loading achievements...</Text>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading achievements...</Text>
         </View>
       ) : filteredAchievements.length === 0 ? (
-        <View className="items-center justify-center py-12 border border-dashed border-[#E2E8F0] rounded-[16px] bg-[#F8FAFC]">
-          <Inbox size={40} color="#94A3B8" />
-          <Text className="mt-4 text-[13px] font-muller text-[#475569]">No achievements match your criteria.</Text>
+        <View style={styles.emptyState}>
+          <Inbox size={34} color={theme.colors.textMuted} />
+          <Text style={styles.emptyText}>
+            No achievements match your criteria.
+          </Text>
         </View>
       ) : (
-        <View className="pb-2">
+        <View style={styles.stack}>
           {filteredAchievements.map((ach) => (
             <AchievementDisplayCard key={ach.id} achievement={ach} />
           ))}
@@ -177,3 +202,230 @@ export default function AchievementViewer() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  rootCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.medium,
+  },
+  headerTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  headerIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+  },
+  headerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: theme.colors.accentSoft,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  headerPillText: {
+    color: theme.colors.accent,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  sectionTitle: {
+    color: theme.colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: "MullerBold",
+  },
+  sectionSubtitle: {
+    marginTop: 6,
+    marginBottom: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+  searchWrap: {
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.inputBorder ?? theme.colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    ...theme.shadows.soft,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+  batchRow: {
+    gap: 8,
+    paddingBottom: 8,
+    marginBottom: 10,
+  },
+  batchChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  batchChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  batchChipText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerBold",
+  },
+  batchChipTextActive: {
+    color: theme.colors.textOnDark,
+  },
+  stack: { gap: 12 },
+  achievementCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    ...theme.shadows.soft,
+  },
+  achievementTop: {
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  achievementIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    marginRight: 12,
+  },
+  achievementTextWrap: {
+    flex: 1,
+    paddingRight: 4,
+  },
+  achievementTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  achievementDate: {
+    marginTop: 6,
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  achievementDescription: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: "MullerMedium",
+  },
+  achievementFooter: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  achievementStudentWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    paddingRight: 12,
+  },
+  achievementStudentText: {
+    marginLeft: 8,
+    color: theme.colors.text,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerBold",
+    flex: 1,
+  },
+  achievementStudentCic: {
+    color: theme.colors.textMuted,
+    fontFamily: "MullerMedium",
+  },
+  proofButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    gap: 6,
+  },
+  proofButtonText: {
+    color: theme.colors.primary,
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "MullerBold",
+    textTransform: "uppercase",
+  },
+  loadingWrap: {
+    paddingVertical: 30,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 30,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+  },
+  emptyText: {
+    marginTop: 12,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    textAlign: "center",
+  },
+});

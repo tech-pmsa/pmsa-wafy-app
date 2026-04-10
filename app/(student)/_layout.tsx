@@ -1,7 +1,8 @@
-import React from 'react';
-import { Drawer } from 'expo-router/drawer';
-import CustomDrawerContent from '@/components/CustomDrawerContent';
-import { COLORS } from '@/constants/theme';
+import React from "react";
+import { Drawer } from "expo-router/drawer";
+import CustomDrawerContent from "@/components/CustomDrawerContent";
+import { theme } from "@/theme/theme";
+import { Platform } from "react-native";
 
 export default function StudentLayout() {
   return (
@@ -9,22 +10,35 @@ export default function StudentLayout() {
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         headerShown: true,
-        headerTintColor: COLORS.textPrimary, // #0F172A
-        headerStyle: { backgroundColor: COLORS.background }, // #F8FAFC to blend with screens
-        headerTitleStyle: {
-          fontFamily: 'MullerBold',
-          fontSize: 18,
+        headerTintColor: theme.colors.text,
+        headerStyle: {
+          backgroundColor: theme.colors.background,
+          height: Platform.OS === "ios" ? 96 : 64,
         },
+        headerTitleStyle: {
+          fontFamily: "MullerBold",
+          fontSize: 18,
+          color: theme.colors.text,
+        },
+        headerTitleAlign: "center",
         headerShadowVisible: false,
-        drawerActiveBackgroundColor: COLORS.primaryLight,
-        drawerActiveTintColor: COLORS.primary,
+        headerStatusBarHeight: Platform.OS === "ios" ? undefined : 15,
+        sceneStyle: {
+          backgroundColor: theme.colors.background,
+        },
+        drawerType: "front",
+        drawerStyle: {
+          width: 320,
+          backgroundColor: "transparent",
+        },
+        drawerActiveBackgroundColor: theme.colors.primaryTint,
+        drawerActiveTintColor: theme.colors.primary,
+        drawerInactiveTintColor: theme.colors.textSecondary,
       }}
-      backBehavior="history" // <--- THIS FIXES THE BACK BUTTON BUG!
+      backBehavior="history"
     >
-      <Drawer.Screen name="student-dashboard" options={{ title: 'Dashboard' }} />
-
-      {/* Add the new settings screen here! */}
-      <Drawer.Screen name="settings" options={{ title: 'Settings' }} />
+      <Drawer.Screen name="student-dashboard" options={{ title: "Dashboard" }} />
+      <Drawer.Screen name="settings" options={{ title: "Settings" }} />
     </Drawer>
   );
 }

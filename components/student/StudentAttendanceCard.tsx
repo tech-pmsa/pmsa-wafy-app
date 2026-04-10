@@ -1,30 +1,53 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, ActivityIndicator, Modal, TouchableOpacity } from 'react-native';
-import { supabase } from '@/lib/supabaseClient';
-import { useUserData } from '@/hooks/useUserData';
-import { format } from 'date-fns';
-import Svg, { Circle } from 'react-native-svg';
-import { CalendarCheck2, CalendarDays, TrendingUp, TrendingDown, CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react-native';
-import { COLORS } from '@/constants/theme';
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  Modal,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
+import { supabase } from "@/lib/supabaseClient";
+import { useUserData } from "@/hooks/useUserData";
+import { format } from "date-fns";
+import Svg, { Circle } from "react-native-svg";
+import {
+  CalendarCheck2,
+  CalendarDays,
+  TrendingUp,
+  TrendingDown,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  X,
+} from "lucide-react-native";
+import { theme } from "@/theme/theme";
 
-interface AttendanceSummary { total_present: number; total_days: number; }
-interface PeriodDetail { status: 'Present' | 'Absent'; reason?: string; description?: string; }
-interface TodaysAttendanceRecord { date: string; is_leave_day: boolean; [key: string]: any; }
-
-const periods = Array.from({ length: 8 }, (_, i) => `period_${i + 1}`);
-const excusedAbsences = ['Cic Related', 'Wsf Related', 'Exam Related'];
-
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
+interface AttendanceSummary {
+  total_present: number;
+  total_days: number;
+}
+interface PeriodDetail {
+  status: "Present" | "Absent";
+  reason?: string;
+  description?: string;
+}
+interface TodaysAttendanceRecord {
+  date: string;
+  is_leave_day: boolean;
+  [key: string]: any;
 }
 
-function RadialProgress({ percentage, colorHex }: { percentage: number; colorHex: string }) {
+const periods = Array.from({ length: 8 }, (_, i) => `period_${i + 1}`);
+const excusedAbsences = ["Cic Related", "Wsf Related", "Exam Related"];
+
+function RadialProgress({
+  percentage,
+  colorHex,
+}: {
+  percentage: number;
+  colorHex: string;
+}) {
   const radius = 56;
   const stroke = 12;
   const normalizedRadius = radius - stroke / 2;
@@ -32,21 +55,67 @@ function RadialProgress({ percentage, colorHex }: { percentage: number; colorHex
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <View className="items-center justify-center h-36 w-36 mb-6 mt-2">
-      <Svg height="100%" width="100%" viewBox="0 0 120 120" style={{ transform: [{ rotate: '-90deg' }] }}>
-        <Circle cx="60" cy="60" r={normalizedRadius} stroke="#F1F5F9" strokeWidth={stroke} fill="transparent" />
+    <View style={styles.radialWrap}>
+      <Svg
+        height="100%"
+        width="100%"
+        viewBox="0 0 120 120"
+        style={{ transform: [{ rotate: "-90deg" }] }}
+      >
         <Circle
-          cx="60" cy="60" r={normalizedRadius}
-          stroke={colorHex} strokeWidth={stroke} fill="transparent"
-          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+          cx="60"
+          cy="60"
+          r={normalizedRadius}
+          stroke={theme.colors.surfaceMuted}
+          strokeWidth={stroke}
+          fill="transparent"
+        />
+        <Circle
+          cx="60"
+          cy="60"
+          r={normalizedRadius}
+          stroke={colorHex}
+          strokeWidth={stroke}
+          fill="transparent"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
         />
       </Svg>
-      <View className="absolute items-center justify-center">
-        <Text className="text-3xl font-muller-bold text-[#0F172A] tracking-tight">{percentage.toFixed(0)}%</Text>
-        <Text className="text-[11px] text-[#94A3B8] font-muller-bold mt-1 uppercase tracking-wider">Overall</Text>
+
+      <View style={styles.radialCenter}>
+        <Text style={styles.radialValue}>{percentage.toFixed(0)}%</Text>
+        <Text style={styles.radialLabel}>Overall</Text>
       </View>
     </View>
   );
+}
+
+function toneForPeriod(detail?: PeriodDetail) {
+  const isPresent = detail?.status === "Present";
+  const isExcused = excusedAbsences.includes(detail?.reason || "");
+
+  if (isPresent) {
+    return {
+      bg: theme.colors.successSoft,
+      border: "rgba(22,163,74,0.14)",
+      icon: <CheckCircle2 size={15} color={theme.colors.success} />,
+    };
+  }
+
+  if (isExcused) {
+    return {
+      bg: theme.colors.primarySoft,
+      border: theme.colors.primaryTint,
+      icon: <AlertCircle size={15} color={theme.colors.primary} />,
+    };
+  }
+
+  return {
+    bg: theme.colors.errorSoft,
+    border: "rgba(220,38,38,0.14)",
+    icon: <XCircle size={15} color={theme.colors.error} />,
+  };
 }
 
 export default function StudentAttendanceCard() {
@@ -56,7 +125,7 @@ export default function StudentAttendanceCard() {
   const [todayData, setTodayData] = useState<TodaysAttendanceRecord | null>(null);
   const [selectedAbsence, setSelectedAbsence] = useState<any>(null);
 
-  const todayString = format(new Date(), 'yyyy-MM-dd');
+  const todayString = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
     if (userLoading || !user) {
@@ -66,198 +135,574 @@ export default function StudentAttendanceCard() {
 
     const fetchInitialData = async () => {
       setLoading(true);
+
       const [{ data: summary }, { data: todayRecord }] = await Promise.all([
-        supabase.from('students_with_attendance').select('total_present, total_days').eq('uid', user.id).single(),
-        supabase.from('attendance').select('*').eq('student_uid', user.id).eq('date', todayString).single()
+        supabase
+          .from("students_with_attendance")
+          .select("total_present, total_days")
+          .eq("uid", user.id)
+          .single(),
+        supabase
+          .from("attendance")
+          .select("*")
+          .eq("student_uid", user.id)
+          .eq("date", todayString)
+          .single(),
       ]);
 
       if (summary) setSummaryData(summary);
       if (todayRecord) setTodayData(todayRecord as TodaysAttendanceRecord);
+
       setLoading(false);
     };
+
     fetchInitialData();
 
-    const channel = supabase.channel(`attendance-channel-${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance', filter: `student_uid=eq.${user.id}` },
+    const channel = supabase
+      .channel(`attendance-channel-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "attendance",
+          filter: `student_uid=eq.${user.id}`,
+        },
         (payload) => {
           const newRecord = payload.new as TodaysAttendanceRecord;
-          if (newRecord.date === todayString) setTodayData(newRecord);
+          if (newRecord?.date === todayString) setTodayData(newRecord);
         }
-      ).subscribe();
+      )
+      .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, userLoading, todayString]);
 
   const info = useMemo(() => {
     if (!summaryData) return null;
+
     const { total_present, total_days } = summaryData;
     const percentage = total_days > 0 ? (total_present / total_days) * 100 : 0;
 
-    let status = 'Poor';
-    let hex = COLORS.danger;
-    let desc = 'Attendance is critically low.';
-    let Icon = TrendingDown;
-    let bgClass = 'bg-[#DC2626]/10';
-    let borderClass = 'border-[#DC2626]/20';
+    let status = "Poor";
+    let hex = theme.colors.error;
+    let desc = "Attendance is critically low.";
 
-    if (percentage >= 75) {
-      status = 'Good';
-      hex = COLORS.success;
-      desc = "Excellent work! You're on track.";
-      Icon = TrendingUp;
-      bgClass = 'bg-[#16A34A]/10';
-      borderClass = 'border-[#16A34A]/20';
-    } else if (percentage >= 50) {
-      status = 'Average';
-      hex = COLORS.warning;
-      desc = 'Room for improvement.';
-      Icon = TrendingUp;
-      bgClass = 'bg-[#D97706]/10';
-      borderClass = 'border-[#D97706]/20';
+    if (percentage >= 90) {
+      status = "Excellent";
+      hex = theme.colors.success;
+      desc = "Your attendance is excellent.";
+    } else if (percentage >= 75) {
+      status = "Good";
+      hex = theme.colors.primary;
+      desc = "You are maintaining a safe attendance range.";
+    } else if (percentage >= 60) {
+      status = "Needs Focus";
+      hex = theme.colors.accent;
+      desc = "Your attendance is dropping and needs attention.";
     }
 
-    return { total_present, total_days, percentage, status, hex, desc, Icon, bgClass, borderClass };
+    return {
+      percentage,
+      status,
+      hex,
+      desc,
+      total_present,
+      total_days,
+    };
   }, [summaryData]);
 
   if (loading || userLoading) {
     return (
-      <View
-        className="bg-[#FFFFFF] p-8 rounded-[18px] items-center justify-center my-2 border border-[#E2E8F0]"
-        style={cardShadow()}
-      >
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="mt-4 text-[#475569] font-muller font-medium">Loading Attendance...</Text>
+      <View style={styles.loadingCard}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading attendance...</Text>
       </View>
     );
   }
 
   if (!info) {
     return (
-      <View className="bg-[#FFFFFF] p-6 rounded-[18px] border border-[#E2E8F0]" style={cardShadow()}>
-        <Text className="text-[#475569] font-muller text-center">No attendance record found.</Text>
+      <View style={styles.rootCard}>
+        <Text style={styles.title}>Attendance Overview</Text>
+        <Text style={styles.subtitle}>No attendance data available yet.</Text>
       </View>
     );
   }
 
   return (
-    <View className="bg-[#FFFFFF] rounded-[18px] border border-[#E2E8F0] p-5" style={cardShadow()}>
-      <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mb-1">My Attendance</Text>
-      <Text className="text-sm font-muller text-[#475569] mb-5">Your overall summary and today's live status.</Text>
-
-      <View className="items-center">
-        <RadialProgress percentage={info.percentage} colorHex={info.hex} />
-
-        <View className="flex-row bg-[#F8FAFC] rounded-[16px] border border-[#E2E8F0] p-4 w-full mb-4">
-          <View className="flex-1 items-center border-r border-[#E2E8F0]">
-            <CalendarCheck2 size={24} color="#94A3B8" />
-            <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mt-2">{info.total_present}</Text>
-            <Text className="text-[11px] font-muller-bold text-[#475569] mt-0.5 uppercase tracking-wider">Present</Text>
+    <>
+      <View style={styles.rootCard}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerIconWrap}>
+            <CalendarCheck2 size={22} color={theme.colors.primary} />
           </View>
-          <View className="flex-1 items-center">
-            <CalendarDays size={24} color="#94A3B8" />
-            <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight mt-2">{info.total_days}</Text>
-            <Text className="text-[11px] font-muller-bold text-[#475569] mt-0.5 uppercase tracking-wider">Total Days</Text>
-          </View>
-        </View>
 
-        <View className={`flex-row items-center w-full p-4 rounded-[14px] border ${info.borderClass} ${info.bgClass}`}>
-          <info.Icon size={22} color={info.hex} />
-          <View className="ml-3.5 flex-1">
-            <Text style={{ color: info.hex }} className="font-muller-bold text-[15px]">{info.status} Standing</Text>
-            <Text className="text-xs font-muller text-[#475569] mt-0.5">{info.desc}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View className="border-t border-[#E2E8F0] mt-6 pt-5">
-        <Text className="font-muller-bold text-[#0F172A] tracking-tight text-center mb-4">
-          Today's Status ({format(new Date(), 'PPP')})
-        </Text>
-
-        {!todayData ? (
-          <Text className="text-center font-muller text-[#94A3B8] italic bg-[#F8FAFC] p-4 rounded-[12px] border border-[#E2E8F0]">
-            Pending class leader submission...
-          </Text>
-        ) : todayData.is_leave_day ? (
-          <View className="bg-[#1E40AF]/10 p-4 rounded-[12px] border border-[#1E40AF]/20">
-            <Text className="text-center text-[#1E40AF] font-muller-bold">Leave Day</Text>
-            <Text className="text-center text-[#1E40AF]/70 font-muller text-xs mt-1">No attendance recorded today.</Text>
-          </View>
-        ) : (
-          <View className="flex-row flex-wrap justify-between gap-y-2.5">
-            {periods.map((period, i) => {
-              const detail = todayData[period] as PeriodDetail;
-              const isPresent = detail?.status === 'Present';
-              const isExcused = excusedAbsences.includes(detail?.reason || '');
-
-              let IconComp = XCircle; let color = COLORS.danger;
-              let bg = "bg-[#DC2626]/10"; let border = "border-[#DC2626]/20";
-
-              if (isPresent) {
-                IconComp = CheckCircle2; color = COLORS.success;
-                bg = "bg-[#16A34A]/10"; border = "border-[#16A34A]/20";
-              } else if (isExcused) {
-                IconComp = AlertCircle; color = COLORS.primary;
-                bg = "bg-[#1E40AF]/10"; border = "border-[#1E40AF]/20";
-              }
-
-              return (
-                <TouchableOpacity
-                  key={period}
-                  disabled={isPresent}
-                  activeOpacity={0.6}
-                  onPress={() => setSelectedAbsence({ p: i+1, r: detail?.reason, d: detail?.description })}
-                  className={`w-[23%] items-center justify-center py-3 rounded-[12px] border ${border} ${bg}`}
-                >
-                  <Text className="text-[11px] font-muller-bold text-[#475569] mb-1.5">P{i + 1}</Text>
-                  <IconComp size={18} color={color} />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-      </View>
-
-      {/* Modal for viewing absence reason */}
-      <Modal visible={!!selectedAbsence} transparent animationType="fade" onRequestClose={() => setSelectedAbsence(null)}>
-        <View className="flex-1 bg-black/40 justify-center items-center p-6">
           <View
-            className="bg-[#FFFFFF] rounded-[20px] w-full p-6 border border-[#E2E8F0]"
-            style={cardShadow()}
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor:
+                  info.status === "Excellent"
+                    ? theme.colors.successSoft
+                    : info.status === "Good"
+                    ? theme.colors.primarySoft
+                    : info.status === "Needs Focus"
+                    ? theme.colors.accentSoft
+                    : theme.colors.errorSoft,
+              },
+            ]}
           >
-            <View className="flex-row justify-between items-center mb-5">
-              <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">
-                {selectedAbsence?.r || 'Absent'}
-              </Text>
+            {info.status === "Excellent" || info.status === "Good" ? (
+              <TrendingUp
+                size={14}
+                color={
+                  info.status === "Excellent"
+                    ? theme.colors.success
+                    : theme.colors.primary
+                }
+              />
+            ) : (
+              <TrendingDown
+                size={14}
+                color={
+                  info.status === "Needs Focus"
+                    ? theme.colors.accent
+                    : theme.colors.error
+                }
+              />
+            )}
+            <Text
+              style={[
+                styles.statusBadgeText,
+                {
+                  color:
+                    info.status === "Excellent"
+                      ? theme.colors.success
+                      : info.status === "Good"
+                      ? theme.colors.primary
+                      : info.status === "Needs Focus"
+                      ? theme.colors.accent
+                      : theme.colors.error,
+                },
+              ]}
+            >
+              {info.status}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.title}>Attendance Overview</Text>
+        <Text style={styles.subtitle}>{info.desc}</Text>
+
+        <View style={styles.radialSection}>
+          <RadialProgress percentage={info.percentage} colorHex={info.hex} />
+        </View>
+
+        <View style={styles.metricRow}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Present Days</Text>
+            <Text style={styles.metricValue}>{info.total_present}</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Total Days</Text>
+            <Text style={styles.metricValue}>{info.total_days}</Text>
+          </View>
+        </View>
+
+        <View style={styles.todayCard}>
+          <View style={styles.todayHeader}>
+            <View style={styles.todayHeaderLeft}>
+              <View style={styles.todayIconWrap}>
+                <CalendarDays size={18} color={theme.colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.todayTitle}>Today’s Attendance</Text>
+                <Text style={styles.todaySubtitle}>{format(new Date(), "PPP")}</Text>
+              </View>
+            </View>
+          </View>
+
+          {todayData?.is_leave_day ? (
+            <View style={styles.leaveDayBadge}>
+              <Text style={styles.leaveDayText}>Leave Day</Text>
+            </View>
+          ) : todayData ? (
+            <View style={styles.periodGrid}>
+              {periods.map((period, i) => {
+                const detail = todayData?.[period] as PeriodDetail | undefined;
+                const tone = toneForPeriod(detail);
+
+                return (
+                  <TouchableOpacity
+                    key={period}
+                    activeOpacity={0.84}
+                    onPress={() =>
+                      detail?.status !== "Present" &&
+                      setSelectedAbsence({
+                        period: i + 1,
+                        reason: detail?.reason || "Absent",
+                        desc: detail?.description || "No description provided.",
+                      })
+                    }
+                    disabled={detail?.status === "Present"}
+                    style={[
+                      styles.periodBox,
+                      {
+                        backgroundColor: tone.bg,
+                        borderColor: tone.border,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.periodBoxLabel}>P{i + 1}</Text>
+                    {tone.icon}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={styles.pendingText}>Attendance not submitted yet.</Text>
+          )}
+        </View>
+      </View>
+
+      <Modal
+        visible={!!selectedAbsence}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedAbsence(null)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalTopRow}>
+              <Text style={styles.modalTitle}>{selectedAbsence?.reason}</Text>
               <TouchableOpacity
                 onPress={() => setSelectedAbsence(null)}
-                className="bg-[#F1F5F9] p-2 rounded-full"
+                style={styles.closeButton}
               >
-                <X size={20} color="#475569" />
+                <X size={18} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <View className="bg-[#F8FAFC] p-4 rounded-[14px] border border-[#E2E8F0] mb-5">
-              <Text className="text-[#475569] font-muller text-sm">
-                Missed: <Text className="font-muller-bold text-[#0F172A]">Period {selectedAbsence?.p}</Text>
-              </Text>
+            <View style={styles.modalInfoCard}>
+              <Text style={styles.modalInfoLabel}>Missed</Text>
+              <Text style={styles.modalInfoValue}>Period {selectedAbsence?.period}</Text>
             </View>
 
-            <Text className="text-[#0F172A] font-muller-bold mb-2">Description / Note</Text>
-            <Text className="text-[#475569] font-muller leading-relaxed">
-              {selectedAbsence?.d || "No description provided."}
-            </Text>
+            <Text style={styles.modalSectionTitle}>Description / Note</Text>
+            <Text style={styles.modalDescription}>{selectedAbsence?.desc}</Text>
 
             <TouchableOpacity
               onPress={() => setSelectedAbsence(null)}
-              activeOpacity={0.8}
-              className="mt-8 bg-[#1E40AF] py-3.5 rounded-[14px] items-center"
+              activeOpacity={0.86}
+              style={styles.primaryButton}
             >
-              <Text className="text-white font-muller-bold text-[15px]">Close Details</Text>
+              <Text style={styles.primaryButtonText}>Close Details</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </View>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  rootCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.medium,
+  },
+  loadingCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.medium,
+  },
+  loadingText: {
+    marginTop: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  headerIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  title: {
+    color: theme.colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: "MullerBold",
+  },
+  subtitle: {
+    marginTop: 6,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+  radialSection: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 8,
+  },
+  radialWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 144,
+    height: 144,
+    marginVertical: 8,
+  },
+  radialCenter: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radialValue: {
+    color: theme.colors.text,
+    fontSize: 30,
+    lineHeight: 36,
+    fontFamily: "MullerBold",
+  },
+  radialLabel: {
+    marginTop: 2,
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "MullerBold",
+    textTransform: "uppercase",
+  },
+  metricRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    alignItems: "center",
+  },
+  metricLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  metricValue: {
+    marginTop: 8,
+    color: theme.colors.text,
+    fontSize: 24,
+    lineHeight: 28,
+    fontFamily: "MullerBold",
+  },
+  todayCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+  },
+  todayHeader: {
+    marginBottom: 14,
+  },
+  todayHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  todayIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    marginRight: 12,
+  },
+  todayTitle: {
+    color: theme.colors.text,
+    fontSize: 16,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  todaySubtitle: {
+    marginTop: 2,
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerMedium",
+  },
+  leaveDayBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  leaveDayText: {
+    color: theme.colors.primary,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerBold",
+  },
+  periodGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 10,
+  },
+  periodBox: {
+    width: "23.5%",
+    minHeight: 54,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
+  periodBoxLabel: {
+    marginBottom: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "MullerBold",
+  },
+  pendingText: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    fontStyle: "italic",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlayStrong ?? "rgba(15,23,42,0.28)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.floating,
+  },
+  modalTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  modalTitle: {
+    flex: 1,
+    color: theme.colors.text,
+    fontSize: 20,
+    lineHeight: 25,
+    fontFamily: "MullerBold",
+    marginRight: 12,
+  },
+  closeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  modalInfoCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    marginBottom: 16,
+  },
+  modalInfoLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  modalInfoValue: {
+    marginTop: 5,
+    color: theme.colors.text,
+    fontSize: 16,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  modalSectionTitle: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+    marginBottom: 8,
+  },
+  modalDescription: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: "MullerMedium",
+  },
+  primaryButton: {
+    marginTop: 20,
+    minHeight: 52,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+  },
+  primaryButtonText: {
+    color: theme.colors.textOnDark,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerBold",
+  },
+});

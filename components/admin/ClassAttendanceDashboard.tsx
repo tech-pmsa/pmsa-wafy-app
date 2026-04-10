@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   Dimensions,
   Modal,
   ActivityIndicator,
-} from 'react-native';
-import { format } from 'date-fns';
-import { BarChart } from 'react-native-chart-kit';
+  StyleSheet,
+} from "react-native";
+import { format } from "date-fns";
+import { BarChart } from "react-native-chart-kit";
 import {
   TrendingUp,
   Users,
@@ -23,62 +24,101 @@ import {
   AlertCircle,
   Search,
   X,
-} from 'lucide-react-native';
-import { supabase } from '@/lib/supabaseClient';
-import { useUserData } from '@/hooks/useUserData';
-import { COLORS } from '@/constants/theme';
+  Info,
+} from "lucide-react-native";
+import { supabase } from "@/lib/supabaseClient";
+import { useUserData } from "@/hooks/useUserData";
+import { theme } from "@/theme/theme";
 
-const screenWidth = Dimensions.get('window').width;
+const screenWidth = Dimensions.get("window").width;
 const periods = Array.from({ length: 8 }, (_, i) => `period_${i + 1}`);
-const excusedAbsences = ['Cic Related', 'Wsf Related', 'Exam Related'];
+const excusedAbsences = ["Cic Related", "Wsf Related", "Exam Related"];
 
-function cardShadow() {
+type ViewMode = "chart" | "details" | "status";
+
+interface PeriodDetail {
+  status?: "Present" | "Absent";
+  reason?: string;
+  description?: string;
+}
+
+function getStatusTone(value: number) {
+  if (value < 75) {
+    return {
+      fill: theme.colors.error,
+      soft: theme.colors.errorSoft,
+      text: theme.colors.errorText ?? theme.colors.error,
+      border: "rgba(220,38,38,0.14)",
+    };
+  }
+
   return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    fill: theme.colors.success,
+    soft: theme.colors.successSoft,
+    text: theme.colors.successText ?? theme.colors.success,
+    border: "rgba(22,163,74,0.14)",
   };
 }
 
-function StatCard({
+function MetricCard({
   title,
   value,
-  icon: Icon,
   footer,
-  color = COLORS.primary,
+  icon: Icon,
+  tone = "primary",
 }: {
   title: string;
   value: string;
-  icon: React.ComponentType<any>;
   footer: string;
-  color?: string;
+  icon: React.ComponentType<any>;
+  tone?: "primary" | "success" | "danger";
 }) {
+  const toneMap = {
+    primary: {
+      iconBg: theme.colors.primarySoft,
+      iconColor: theme.colors.primary,
+    },
+    success: {
+      iconBg: theme.colors.successSoft,
+      iconColor: theme.colors.success,
+    },
+    danger: {
+      iconBg: theme.colors.errorSoft,
+      iconColor: theme.colors.error,
+    },
+  } as const;
+
+  const current = toneMap[tone];
+
   return (
-    <View
-      className="bg-[#FFFFFF] p-4 rounded-[14px] border border-[#E2E8F0] flex-1 m-1"
-      style={[cardShadow(), { minWidth: 140 }]}
-    >
-      <View className="flex-row justify-between items-center mb-2">
-        <Text className="text-sm font-muller font-medium text-[#475569]">{title}</Text>
-        <Icon size={18} color={color} />
+    <View style={styles.metricCard}>
+      <View style={styles.metricTopRow}>
+        <Text style={styles.metricLabel}>{title}</Text>
+        <View style={[styles.metricIconWrap, { backgroundColor: current.iconBg }]}>
+          <Icon size={18} color={current.iconColor} />
+        </View>
       </View>
-      <Text className="text-2xl font-muller-bold font-bold text-[#0F172A] tracking-tight">{value}</Text>
-      <Text className="text-xs font-muller text-[#94A3B8] mt-1">{footer}</Text>
+
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricFooter}>{footer}</Text>
     </View>
   );
 }
 
 function ProgressBar({ percentage }: { percentage: number }) {
   const safePercentage = Math.max(0, Math.min(100, percentage));
-  const barColor = safePercentage < 75 ? COLORS.danger : COLORS.success;
+  const tone = getStatusTone(safePercentage);
 
   return (
-    <View className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
+    <View style={styles.progressTrack}>
       <View
-        style={{ width: `${safePercentage}%`, height: '100%', backgroundColor: barColor }}
-        className="rounded-full"
+        style={[
+          styles.progressFill,
+          {
+            width: `${safePercentage}%`,
+            backgroundColor: tone.fill,
+          },
+        ]}
       />
     </View>
   );
@@ -97,15 +137,12 @@ function ViewToggleButton({
 }) {
   return (
     <TouchableOpacity
-      activeOpacity={0.7}
+      activeOpacity={0.84}
       onPress={onPress}
-      className={`flex-1 py-3 rounded-[14px] items-center flex-row justify-center ${
-        active ? 'bg-[#FFFFFF] border border-[#E2E8F0]' : 'border border-transparent'
-      }`}
-      style={active ? cardShadow() : undefined}
+      style={[styles.toggleButton, active && styles.toggleButtonActive]}
     >
       {icon}
-      <Text className={`ml-2 font-muller-bold tracking-tight text-[15px] ${active ? 'text-[#1E40AF]' : 'text-[#475569]'}`}>
+      <Text style={[styles.toggleButtonText, active && styles.toggleButtonTextActive]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -115,9 +152,9 @@ function ViewToggleButton({
 export default function ClassAttendanceDashboard() {
   const { details, loading: userLoading } = useUserData();
   const [classAttendance, setClassAttendance] = useState<any[]>([]);
-  const [view, setView] = useState<'chart' | 'details' | 'status'>('chart');
+  const [view, setView] = useState<ViewMode>("chart");
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedAbsence, setSelectedAbsence] = useState<{
     name: string;
     cic: string;
@@ -127,7 +164,7 @@ export default function ClassAttendanceDashboard() {
   } | null>(null);
 
   useEffect(() => {
-    const classId = details?.designation?.replace(' Class', '');
+    const classId = details?.designation?.replace(" Class", "");
 
     if (userLoading || !classId) {
       if (!userLoading) setLoading(false);
@@ -137,18 +174,18 @@ export default function ClassAttendanceDashboard() {
     const fetchData = async () => {
       setLoading(true);
 
-      const todayString = format(new Date(), 'yyyy-MM-dd');
+      const todayString = format(new Date(), "yyyy-MM-dd");
 
       const [{ data: summaryData }, { data: todayData }] = await Promise.all([
         supabase
-          .from('students_with_attendance')
-          .select('uid, name, cic, total_present, total_days')
-          .eq('class_id', classId),
+          .from("students_with_attendance")
+          .select("uid, name, cic, total_present, total_days")
+          .eq("class_id", classId),
         supabase
-          .from('attendance')
-          .select('*')
-          .eq('class_id', classId)
-          .eq('date', todayString),
+          .from("attendance")
+          .select("*")
+          .eq("class_id", classId)
+          .eq("date", todayString),
       ]);
 
       if (summaryData) {
@@ -166,6 +203,8 @@ export default function ClassAttendanceDashboard() {
         }));
 
         setClassAttendance(combinedData);
+      } else {
+        setClassAttendance([]);
       }
 
       setLoading(false);
@@ -173,16 +212,16 @@ export default function ClassAttendanceDashboard() {
 
     fetchData();
 
-    const todayString = format(new Date(), 'yyyy-MM-dd');
+    const todayString = format(new Date(), "yyyy-MM-dd");
 
     const channel = supabase
       .channel(`class-attendance-${classId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'attendance',
+          event: "*",
+          schema: "public",
+          table: "attendance",
           filter: `class_id=eq.${classId}`,
         },
         (payload) => {
@@ -208,8 +247,12 @@ export default function ClassAttendanceDashboard() {
 
   const filteredStudents = useMemo(() => {
     return classAttendance.filter((s) => {
-      const nameMatch = (s.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const cicMatch = String(s.cic || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const nameMatch = (s.name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const cicMatch = String(s.cic || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
       return nameMatch || cicMatch;
     });
   }, [classAttendance, searchTerm]);
@@ -217,9 +260,9 @@ export default function ClassAttendanceDashboard() {
   const classData = useMemo(() => {
     const processed = filteredStudents
       .map((s) => {
-        const total_absent = (s.total_days || 0) - (s.total_present || 0);
-        const points_deducted = Math.floor(total_absent / 2) * 2;
-        const points = Math.max(0, 20 - points_deducted);
+        const totalAbsent = (s.total_days || 0) - (s.total_present || 0);
+        const pointsDeducted = Math.floor(totalAbsent / 2) * 2;
+        const points = Math.max(0, 20 - pointsDeducted);
 
         return {
           ...s,
@@ -244,24 +287,18 @@ export default function ClassAttendanceDashboard() {
 
   if (loading || userLoading) {
     return (
-      <View
-        className="bg-[#FFFFFF] p-6 rounded-[18px] h-64 justify-center items-center border border-[#E2E8F0]"
-        style={cardShadow()}
-      >
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="text-[#475569] font-muller font-medium mt-4">Loading class attendance...</Text>
+      <View style={styles.loadingCard}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading class attendance...</Text>
       </View>
     );
   }
 
   if (classAttendance.length === 0) {
     return (
-      <View
-        className="bg-[#FFFFFF] p-6 rounded-[18px] border border-[#E2E8F0]"
-        style={cardShadow()}
-      >
-        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">Class Attendance</Text>
-        <Text className="text-[#475569] font-muller mt-2">
+      <View style={styles.rootCard}>
+        <Text style={styles.title}>Class Attendance</Text>
+        <Text style={styles.subtitle}>
           No attendance data is available for your class yet.
         </Text>
       </View>
@@ -269,223 +306,228 @@ export default function ClassAttendanceDashboard() {
   }
 
   return (
-    <View>
-      <View className="flex-row flex-wrap justify-between -mx-1">
-        <StatCard
+    <>
+      <View style={styles.metricsGrid}>
+        <MetricCard
           title="Class Average"
           value={`${classData.average.toFixed(1)}%`}
+          footer="Overall performance"
           icon={Users}
-          footer="Overall"
+          tone="primary"
         />
-        <StatCard
+        <MetricCard
           title="Below 75%"
           value={classData.belowThreshold.toString()}
-          icon={AlertTriangle}
           footer="Need attention"
-          color={COLORS.danger}
+          icon={AlertTriangle}
+          tone="danger"
         />
-        <StatCard
+        <MetricCard
           title="Top Performer"
-          value={classData.topPerformer?.cic || 'N/A'}
+          value={classData.topPerformer?.cic || "N/A"}
+          footer={`${classData.topPerformer?.percentage?.toFixed(1) || "0.0"}%`}
           icon={TrendingUp}
-          footer={`${classData.topPerformer?.percentage?.toFixed(1) || '0.0'}%`}
-          color={COLORS.success}
+          tone="success"
         />
       </View>
 
-      <View
-        className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] mt-5"
-        style={cardShadow()}
-      >
-        <Text className="text-xl font-muller-bold tracking-tight text-[#0F172A] mb-5">Student Performance</Text>
+      <View style={styles.rootCard}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.title}>Student Performance</Text>
+          <Text style={styles.subtitle}>
+            Chart, detailed list, and today’s live attendance view
+          </Text>
+        </View>
 
-        <View className="flex-row bg-[#E2E8F0]/60 p-1.5 rounded-[16px] mb-5">
+        <View style={styles.segmentWrap}>
           <ViewToggleButton
             label="Chart"
-            active={view === 'chart'}
-            onPress={() => setView('chart')}
-            icon={<BarChart2 size={18} color={view === 'chart' ? COLORS.primary : '#94A3B8'} />}
+            active={view === "chart"}
+            onPress={() => setView("chart")}
+            icon={
+              <BarChart2
+                size={17}
+                color={view === "chart" ? theme.colors.primary : theme.colors.icon ?? theme.colors.textMuted}
+              />
+            }
           />
           <ViewToggleButton
             label="List"
-            active={view === 'details'}
-            onPress={() => setView('details')}
-            icon={<List size={18} color={view === 'details' ? COLORS.primary : '#94A3B8'} />}
+            active={view === "details"}
+            onPress={() => setView("details")}
+            icon={
+              <List
+                size={17}
+                color={view === "details" ? theme.colors.primary : theme.colors.icon ?? theme.colors.textMuted}
+              />
+            }
           />
           <ViewToggleButton
             label="Live"
-            active={view === 'status'}
-            onPress={() => setView('status')}
-            icon={<Clock size={18} color={view === 'status' ? COLORS.primary : '#94A3B8'} />}
+            active={view === "status"}
+            onPress={() => setView("status")}
+            icon={
+              <Clock
+                size={17}
+                color={view === "status" ? theme.colors.primary : theme.colors.icon ?? theme.colors.textMuted}
+              />
+            }
           />
         </View>
 
-        {(view === 'details' || view === 'status') && (
-          <View className="flex-row items-center bg-[#FFFFFF] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5 mb-5">
-            <Search size={20} color="#94A3B8" />
+        {(view === "details" || view === "status") && (
+          <View style={styles.searchWrap}>
+            <Search size={18} color={theme.colors.icon ?? theme.colors.textMuted} />
             <TextInput
-              className="flex-1 ml-3 text-base font-muller text-[#0F172A]"
+              style={styles.searchInput}
               placeholder="Search by name or CIC..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.colors.inputPlaceholder ?? theme.colors.textMuted}
               value={searchTerm}
               onChangeText={setSearchTerm}
             />
           </View>
         )}
 
-        {view === 'chart' && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2 -ml-2">
+        {view === "chart" && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chartScrollContent}
+          >
             <BarChart
               data={{
-                labels: classData.students.map((s) => String(s.cic || 'N/A')),
+                labels: classData.students.map((s) => String(s.cic || "N/A")),
                 datasets: [{ data: classData.students.map((s) => s.percentage) }],
               }}
-              width={Math.max(screenWidth - 48, classData.students.length * 60)}
+              width={Math.max(screenWidth - 64, classData.students.length * 60)}
               height={290}
               yAxisLabel=""
               yAxisSuffix="%"
+              fromZero
+              verticalLabelRotation={70}
               chartConfig={{
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
-                color: (opacity = 1) => `rgba(30, 64, 175, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
+                backgroundGradientFrom: "#ffffff",
+                backgroundGradientTo: "#ffffff",
+                color: (opacity = 1) => `rgba(59,130,246,${opacity})`,
+                labelColor: (opacity = 1) => `rgba(66,82,107,${opacity})`,
                 barPercentage: 0.5,
                 decimalPlaces: 0,
                 propsForLabels: {
-                  fontFamily: 'System', // Charts often prefer system fonts for SVG rendering safety
-                  fontWeight: '600',
-                }
+                  fontFamily: "System",
+                  fontWeight: "600",
+                },
               }}
-              verticalLabelRotation={70}
-              fromZero
+              style={styles.chart}
             />
           </ScrollView>
         )}
 
-        {view === 'details' && (
-          <View>
+        {view === "details" && (
+          <View style={styles.stack}>
             {classData.students.map((student) => (
-              <View
-                key={student.uid}
-                className="bg-[#FFFFFF] p-4 rounded-[14px] border border-[#E2E8F0] flex-row items-center justify-between mb-3"
-              >
-                <View className="flex-1 pr-4">
-                  <Text className="font-muller-bold text-[#0F172A] text-[15px]">{student.name}</Text>
-                  <Text className="text-xs font-muller text-[#475569] mt-1">CIC: {student.cic || 'N/A'}</Text>
+              <View key={student.uid} style={styles.studentListCard}>
+                <View style={styles.studentListMain}>
+                  <Text style={styles.studentName}>{student.name}</Text>
+                  <Text style={styles.studentMeta}>CIC: {student.cic || "N/A"}</Text>
 
-                  <View className="flex-row items-center mt-3">
-                    <View style={{ width: 96, marginRight: 12 }}>
+                  <View style={styles.percentRow}>
+                    <View style={styles.percentBarWrap}>
                       <ProgressBar percentage={student.percentage} />
                     </View>
-                    <Text className="text-xs font-muller-bold text-[#475569]">
+                    <Text style={styles.percentText}>
                       {student.percentage.toFixed(1)}%
                     </Text>
                   </View>
                 </View>
 
-                <View className="items-end bg-[#F8FAFC] px-3 py-2 rounded-[12px] border border-[#E2E8F0]">
+                <View style={styles.pointsCard}>
                   <Text
-                    className={`font-muller-bold text-xl ${
-                      student.points < 10 ? 'text-[#DC2626]' : 'text-[#1E40AF]'
-                    }`}
+                    style={[
+                      styles.pointsValue,
+                      {
+                        color:
+                          student.points < 10
+                            ? theme.colors.error
+                            : theme.colors.primary,
+                      },
+                    ]}
                   >
                     {student.points}
                   </Text>
-                  <Text className="text-[11px] font-muller text-[#94A3B8]">/ 20 Pts</Text>
+                  <Text style={styles.pointsSub}>/ 20 pts</Text>
                 </View>
               </View>
             ))}
           </View>
         )}
 
-        {view === 'status' && (
-          <View>
+        {view === "status" && (
+          <View style={styles.stack}>
             {classData.students.map((student) => (
-              <View
-                key={student.uid}
-                className="bg-[#FFFFFF] p-4 rounded-[14px] border border-[#E2E8F0] mb-3"
-              >
-                <Text className="font-muller-bold text-[#0F172A] text-[15px] mb-1">{student.name}</Text>
-                <Text className="text-xs font-muller text-[#475569] mb-4">CIC: {student.cic || 'N/A'}</Text>
+              <View key={student.uid} style={styles.statusCard}>
+                <Text style={styles.studentName}>{student.name}</Text>
+                <Text style={styles.studentMeta}>CIC: {student.cic || "N/A"}</Text>
 
                 {student.today_attendance?.is_leave_day ? (
-                  <View className="bg-[#1E40AF]/10 self-start px-3 py-1.5 rounded-lg border border-[#1E40AF]/20">
-                    <Text className="text-sm font-muller-bold text-[#1E40AF]">Leave Day</Text>
+                  <View style={styles.leaveDayBadge}>
+                    <Text style={styles.leaveDayText}>Leave Day</Text>
                   </View>
                 ) : student.today_attendance ? (
-                  <View className="flex-row flex-wrap">
+                  <View style={styles.periodGrid}>
                     {periods.map((period, i) => {
-                      const detail = (student.today_attendance as any)[period];
-                      const isPresent = detail?.status === 'Present';
-                      const isExcused = excusedAbsences.includes(detail?.reason || '');
+                      const detail = student.today_attendance?.[period] as
+                        | PeriodDetail
+                        | undefined;
+
+                      const isPresent = detail?.status === "Present";
+                      const isExcused = excusedAbsences.includes(detail?.reason || "");
+
+                      let bg = theme.colors.errorSoft;
+                      let border = "rgba(220,38,38,0.14)";
+                      let icon = <XCircle size={15} color={theme.colors.error} />;
+                      let onPressable = false;
 
                       if (isPresent) {
-                        return (
-                          <TouchableOpacity
-                            key={period}
-                            disabled
-                            style={{ width: '23%', marginRight: '2%', marginBottom: 8 }}
-                            className="items-center justify-center py-2 rounded-[10px] border bg-[#16A34A]/10 border-[#16A34A]/20"
-                          >
-                            <Text className="text-[11px] font-muller-bold text-[#475569] mb-1">
-                              P{i + 1}
-                            </Text>
-                            <CheckCircle2 size={16} color={COLORS.success} />
-                          </TouchableOpacity>
-                        );
-                      }
-
-                      if (isExcused) {
-                        return (
-                          <TouchableOpacity
-                            key={period}
-                            activeOpacity={0.6}
-                            onPress={() =>
-                              setSelectedAbsence({
-                                name: student.name,
-                                cic: student.cic || 'N/A',
-                                period: i + 1,
-                                reason: detail?.reason || 'Excused',
-                                desc: detail?.description || 'No description provided.',
-                              })
-                            }
-                            style={{ width: '23%', marginRight: '2%', marginBottom: 8 }}
-                            className="items-center justify-center py-2 rounded-[10px] border bg-[#1E40AF]/10 border-[#1E40AF]/20"
-                          >
-                            <Text className="text-[11px] font-muller-bold text-[#475569] mb-1">
-                              P{i + 1}
-                            </Text>
-                            <AlertCircle size={16} color={COLORS.primary} />
-                          </TouchableOpacity>
-                        );
+                        bg = theme.colors.successSoft;
+                        border = "rgba(22,163,74,0.14)";
+                        icon = <CheckCircle2 size={15} color={theme.colors.success} />;
+                      } else if (isExcused) {
+                        bg = theme.colors.primarySoft;
+                        border = "rgba(59,130,246,0.14)";
+                        icon = <AlertCircle size={15} color={theme.colors.primary} />;
+                        onPressable = true;
                       }
 
                       return (
                         <TouchableOpacity
                           key={period}
-                          activeOpacity={0.6}
+                          activeOpacity={onPressable ? 0.82 : 1}
+                          disabled={!onPressable}
                           onPress={() =>
                             setSelectedAbsence({
                               name: student.name,
-                              cic: student.cic || 'N/A',
+                              cic: String(student.cic || "N/A"),
                               period: i + 1,
-                              reason: detail?.reason || 'Absent',
-                              desc: detail?.description || 'No description provided.',
+                              reason: detail?.reason || "Excused absence",
+                              desc: detail?.description || "No description provided.",
                             })
                           }
-                          style={{ width: '23%', marginRight: '2%', marginBottom: 8 }}
-                          className="items-center justify-center py-2 rounded-[10px] border bg-[#DC2626]/10 border-[#DC2626]/20"
+                          style={[
+                            styles.periodBadge,
+                            {
+                              backgroundColor: bg,
+                              borderColor: border,
+                            },
+                          ]}
                         >
-                          <Text className="text-[11px] font-muller-bold text-[#475569] mb-1">
-                            P{i + 1}
-                          </Text>
-                          <XCircle size={16} color={COLORS.danger} />
+                          <Text style={styles.periodBadgeLabel}>P{i + 1}</Text>
+                          {icon}
                         </TouchableOpacity>
                       );
                     })}
                   </View>
                 ) : (
-                  <Text className="text-sm font-muller text-[#94A3B8] italic">Attendance pending...</Text>
+                  <Text style={styles.pendingText}>Attendance not submitted yet.</Text>
                 )}
               </View>
             ))}
@@ -495,54 +537,415 @@ export default function ClassAttendanceDashboard() {
 
       <Modal
         visible={!!selectedAbsence}
-        transparent={true}
         animationType="fade"
+        transparent
         onRequestClose={() => setSelectedAbsence(null)}
       >
-        <View className="flex-1 bg-black/40 justify-center items-center p-6">
-          <View
-            className="bg-[#FFFFFF] rounded-[20px] w-full p-6 border border-[#E2E8F0]"
-            style={cardShadow()}
-          >
-            <View className="flex-row justify-between items-center mb-5">
-              <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">
-                {selectedAbsence?.reason}
-              </Text>
+        <View style={styles.overlay}>
+          <View style={styles.absenceModalCard}>
+            <View style={styles.absenceHeader}>
+              <View style={styles.absenceIconWrap}>
+                <Info size={18} color={theme.colors.primary} />
+              </View>
+
               <TouchableOpacity
                 onPress={() => setSelectedAbsence(null)}
-                className="bg-[#F1F5F9] p-2 rounded-full"
+                activeOpacity={0.84}
+                style={styles.closeButton}
               >
-                <X size={20} color="#475569" />
+                <X size={18} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
 
-            <View className="bg-[#F8FAFC] p-4 rounded-[14px] border border-[#E2E8F0] mb-5">
-              <Text className="text-[#0F172A] font-muller-bold mb-1.5 text-base">
-                {selectedAbsence?.name}
-              </Text>
-              <Text className="text-[#475569] font-muller text-sm mb-1.5">
-                CIC: <Text className="font-muller-bold">{selectedAbsence?.cic}</Text>
-              </Text>
-              <Text className="text-[#475569] font-muller text-sm">
-                Missed: <Text className="font-muller-bold">Period {selectedAbsence?.period}</Text>
-              </Text>
-            </View>
+            <Text style={styles.absenceTitle}>Excused Absence Details</Text>
 
-            <Text className="text-[#0F172A] font-muller-bold mb-2">Description / Note</Text>
-            <Text className="text-[#475569] font-muller leading-relaxed">
-              {selectedAbsence?.desc}
-            </Text>
+            {selectedAbsence ? (
+              <>
+                <Text style={styles.absenceLine}>
+                  <Text style={styles.absenceLabel}>Student: </Text>
+                  {selectedAbsence.name}
+                </Text>
+                <Text style={styles.absenceLine}>
+                  <Text style={styles.absenceLabel}>CIC: </Text>
+                  {selectedAbsence.cic}
+                </Text>
+                <Text style={styles.absenceLine}>
+                  <Text style={styles.absenceLabel}>Period: </Text>P{selectedAbsence.period}
+                </Text>
+                <Text style={styles.absenceLine}>
+                  <Text style={styles.absenceLabel}>Reason: </Text>
+                  {selectedAbsence.reason}
+                </Text>
 
-            <TouchableOpacity
-              onPress={() => setSelectedAbsence(null)}
-              activeOpacity={0.8}
-              className="mt-8 bg-[#1E40AF] py-3.5 rounded-[14px] items-center"
-            >
-              <Text className="text-white font-muller-bold text-[15px]">Close Details</Text>
-            </TouchableOpacity>
+                <View style={styles.descBox}>
+                  <Text style={styles.absenceLabel}>Description</Text>
+                  <Text style={styles.descText}>{selectedAbsence.desc}</Text>
+                </View>
+              </>
+            ) : null}
           </View>
         </View>
       </Modal>
-    </View>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  rootCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.medium,
+  },
+  loadingCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    minHeight: 220,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    ...theme.shadows.medium,
+  },
+  loadingText: {
+    marginTop: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  metricsGrid: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  metricCard: {
+    flex: 1,
+    minWidth: 140,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    ...theme.shadows.soft,
+  },
+  metricTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  metricLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerMedium",
+  },
+  metricIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  metricValue: {
+    color: theme.colors.text,
+    fontSize: 24,
+    lineHeight: 30,
+    fontFamily: "MullerBold",
+  },
+  metricFooter: {
+    marginTop: 6,
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerMedium",
+  },
+  sectionHeader: {
+    marginBottom: 16,
+  },
+  title: {
+    color: theme.colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: "MullerBold",
+  },
+  subtitle: {
+    marginTop: 6,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+  segmentWrap: {
+    flexDirection: "row",
+    backgroundColor: theme.colors.surfaceMuted,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 6,
+    gap: 8,
+    marginBottom: 16,
+  },
+  toggleButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  toggleButtonActive: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    ...theme.shadows.soft,
+  },
+  toggleButtonText: {
+    marginLeft: 8,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  toggleButtonTextActive: {
+    color: theme.colors.primary,
+    fontFamily: "MullerBold",
+  },
+  searchWrap: {
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.inputBorder ?? theme.colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    marginBottom: 16,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+  chartScrollContent: {
+    paddingRight: 14,
+  },
+  chart: {
+    marginLeft: -10,
+    borderRadius: 16,
+  },
+  stack: {
+    gap: 12,
+  },
+  progressTrack: {
+    width: "100%",
+    height: 8,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
+  },
+  studentListCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  studentListMain: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  studentName: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  studentMeta: {
+    marginTop: 4,
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerMedium",
+  },
+  percentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+  },
+  percentBarWrap: {
+    width: 110,
+    marginRight: 12,
+  },
+  percentText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  pointsCard: {
+    minWidth: 82,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    alignItems: "flex-end",
+  },
+  pointsValue: {
+    fontSize: 22,
+    lineHeight: 26,
+    fontFamily: "MullerBold",
+  },
+  pointsSub: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "MullerMedium",
+    marginTop: 2,
+  },
+  statusCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    gap: 10,
+  },
+  leaveDayBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    marginTop: 4,
+  },
+  leaveDayText: {
+    color: theme.colors.primary,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerBold",
+  },
+  periodGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 10,
+    marginTop: 2,
+  },
+  periodBadge: {
+    width: "23.5%",
+    minHeight: 54,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
+  periodBadgeLabel: {
+    marginBottom: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "MullerBold",
+  },
+  pendingText: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    fontStyle: "italic",
+    marginTop: 2,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlayStrong ?? "rgba(15,23,42,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+  },
+  absenceModalCard: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.floating,
+  },
+  absenceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  absenceIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  absenceTitle: {
+    color: theme.colors.text,
+    fontSize: 20,
+    lineHeight: 25,
+    fontFamily: "MullerBold",
+    marginBottom: 12,
+  },
+  absenceLine: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+    marginBottom: 6,
+  },
+  absenceLabel: {
+    color: theme.colors.text,
+    fontFamily: "MullerBold",
+  },
+  descBox: {
+    marginTop: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    padding: 14,
+  },
+  descText: {
+    marginTop: 8,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+});

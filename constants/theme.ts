@@ -1,51 +1,43 @@
-/**
- * Core Design System Tokens for PMSA Wafy College App
- * Use these constants when inline Tailwind classes aren't sufficient,
- * or when passing color values directly to native components (like Lucide icons).
- */
+import { colors } from "../theme/colors";
+import { radius } from "../theme/radius";
+import { spacing } from "../theme/spacing";
 
 export const COLORS = {
-  // Brand
-  primary: '#1E40AF',
-  secondary: '#0F766E',
-  accent: '#F59E0B',
+  primary: colors.primary,
+  secondary: colors.secondary,
+  accent: colors.accent,
 
-  // Layout & Surfaces
-  background: '#F8FAFC',     // App shell, screens
-  surface: '#FFFFFF',        // Cards, primary drawer content
-  surfaceSoft: '#F1F5F9',    // Secondary cards, nested areas
+  background: colors.background,
+  surface: colors.surface,
+  surfaceSoft: colors.surfaceSoft,
 
-  // Typography
-  textPrimary: '#0F172A',    // Headings, primary content
-  textSecondary: '#475569',  // Subtitles, metadata
-  textMuted: '#94A3B8',      // Inactive states, placeholders
+  textPrimary: colors.text,
+  textSecondary: colors.textSecondary,
+  textMuted: colors.textMuted,
 
-  // Structural
-  border: '#E2E8F0',
+  border: colors.border,
 
-  // Status
-  success: '#16A34A',
-  warning: '#D97706',
-  danger: '#DC2626',
+  success: colors.success,
+  warning: colors.warning,
+  danger: colors.error,
 
-  // Opacity Overlays (Often used for active states or soft buttons)
-  primaryLight: 'rgba(30, 64, 175, 0.1)', // bg-[#1E40AF]/10
-  dangerLight: 'rgba(220, 38, 38, 0.1)',  // bg-[#DC2626]/10
+  primaryLight: colors.primaryTint,
+  dangerLight: colors.errorSoft,
 };
 
 export const RADIUS = {
-  sm: 12, // Avatars, small badges
-  md: 14, // Buttons, interactive items
-  lg: 16, // Soft nested blocks
-  xl: 18, // Main structural cards
+  sm: radius.sm,
+  md: radius.md,
+  lg: radius.lg,
+  xl: radius.xl,
 };
 
 export const SPACING = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  '2xl': 24,
-  '3xl': 32,
+  xs: spacing.xs,
+  sm: spacing.sm,
+  md: spacing.md,
+  lg: spacing.lg,
+  xl: spacing.xl,
+  "2xl": spacing.xxl,
+  "3xl": spacing.xxxl,
 };

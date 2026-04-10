@@ -1,68 +1,238 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { User, School, Users, Phone, Eye, Edit, Trash2 } from 'lucide-react-native';
-import { COLORS } from '@/constants/theme';
+import React from "react";
+import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import {
+  User,
+  School,
+  Users,
+  Phone,
+  Eye,
+  Edit,
+  Trash2,
+} from "lucide-react-native";
+import { theme } from "@/theme/theme";
 
-export function StudentCard({ student, onView, onEdit, onDelete }: any) {
+type StudentCardProps = {
+  student: any;
+  onView?: (student: any) => void;
+  onEdit?: (student: any) => void;
+  onDelete?: (student: any) => void;
+  readOnly?: boolean;
+};
+
+export function StudentCard({
+  student,
+  onView,
+  onEdit,
+  onDelete,
+  readOnly = false,
+}: StudentCardProps) {
+  const showView = !!onView;
+  const showEdit = !readOnly && !!onEdit;
+  const showDelete = !readOnly && !!onDelete;
+
   return (
-    <View className="bg-[#FFFFFF] rounded-[16px] border border-[#E2E8F0] overflow-hidden shadow-sm">
-      <View className="p-4 flex-row items-center border-b border-[#E2E8F0]">
-        <View className="h-14 w-14 rounded-[12px] bg-[#F1F5F9] items-center justify-center overflow-hidden border border-[#E2E8F0]">
+    <View style={styles.card}>
+      <View style={styles.topRow}>
+        <View style={styles.avatarWrap}>
           {student.img_url ? (
-            <Image source={{ uri: student.img_url }} className="h-full w-full" />
+            <Image source={{ uri: student.img_url }} style={styles.avatarImage} />
           ) : (
-            <User size={24} color="#94A3B8" />
+            <User size={24} color={theme.colors.textMuted} />
           )}
         </View>
-        <View className="ml-4 flex-1">
-          <Text className="font-muller-bold text-[#0F172A] text-[16px] tracking-tight truncate" numberOfLines={1}>
+
+        <View style={styles.topTextWrap}>
+          <Text style={styles.name} numberOfLines={1}>
             {student.name}
           </Text>
-          <Text className="text-[13px] font-muller text-[#475569] mt-0.5">CIC: {student.cic || 'N/A'}</Text>
+          <Text style={styles.cic}>CIC: {student.cic || "N/A"}</Text>
         </View>
       </View>
 
-      <View className="px-4 py-3.5 flex-row flex-wrap gap-y-2.5 bg-[#F8FAFC]">
-        <View className="w-1/2 flex-row items-center pr-2">
-          <School size={14} color="#94A3B8" />
-          <Text className="text-[13px] font-muller text-[#475569] ml-2 truncate" numberOfLines={1}>{student.class_id}</Text>
+      <View style={styles.metaSection}>
+        <View style={styles.metaItem}>
+          <School size={14} color={theme.colors.textMuted} />
+          <Text style={styles.metaText} numberOfLines={1}>
+            {student.class_id}
+          </Text>
         </View>
-        <View className="w-1/2 flex-row items-center">
-          <Users size={14} color="#94A3B8" />
-          <Text className="text-[13px] font-muller text-[#475569] ml-2 truncate" numberOfLines={1}>{student.council || 'N/A'}</Text>
+
+        <View style={styles.metaItem}>
+          <Users size={14} color={theme.colors.textMuted} />
+          <Text style={styles.metaText} numberOfLines={1}>
+            {student.council || "N/A"}
+          </Text>
         </View>
-        <View className="w-1/2 flex-row items-center pr-2">
-          <Phone size={14} color="#94A3B8" />
-          <Text className="text-[13px] font-muller text-[#475569] ml-2 truncate" numberOfLines={1}>{student.phone || 'N/A'}</Text>
+
+        <View style={styles.metaItem}>
+          <Phone size={14} color={theme.colors.textMuted} />
+          <Text style={styles.metaText} numberOfLines={1}>
+            {student.phone || "N/A"}
+          </Text>
         </View>
       </View>
 
-      <View className="flex-row border-t border-[#E2E8F0] bg-[#FFFFFF]">
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => onView(student)}
-          className="flex-1 py-3.5 items-center justify-center flex-row border-r border-[#E2E8F0]"
-        >
-          <Eye size={16} color={COLORS.primary} />
-          <Text className="ml-2 font-muller-bold text-[#1E40AF] text-[13px] uppercase tracking-wider">View</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => onEdit(student)}
-          className="flex-1 py-3.5 items-center justify-center flex-row border-r border-[#E2E8F0]"
-        >
-          <Edit size={16} color={COLORS.warning} />
-          <Text className="ml-2 font-muller-bold text-[#D97706] text-[13px] uppercase tracking-wider">Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => onDelete(student)}
-          className="flex-1 py-3.5 items-center justify-center flex-row"
-        >
-          <Trash2 size={16} color={COLORS.danger} />
-          <Text className="ml-2 font-muller-bold text-[#DC2626] text-[13px] uppercase tracking-wider">Delete</Text>
-        </TouchableOpacity>
+      <View
+        style={[
+          styles.actionRow,
+          readOnly && styles.actionRowReadOnly,
+        ]}
+      >
+        {showView && (
+          <TouchableOpacity
+            activeOpacity={0.84}
+            onPress={() => onView?.(student)}
+            style={[
+              styles.actionButton,
+              !readOnly && (showEdit || showDelete) && styles.actionButtonGrow,
+              readOnly && styles.singleActionButton,
+            ]}
+          >
+            <Eye size={16} color={theme.colors.primary} />
+            <Text style={styles.viewText}>View</Text>
+          </TouchableOpacity>
+        )}
+
+        {showEdit && (
+          <TouchableOpacity
+            activeOpacity={0.84}
+            onPress={() => onEdit?.(student)}
+            style={[styles.actionButton, styles.actionButtonBorder]}
+          >
+            <Edit size={16} color={theme.colors.warning} />
+            <Text style={styles.editText}>Edit</Text>
+          </TouchableOpacity>
+        )}
+
+        {showDelete && (
+          <TouchableOpacity
+            activeOpacity={0.84}
+            onPress={() => onDelete?.(student)}
+            style={styles.actionButton}
+          >
+            <Trash2 size={16} color={theme.colors.error} />
+            <Text style={styles.deleteText}>Delete</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    ...theme.shadows.soft,
+  },
+  topRow: {
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  avatarWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  topTextWrap: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  name: {
+    color: theme.colors.text,
+    fontSize: 16,
+    lineHeight: 21,
+    fontFamily: "MullerBold",
+  },
+  cic: {
+    marginTop: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  metaSection: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.surfaceSoft,
+    gap: 10,
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  metaText: {
+    marginLeft: 8,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    flex: 1,
+  },
+  actionRow: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  actionRowReadOnly: {
+    justifyContent: "center",
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  actionButtonGrow: {
+    flex: 1,
+  },
+  singleActionButton: {
+    flex: 0,
+    minWidth: 120,
+    paddingHorizontal: 18,
+  },
+  actionButtonBorder: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  viewText: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+    textTransform: "uppercase",
+  },
+  editText: {
+    color: theme.colors.warning,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+    textTransform: "uppercase",
+  },
+  deleteText: {
+    color: theme.colors.error,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+    textTransform: "uppercase",
+  },
+});

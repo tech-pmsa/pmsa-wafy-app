@@ -1,97 +1,121 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Image, Modal, ScrollView, Linking } from 'react-native';
-import { supabase } from '@/lib/supabaseClient';
-import { useUserData } from '@/hooks/useUserData';
-import { Trophy, User as UserIcon, Link as LinkIcon, X } from 'lucide-react-native';
-import { COLORS } from '@/constants/theme';
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+  Modal,
+  ScrollView,
+  Linking,
+  StyleSheet,
+} from "react-native";
+import { supabase } from "@/lib/supabaseClient";
+import { useUserData } from "@/hooks/useUserData";
+import {
+  Trophy,
+  User as UserIcon,
+  Link as LinkIcon,
+  X,
+  Sparkles,
+} from "lucide-react-native";
+import { theme } from "@/theme/theme";
 
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
-}
-
-// --- Sub-components ---
-
-// 1. Clickable List Item
-function AchievementListItem({ achievement, onClick }: { achievement: any, onClick: () => void }) {
+function AchievementListItem({
+  achievement,
+  onClick,
+}: {
+  achievement: any;
+  onClick: () => void;
+}) {
   return (
     <TouchableOpacity
       onPress={onClick}
-      activeOpacity={0.7}
-      className="flex-row items-center p-3 mb-2.5 bg-[#F8FAFC] rounded-[16px] border border-[#E2E8F0]"
+      activeOpacity={0.84}
+      style={styles.listItem}
     >
-      <View className="h-12 w-12 rounded-[12px] bg-[#1E40AF]/10 items-center justify-center overflow-hidden border border-[#1E40AF]/10">
+      <View style={styles.listItemAvatar}>
         {achievement.students?.img_url ? (
-          <Image source={{ uri: achievement.students.img_url }} className="h-full w-full" />
+          <Image source={{ uri: achievement.students.img_url }} style={styles.avatarImage} />
         ) : (
-          <Trophy size={20} color={COLORS.primary} />
+          <Trophy size={20} color={theme.colors.primary} />
         )}
       </View>
-      <View className="flex-1 ml-3 mr-3">
-        <Text className="font-muller-bold text-[#0F172A] text-[15px] tracking-tight" numberOfLines={1}>
+
+      <View style={styles.listItemTextWrap}>
+        <Text style={styles.listItemTitle} numberOfLines={1}>
           {achievement.title}
         </Text>
-        <View className="flex-row items-center mt-1">
-          <UserIcon size={12} color="#94A3B8" />
-          <Text className="text-[13px] font-muller text-[#475569] ml-1.5 truncate" numberOfLines={1}>
+
+        <View style={styles.listItemMetaRow}>
+          <UserIcon size={12} color={theme.colors.textMuted} />
+          <Text style={styles.listItemMeta} numberOfLines={1}>
             {achievement.name} ({achievement.cic})
           </Text>
         </View>
       </View>
-      <Text className="text-[11px] font-muller-bold text-[#94A3B8] uppercase tracking-wider">
-        {new Date(achievement.submitted_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}
+
+      <Text style={styles.listItemDate}>
+        {new Date(achievement.submitted_at).toLocaleDateString("en-GB", {
+          month: "short",
+          day: "numeric",
+        })}
       </Text>
     </TouchableOpacity>
   );
 }
 
-// 2. Details Modal
-function AchievementDetailsModal({ achievement, isOpen, onClose }: { achievement: any | null, isOpen: boolean, onClose: () => void }) {
+function AchievementDetailsModal({
+  achievement,
+  isOpen,
+  onClose,
+}: {
+  achievement: any | null;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
   if (!achievement) return null;
 
-  const isImageProof = achievement.proof_url && /\.(jpg|jpeg|png|gif)$/i.test(achievement.proof_url);
+  const isImageProof =
+    achievement.proof_url &&
+    /\.(jpg|jpeg|png|webp)$/i.test(achievement.proof_url);
 
   return (
-    <Modal visible={isOpen} transparent animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 bg-black/40 justify-end">
-        <View className="bg-[#FFFFFF] rounded-t-[24px] p-6 shadow-xl max-h-[85%] border-t border-[#E2E8F0]">
-
-          <View className="flex-row justify-between items-start mb-6">
-            <View className="flex-row flex-1 pr-4">
-              <View className="bg-[#1E40AF]/10 p-3.5 rounded-[14px] mr-4 self-start border border-[#1E40AF]/10">
-                <Trophy size={26} color={COLORS.primary} />
+    <Modal visible={isOpen} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderMain}>
+              <View style={styles.modalTrophyWrap}>
+                <Trophy size={24} color={theme.colors.primary} />
               </View>
-              <View className="flex-1">
-                <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight leading-snug">{achievement.title}</Text>
-                <Text className="text-[11px] font-muller-bold text-[#94A3B8] mt-2 uppercase tracking-wider">
-                  Submitted on {new Date(achievement.submitted_at).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
+
+              <View style={styles.modalHeaderTextWrap}>
+                <Text style={styles.modalTitle}>{achievement.title}</Text>
+                <Text style={styles.modalDate}>
+                  Submitted on{" "}
+                  {new Date(achievement.submitted_at).toLocaleDateString("en-GB", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              onPress={onClose}
-              activeOpacity={0.7}
-              className="bg-[#F1F5F9] p-2.5 rounded-full"
-            >
-              <X size={20} color="#0F172A" />
+
+            <TouchableOpacity onPress={onClose} activeOpacity={0.84} style={styles.closeButton}>
+              <X size={18} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} className="mb-6">
-            <Text className="text-[#475569] font-muller text-[15px] leading-relaxed mb-6">
-              {achievement.description}
-            </Text>
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
+            <Text style={styles.modalDescription}>{achievement.description}</Text>
 
             {isImageProof && (
-              <View className="rounded-[16px] border border-[#E2E8F0] overflow-hidden mb-5 bg-[#F8FAFC]">
+              <View style={styles.modalImageWrap}>
                 <Image
                   source={{ uri: achievement.proof_url }}
-                  className="w-full h-64"
+                  style={styles.modalImage}
                   resizeMode="contain"
                 />
               </View>
@@ -100,36 +124,35 @@ function AchievementDetailsModal({ achievement, isOpen, onClose }: { achievement
             {achievement.proof_url && (
               <TouchableOpacity
                 onPress={() => Linking.openURL(achievement.proof_url)}
-                activeOpacity={0.7}
-                className="flex-row items-center justify-center bg-[#F8FAFC] py-3.5 rounded-[14px] border border-[#E2E8F0]"
+                activeOpacity={0.84}
+                style={styles.fullProofButton}
               >
-                <LinkIcon size={18} color="#0F172A" />
-                <Text className="ml-2.5 font-muller-bold text-[#0F172A]">View Full Proof</Text>
+                <LinkIcon size={17} color={theme.colors.text} />
+                <Text style={styles.fullProofButtonText}>View Full Proof</Text>
               </TouchableOpacity>
             )}
           </ScrollView>
 
-          <View className="border-t border-[#E2E8F0] pt-5 flex-row items-center">
-            <View className="h-11 w-11 rounded-[12px] bg-[#F1F5F9] items-center justify-center overflow-hidden border border-[#E2E8F0]">
+          <View style={styles.modalFooter}>
+            <View style={styles.modalFooterAvatar}>
               {achievement.students?.img_url ? (
-                <Image source={{ uri: achievement.students.img_url }} className="h-full w-full" />
+                <Image source={{ uri: achievement.students.img_url }} style={styles.avatarImage} />
               ) : (
-                <UserIcon size={20} color="#94A3B8" />
+                <UserIcon size={18} color={theme.colors.textMuted} />
               )}
             </View>
-            <View className="ml-3.5">
-              <Text className="text-[15px] font-muller-bold text-[#0F172A] tracking-tight">{achievement.name}</Text>
-              <Text className="text-xs font-muller text-[#475569] mt-0.5">{achievement.cic}</Text>
+
+            <View>
+              <Text style={styles.modalFooterName}>{achievement.name}</Text>
+              <Text style={styles.modalFooterCic}>{achievement.cic}</Text>
             </View>
           </View>
-
         </View>
       </View>
     </Modal>
   );
 }
 
-// --- Main Component ---
 export default function ApprovedAchievements() {
   const { role, details, loading: userLoading } = useUserData();
   const [achievements, setAchievements] = useState<any[]>([]);
@@ -138,23 +161,31 @@ export default function ApprovedAchievements() {
 
   useEffect(() => {
     if (userLoading) return;
+
     const fetchAchievements = async () => {
       setIsLoading(true);
-      let query = supabase.from('achievements').select('*, students(img_url)').eq('approved', true);
 
-      if (role === 'student' && details?.cic) {
-        query = query.eq('cic', details.cic);
-      } else if (role === 'class' && details?.batch) {
-        query = query.eq('batch', details.batch);
+      let query = supabase
+        .from("achievements")
+        .select("*, students(img_url)")
+        .eq("approved", true);
+
+      if (role === "student" && details?.cic) {
+        query = query.eq("cic", details.cic);
+      } else if (role === "class" && details?.batch) {
+        query = query.eq("batch", details.batch);
       }
 
-      const { data, error } = await query.order('submitted_at', { ascending: false }).limit(5);
+      const { data, error } = await query
+        .order("submitted_at", { ascending: false })
+        .limit(5);
 
       if (error) {
         console.error("Error fetching achievements:", error);
       } else if (data) {
         setAchievements(data);
       }
+
       setIsLoading(false);
     };
 
@@ -162,30 +193,41 @@ export default function ApprovedAchievements() {
   }, [role, details, userLoading]);
 
   const title = useMemo(() => {
-    if (role === 'student') return 'My Recent Achievements';
-    if (role === 'class') return 'Recent Class Achievements';
-    return 'Latest College Achievements';
+    if (role === "student") return "My Recent Achievements";
+    if (role === "class") return "Recent Class Achievements";
+    return "Latest College Achievements";
   }, [role]);
 
   return (
-    <View
-      className="bg-[#FFFFFF] rounded-[18px] p-5 border border-[#E2E8F0] my-2"
-      style={cardShadow()}
-    >
-      <View className="mb-5">
-        <Text className="text-xl font-muller-bold text-[#0F172A] tracking-tight">{title}</Text>
-        <Text className="text-sm font-muller text-[#475569] mt-1">A showcase of recent accomplishments.</Text>
+    <View style={styles.rootCard}>
+      <View style={styles.headerTopRow}>
+        <View style={styles.headerIconWrap}>
+          <Trophy size={22} color={theme.colors.primary} />
+        </View>
+
+        <View style={styles.headerPill}>
+          <Sparkles size={13} color={theme.colors.accent} />
+          <Text style={styles.headerPillText}>Showcase</Text>
+        </View>
       </View>
 
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionSubtitle}>
+        A showcase of recent accomplishments.
+      </Text>
+
       {isLoading || userLoading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} className="my-6" />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading achievements...</Text>
+        </View>
       ) : achievements.length === 0 ? (
-        <View className="items-center justify-center py-10 border border-dashed border-[#E2E8F0] rounded-[16px] bg-[#F8FAFC]">
-          <Trophy size={32} color="#94A3B8" />
-          <Text className="mt-3 text-[13px] font-muller text-[#475569]">No approved achievements yet.</Text>
+        <View style={styles.emptyState}>
+          <Trophy size={28} color={theme.colors.textMuted} />
+          <Text style={styles.emptyText}>No approved achievements yet.</Text>
         </View>
       ) : (
-        <View className="pb-1">
+        <View style={styles.stack}>
           {achievements.map((ach) => (
             <AchievementListItem
               key={ach.id}
@@ -204,3 +246,280 @@ export default function ApprovedAchievements() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  rootCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.medium,
+  },
+  headerTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  headerIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+  },
+  headerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: theme.colors.accentSoft,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  headerPillText: {
+    color: theme.colors.accent,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  sectionTitle: {
+    color: theme.colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: "MullerBold",
+  },
+  sectionSubtitle: {
+    marginTop: 6,
+    marginBottom: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: "MullerMedium",
+  },
+  stack: { gap: 12 },
+  listItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 20,
+    padding: 12,
+  },
+  listItemAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  listItemTextWrap: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 12,
+  },
+  listItemTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  listItemMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+  },
+  listItemMeta: {
+    marginLeft: 6,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerMedium",
+    flex: 1,
+  },
+  listItemDate: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 14,
+    textTransform: "uppercase",
+    fontFamily: "MullerBold",
+  },
+  loadingWrap: {
+    paddingVertical: 30,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 14,
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 30,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+  },
+  emptyText: {
+    marginTop: 12,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlayStrong ?? "rgba(15,23,42,0.28)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 430,
+    maxHeight: "84%",
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.floating,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+  modalHeaderMain: {
+    flexDirection: "row",
+    flex: 1,
+    paddingRight: 12,
+  },
+  modalTrophyWrap: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    marginRight: 12,
+  },
+  modalHeaderTextWrap: {
+    flex: 1,
+  },
+  modalTitle: {
+    color: theme.colors.text,
+    fontSize: 20,
+    lineHeight: 25,
+    fontFamily: "MullerBold",
+  },
+  modalDate: {
+    marginTop: 6,
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  closeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  modalScroll: {
+    marginBottom: 14,
+  },
+  modalDescription: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: "MullerMedium",
+    marginBottom: 16,
+  },
+  modalImageWrap: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    marginBottom: 16,
+    backgroundColor: theme.colors.surfaceSoft,
+  },
+  modalImage: {
+    width: "100%",
+    height: 260,
+  },
+  fullProofButton: {
+    minHeight: 50,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  fullProofButtonText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  modalFooter: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: 14,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  modalFooterAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    marginRight: 12,
+  },
+  modalFooterName: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerBold",
+  },
+  modalFooterCic: {
+    marginTop: 3,
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerMedium",
+  },
+});

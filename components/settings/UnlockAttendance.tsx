@@ -1,61 +1,68 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert as NativeAlert, Modal, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
-import { supabase } from '@/lib/supabaseClient';
-import { format } from 'date-fns';
-import { AlertTriangle, CalendarIcon, Unlock, X } from 'lucide-react-native';
-import { COLORS } from '@/constants/theme';
-
-function cardShadow() {
-  return {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  };
-}
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert as NativeAlert,
+  Modal,
+  Platform,
+  StyleSheet,
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import { supabase } from "@/lib/supabaseClient";
+import { format } from "date-fns";
+import { AlertTriangle, CalendarIcon, Unlock, X } from "lucide-react-native";
+import { theme } from "@/theme/theme";
 
 export default function UnlockAttendance() {
   const [classes, setClasses] = useState<string[]>([]);
-  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedClass, setSelectedClass] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [confirmationText, setConfirmationText] = useState('');
+  const [confirmationText, setConfirmationText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchClasses = async () => {
-      const { data } = await supabase.from('students').select('class_id');
+      const { data } = await supabase.from("students").select("class_id");
+
       if (data) {
-        const uniqueClasses = [...new Set(data.map(item => item.class_id).filter(Boolean))].sort();
+        const uniqueClasses = [...new Set(data.map((item) => item.class_id).filter(Boolean))].sort();
         setClasses(uniqueClasses as string[]);
       }
     };
+
     fetchClasses();
   }, []);
 
   const handleUnlock = async () => {
     setIsLoading(true);
+
     try {
-      const { data, error } = await supabase.functions.invoke('admin-actions', {
+      const { data, error } = await supabase.functions.invoke("admin-actions", {
         body: {
-          action: 'unlock_attendance',
+          action: "unlock_attendance",
           class_id: selectedClass,
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          reason
-        }
+          date: format(selectedDate, "yyyy-MM-dd"),
+          reason,
+        },
       });
+
       if (error || data?.error) throw new Error(error?.message || data?.error);
 
-      NativeAlert.alert('Success', 'Attendance unlocked.');
-      setSelectedClass(''); setReason(''); setConfirmationText(''); setIsModalOpen(false);
+      NativeAlert.alert("Success", "Attendance unlocked.");
+      setSelectedClass("");
+      setReason("");
+      setConfirmationText("");
+      setIsModalOpen(false);
     } catch (error: any) {
-      NativeAlert.alert('Failed', error.message);
+      NativeAlert.alert("Failed", error.message);
     } finally {
       setIsLoading(false);
     }
@@ -65,45 +72,55 @@ export default function UnlockAttendance() {
 
   return (
     <>
-      <View
-        className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[16px] p-5 shadow-sm"
-        style={cardShadow()}
-      >
-        <View className="flex-row items-center mb-5">
-          <View className="bg-[#D97706]/10 p-2.5 rounded-[12px] border border-[#D97706]/20">
-            <AlertTriangle size={20} color={COLORS.warning} />
+      <View style={styles.rootCard}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerIconWrap}>
+            <AlertTriangle size={20} color={theme.colors.warning} />
           </View>
-          <Text className="text-lg font-muller-bold text-[#D97706] ml-3 tracking-tight">Unlock Attendance</Text>
+          <Text style={styles.headerTitle}>Unlock Attendance</Text>
         </View>
 
-        <Text className="text-[13px] font-muller-bold text-[#475569] mb-2 ml-1">Select Class</Text>
-        <View className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] overflow-hidden mb-5">
+        <Text style={styles.sectionLabel}>Select Class</Text>
+        <View style={styles.pickerWrap}>
           <Picker
             selectedValue={selectedClass}
             onValueChange={setSelectedClass}
-            style={{ color: '#0F172A' }}
+            style={{ color: theme.colors.text }}
           >
-            <Picker.Item label="Select class..." value="" color="#94A3B8" />
-            {classes.map(cls => <Picker.Item key={cls} label={cls} value={cls} color="#0F172A" />)}
+            <Picker.Item label="Select class..." value="" color={theme.colors.textMuted} />
+            {classes.map((cls) => (
+              <Picker.Item key={cls} label={cls} value={cls} color={theme.colors.text} />
+            ))}
           </Picker>
         </View>
 
-        <Text className="text-[13px] font-muller-bold text-[#475569] mb-2 ml-1">Select Date</Text>
+        <Text style={styles.sectionLabel}>Select Date</Text>
         <TouchableOpacity
-          activeOpacity={0.7}
+          activeOpacity={0.84}
           onPress={() => setShowDatePicker(true)}
-          className="flex-row items-center bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] px-4 py-3.5 mb-5"
+          style={styles.dateButton}
         >
-          <CalendarIcon size={18} color="#475569" />
-          <Text className="ml-3 text-[#0F172A] font-muller-bold text-[15px]">{format(selectedDate, 'PPP')}</Text>
+          <CalendarIcon size={18} color={theme.colors.textSecondary} />
+          <Text style={styles.dateButtonText}>{format(selectedDate, "PPP")}</Text>
         </TouchableOpacity>
-        {showDatePicker && <DateTimePicker value={selectedDate} mode="date" maximumDate={new Date()} onChange={(e, d) => { setShowDatePicker(Platform.OS === 'ios'); if(d) setSelectedDate(d); }} />}
 
-        <Text className="text-[13px] font-muller-bold text-[#475569] mb-2 ml-1">Reason</Text>
+        {showDatePicker && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            maximumDate={new Date()}
+            onChange={(e, d) => {
+              setShowDatePicker(Platform.OS === "ios");
+              if (d) setSelectedDate(d);
+            }}
+          />
+        )}
+
+        <Text style={styles.sectionLabel}>Reason</Text>
         <TextInput
-          className="bg-[#F8FAFC] border border-[#E2E8F0] font-muller text-[#0F172A] rounded-[14px] p-4 text-[15px] mb-6"
+          style={styles.input}
           placeholder="Reason for unlocking"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={theme.colors.inputPlaceholder ?? theme.colors.textMuted}
           value={reason}
           onChangeText={setReason}
         />
@@ -111,57 +128,82 @@ export default function UnlockAttendance() {
         <TouchableOpacity
           onPress={() => setIsModalOpen(true)}
           disabled={!selectedClass || !reason}
-          activeOpacity={0.8}
-          className={`py-3.5 rounded-[14px] items-center flex-row justify-center ${(!selectedClass || !reason) ? 'bg-[#E2E8F0]' : 'bg-[#D97706]'}`}
+          activeOpacity={0.86}
+          style={[
+            styles.primaryButton,
+            (!selectedClass || !reason) && styles.primaryButtonDisabled,
+          ]}
         >
-          <Unlock size={18} color={(!selectedClass || !reason) ? '#94A3B8' : 'white'} />
-          <Text className={`font-muller-bold ml-2 text-[15px] tracking-wide ${(!selectedClass || !reason) ? 'text-[#94A3B8]' : 'text-white'}`}>
+          <Unlock
+            size={17}
+            color={
+              !selectedClass || !reason
+                ? theme.colors.textMuted
+                : theme.colors.textOnDark
+            }
+          />
+          <Text
+            style={[
+              styles.primaryButtonText,
+              (!selectedClass || !reason) && styles.primaryButtonTextDisabled,
+            ]}
+          >
             Unlock Day
           </Text>
         </TouchableOpacity>
       </View>
 
       <Modal visible={isModalOpen} transparent animationType="fade">
-        <View className="flex-1 bg-black/40 justify-center px-6">
-          <View
-            className="bg-[#FFFFFF] rounded-[20px] p-6 shadow-xl border border-[#E2E8F0]"
-            style={cardShadow()}
-          >
-            <View className="flex-row justify-between items-center mb-5">
-              <Text className="text-xl font-muller-bold text-[#D97706] tracking-tight">Confirm Unlock</Text>
+        <View style={styles.overlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalTopRow}>
+              <Text style={styles.modalTitle}>Confirm Unlock</Text>
               <TouchableOpacity
-                activeOpacity={0.7}
+                activeOpacity={0.84}
                 onPress={() => setIsModalOpen(false)}
-                className="bg-[#F1F5F9] p-2.5 rounded-full"
+                style={styles.closeButton}
               >
-                <X size={20} color="#475569" />
+                <X size={18} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <Text className="text-[#475569] font-muller text-[15px] mb-5 leading-relaxed">
-              Type <Text className="font-muller-bold text-[#0F172A]">{confPhrase}</Text> to unlock {selectedClass}.
+            <Text style={styles.modalText}>
+              Type <Text style={styles.modalStrong}>{confPhrase}</Text> to unlock{" "}
+              {selectedClass}.
             </Text>
 
             <TextInput
-              className="bg-[#F8FAFC] border border-[#E2E8F0] font-muller-bold text-[#0F172A] rounded-[14px] p-4 text-[15px] mb-6"
+              style={styles.input}
               placeholder={confPhrase}
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={theme.colors.inputPlaceholder ?? theme.colors.textMuted}
               value={confirmationText}
               onChangeText={setConfirmationText}
             />
 
             <TouchableOpacity
               onPress={handleUnlock}
-              activeOpacity={0.8}
-              disabled={isLoading || confirmationText.toLowerCase() !== confPhrase.toLowerCase()}
-              className={`w-full py-4 rounded-[14px] items-center flex-row justify-center ${
-                confirmationText.toLowerCase() === confPhrase.toLowerCase() ? 'bg-[#D97706]' : 'bg-[#E2E8F0]'
-              }`}
+              activeOpacity={0.86}
+              disabled={
+                isLoading ||
+                confirmationText.toLowerCase() !== confPhrase.toLowerCase()
+              }
+              style={[
+                styles.primaryButton,
+                confirmationText.toLowerCase() !== confPhrase.toLowerCase() &&
+                  styles.primaryButtonDisabled,
+              ]}
             >
-              {isLoading && <ActivityIndicator color="white" className="mr-2" />}
-              <Text className={`font-muller-bold text-[16px] tracking-wide ${
-                confirmationText.toLowerCase() === confPhrase.toLowerCase() ? 'text-white' : 'text-[#94A3B8]'
-              }`}>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={theme.colors.textOnDark} />
+              ) : null}
+
+              <Text
+                style={[
+                  styles.primaryButtonText,
+                  confirmationText.toLowerCase() !== confPhrase.toLowerCase() &&
+                    styles.primaryButtonTextDisabled,
+                ]}
+              >
                 Confirm & Unlock
               </Text>
             </TouchableOpacity>
@@ -171,3 +213,151 @@ export default function UnlockAttendance() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  rootCard: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 18,
+    padding: 18,
+    ...theme.shadows.soft,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  headerIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: theme.colors.warningSoft,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    marginLeft: 12,
+    color: theme.colors.warning,
+    fontSize: 18,
+    lineHeight: 23,
+    fontFamily: "MullerBold",
+  },
+  sectionLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 17,
+    fontFamily: "MullerBold",
+    marginBottom: 8,
+    marginLeft: 2,
+  },
+  pickerWrap: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 14,
+  },
+  dateButton: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    marginBottom: 14,
+  },
+  dateButtonText: {
+    marginLeft: 10,
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  input: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    paddingHorizontal: 14,
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    marginBottom: 16,
+  },
+  primaryButton: {
+    minHeight: 50,
+    borderRadius: 16,
+    backgroundColor: theme.colors.warning,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  primaryButtonDisabled: {
+    backgroundColor: theme.colors.border,
+  },
+  primaryButtonText: {
+    color: theme.colors.textOnDark,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  primaryButtonTextDisabled: {
+    color: theme.colors.textMuted,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlayStrong ?? "rgba(15,23,42,0.28)",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 18,
+    ...theme.shadows.floating,
+  },
+  modalTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  modalTitle: {
+    color: theme.colors.warning,
+    fontSize: 20,
+    lineHeight: 25,
+    fontFamily: "MullerBold",
+  },
+  closeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: "MullerMedium",
+    marginBottom: 14,
+  },
+  modalStrong: {
+    color: theme.colors.text,
+    fontFamily: "MullerBold",
+  },
+});
