@@ -390,7 +390,7 @@ export default function FeeManagementDashboard() {
           setSheetData(cleanedData);
           const sheetKeys = Object.keys(cleanedData);
 
-          if (role === "officer" || "staff") {
+          if (role === "officer" || role === "staff") {
             setActiveTab(sheetKeys[0]);
           } else {
             const batch = details?.batch;
@@ -447,7 +447,7 @@ export default function FeeManagementDashboard() {
         </Text>
       </View>
 
-      {role === "officer" || role === "staff" && (
+      {(role === "officer" || role === "staff") && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
