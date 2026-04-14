@@ -97,6 +97,12 @@ const allNavItems = [
     roles: ["chef"],
   },
   {
+    href: "/(admin)/main/main-dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ["main"],
+  },
+  {
     href: "/(admin)/chef/chef-settings",
     label: "Kitchen Settings",
     icon: Settings,

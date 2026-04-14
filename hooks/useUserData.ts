@@ -8,6 +8,7 @@ export type AppRole =
   | 'class'
   | 'class-leader'
   | 'chef'
+  | 'main'
   | 'staff';
 
 interface UserData {
@@ -28,6 +29,7 @@ function normalizeRole(role: string | null | undefined): AppRole | null {
     'class',
     'class-leader',
     'chef',
+    'main',
     'staff',
   ];
 

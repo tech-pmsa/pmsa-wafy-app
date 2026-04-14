@@ -191,6 +191,7 @@ export default function RootLayout() {
       staff: "/(admin)/staff/staff-dashboard",
       student: "/(student)/student-dashboard",
       chef: "/(admin)/chef/chef-dashboard",
+      main: "/(admin)/main/main-dashboard",
     };
 
     if (!session) {

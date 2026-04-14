@@ -69,6 +69,10 @@ export default function AdminLayout() {
         options={{ title: "Kitchen Dashboard" }}
       />
       <Drawer.Screen
+        name="main/main-dashboard"
+        options={{ title: "Main Office Dashboard" }}
+      />
+      <Drawer.Screen
         name="chef/chef-settings"
         options={{ title: "Kitchen Settings" }}
       />

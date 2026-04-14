@@ -562,7 +562,7 @@ export default function KitchenAttendancePage() {
               activeOpacity={0.84}
             >
               <Sun size={14} color={theme.colors.textSecondary} />
-              <Text style={styles.bulkMealBtnText}>Day P</Text>
+              <Text style={styles.bulkMealBtnText}>BreakFast P</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -572,7 +572,7 @@ export default function KitchenAttendancePage() {
               activeOpacity={0.84}
             >
               <Sun size={14} color={theme.colors.error} />
-              <Text style={styles.bulkMealBtnDangerText}>Day A</Text>
+              <Text style={styles.bulkMealBtnDangerText}>BreakFast A</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -582,7 +582,7 @@ export default function KitchenAttendancePage() {
               activeOpacity={0.84}
             >
               <UtensilsCrossed size={14} color={theme.colors.textSecondary} />
-              <Text style={styles.bulkMealBtnText}>Noon P</Text>
+              <Text style={styles.bulkMealBtnText}>Lunch P</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -592,7 +592,7 @@ export default function KitchenAttendancePage() {
               activeOpacity={0.84}
             >
               <UtensilsCrossed size={14} color={theme.colors.error} />
-              <Text style={styles.bulkMealBtnDangerText}>Noon A</Text>
+              <Text style={styles.bulkMealBtnDangerText}>Lunch A</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -602,7 +602,7 @@ export default function KitchenAttendancePage() {
               activeOpacity={0.84}
             >
               <MoonStar size={14} color={theme.colors.textSecondary} />
-              <Text style={styles.bulkMealBtnText}>Night P</Text>
+              <Text style={styles.bulkMealBtnText}>Dinner P</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -612,7 +612,7 @@ export default function KitchenAttendancePage() {
               activeOpacity={0.84}
             >
               <MoonStar size={14} color={theme.colors.error} />
-              <Text style={styles.bulkMealBtnDangerText}>Night A</Text>
+              <Text style={styles.bulkMealBtnDangerText}>Dinner A</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -670,7 +670,7 @@ export default function KitchenAttendancePage() {
                           : styles.mealToggleTextInactive
                       }
                     >
-                      Day {student.day_present ? "P" : "A"}
+                      BreakFast {student.day_present ? "P" : "A"}
                     </Text>
                   </TouchableOpacity>
 
@@ -698,7 +698,7 @@ export default function KitchenAttendancePage() {
                           : styles.mealToggleTextInactive
                       }
                     >
-                      Noon {student.noon_present ? "P" : "A"}
+                      Lunch {student.noon_present ? "P" : "A"}
                     </Text>
                   </TouchableOpacity>
 
@@ -726,7 +726,7 @@ export default function KitchenAttendancePage() {
                           : styles.mealToggleTextInactive
                       }
                     >
-                      Night {student.night_present ? "P" : "A"}
+                      Dinner {student.night_present ? "P" : "A"}
                     </Text>
                   </TouchableOpacity>
                 </View>

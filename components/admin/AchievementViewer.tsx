@@ -19,6 +19,7 @@ import {
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabaseClient";
 import { theme } from "@/theme/theme";
+import { useUserData } from "@/hooks/useUserData";
 
 function AchievementDisplayCard({ achievement }: { achievement: any }) {
   return (
@@ -69,6 +70,9 @@ function AchievementDisplayCard({ achievement }: { achievement: any }) {
 }
 
 export default function AchievementViewer() {
+  // 1. Get the current user's role and details
+  const { role, details, loading: userLoading } = useUserData();
+
   const [allAchievements, setAllAchievements] = useState<any[]>([]);
   const [batches, setBatches] = useState<string[]>([]);
   const [search, setSearch] = useState("");
@@ -76,14 +80,26 @@ export default function AchievementViewer() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Wait until the user's data has loaded before fetching achievements
+    if (userLoading) return;
+
     const fetchInitialData = async () => {
       setIsLoading(true);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("achievements")
         .select("*")
         .eq("approved", true)
         .order("submitted_at", { ascending: false });
+
+      // 2. Add the Role/Batch Logic
+      // If the user is NOT an officer, restrict the query to only their batch.
+      // (Fallback to a non-existent batch string if they don't have one, to securely return 0 rows)
+      if (role !== "officer") {
+        query = query.eq("batch", details?.batch || "NO_BATCH_ASSIGNED");
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching achievements:", error);
@@ -100,7 +116,7 @@ export default function AchievementViewer() {
     };
 
     fetchInitialData();
-  }, []);
+  }, [role, details, userLoading]);
 
   const filteredAchievements = useMemo(() => {
     let filtered = allAchievements;
@@ -180,7 +196,7 @@ export default function AchievementViewer() {
         </ScrollView>
       )}
 
-      {isLoading ? (
+      {isLoading || userLoading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading achievements...</Text>
