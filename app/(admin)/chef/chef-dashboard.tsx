@@ -87,6 +87,65 @@ function getMealPresence(student: KitchenStudentLite | null, meal: MealTab): boo
   return student.night_present;
 }
 
+function toNameCase(value: string) {
+  return value
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function isInitialPart(value: string) {
+  const clean = value.replace(/\./g, "").trim();
+  return clean.length <= 1;
+}
+
+function getSeatDisplayName(fullName: string | null | undefined) {
+  if (!fullName?.trim()) return "Empty";
+
+  const parts = fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) return "Empty";
+  if (parts.length === 1) return toNameCase(parts[0]);
+
+  const first = parts[0].toLowerCase();
+
+  const commonFirstReligiousNames = new Set([
+    "muhammed",
+    "mohammed",
+    "muhamad",
+    "muhammad",
+    "mohamad",
+    "mohammad",
+    "muhamet",
+    "mohd",
+    "md",
+    "syed",
+    "sayyid",
+    "ahammed",
+    "abdul",
+    "abdhul",
+    "al",
+    "mohamed",
+    "ahmad",
+  ]);
+
+  if (commonFirstReligiousNames.has(first)) {
+    const secondMeaningful = parts.find((part, index) => index > 0 && !isInitialPart(part));
+    if (secondMeaningful) return toNameCase(secondMeaningful);
+  }
+
+  if (!isInitialPart(parts[1])) {
+    return toNameCase(parts[0]);
+  }
+
+  return toNameCase(parts[0]);
+}
+
 function StatCard({
   title,
   value,
@@ -169,7 +228,7 @@ function SeatBubble({
         S{seat.seatNumber}
       </Text>
       <Text style={[styles.seatBubbleName, { color: textColor }]} numberOfLines={1}>
-        {seat.student ? seat.student.name.split(" ")[0] : "Empty"}
+        {seat.student ? getSeatDisplayName(seat.student.name) : "Empty"}
       </Text>
     </TouchableOpacity>
   );
@@ -940,20 +999,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 4,
+    paddingHorizontal: 3,
+    paddingVertical: 4,
   },
+
   seatBubbleNum: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 9,
+    lineHeight: 11,
     fontFamily: "MullerBold",
     opacity: 0.95,
   },
   seatBubbleName: {
-    fontSize: 10,
-    lineHeight: 12,
+    fontSize: 8,
+    lineHeight: 10,
     fontFamily: "MullerMedium",
     textAlign: "center",
-    marginTop: 2,
+    marginTop: 1,
+    maxWidth: "100%",
   },
 
   tableCenter: {

@@ -419,74 +419,34 @@ export default function KitchenAttendancePage() {
     }
   };
 
-  const getBulkScopeLabel = () => {
-  if (profile?.role === "officer") return "all students in the college";
+const getBulkTargetStudents = () => {
+  if (profile?.role === "officer") {
+    return students;
+  }
+
   if (profile?.role === "class") {
     const teacherBatch = getTeacherClassValue(profile).value;
-    return teacherBatch ? `all students in ${teacherBatch}` : "your class students";
+    return students.filter((s) => s.batch === teacherBatch);
   }
-  return "the selected students";
+
+  return [];
 };
 
-const applyLocalBulkMealUpdate = (
-  meal: "day" | "noon" | "night",
-  present: boolean
-) => {
-  setStudents((prev) => {
-    if (profile?.role === "officer") {
-      return prev.map((s) => ({
-        ...s,
-        ...(meal === "day" ? { day_present: present } : {}),
-        ...(meal === "noon" ? { noon_present: present } : {}),
-        ...(meal === "night" ? { night_present: present } : {}),
-      }));
-    }
-
-    if (profile?.role === "class") {
-      const teacherBatch = getTeacherClassValue(profile).value;
-      return prev.map((s) =>
-        s.batch === teacherBatch
-          ? {
-              ...s,
-              ...(meal === "day" ? { day_present: present } : {}),
-              ...(meal === "noon" ? { noon_present: present } : {}),
-              ...(meal === "night" ? { night_present: present } : {}),
-            }
-          : s
-      );
-    }
-
-    return prev;
-  });
+const getBulkTargetIds = () => {
+  return getBulkTargetStudents()
+    .map((s) => s.student_uid)
+    .filter(Boolean);
 };
 
-const applyLocalWholeDayBulkUpdate = (present: boolean) => {
-  setStudents((prev) => {
-    if (profile?.role === "officer") {
-      return prev.map((s) => ({
-        ...s,
-        day_present: present,
-        noon_present: present,
-        night_present: present,
-      }));
-    }
+const getBulkScopeLabel = () => {
+  if (profile?.role === "officer") return "all students in the college";
 
-    if (profile?.role === "class") {
-      const teacherBatch = getTeacherClassValue(profile).value;
-      return prev.map((s) =>
-        s.batch === teacherBatch
-          ? {
-              ...s,
-              day_present: present,
-              noon_present: present,
-              night_present: present,
-            }
-          : s
-      );
-    }
+  if (profile?.role === "class") {
+    const teacherBatch = getTeacherClassValue(profile).value;
+    return teacherBatch ? `all students in ${teacherBatch}` : "your batch students";
+  }
 
-    return prev;
-  });
+  return "selected students";
 };
 
 const handleBulkMealUpdate = async (
@@ -507,28 +467,43 @@ const handleBulkMealUpdate = async (
           setBulkLoading(true);
 
           try {
-            let query = supabase
-              .from("kitchen_students")
-              .update({
-                ...(meal === "day" ? { day_present: present } : {}),
-                ...(meal === "noon" ? { noon_present: present } : {}),
-                ...(meal === "night" ? { night_present: present } : {}),
-              });
+            const targetIds = getBulkTargetIds();
 
-            if (profile?.role === "class") {
-              const teacherBatch = getTeacherClassValue(profile).value;
-              if (!teacherBatch) {
-                throw new Error("Batch not found for class user.");
-              }
-              query = query.eq("batch", teacherBatch);
+            if (targetIds.length === 0) {
+              throw new Error("No students found for bulk update.");
             }
 
-            const { error } = await query;
+            const updatePayload =
+              meal === "day"
+                ? { day_present: present }
+                : meal === "noon"
+                ? { noon_present: present }
+                : { night_present: present };
+
+            const { error } = await supabase
+              .from("kitchen_students")
+              .update(updatePayload)
+              .in("student_uid", targetIds);
+
             if (error) throw error;
 
-            applyLocalBulkMealUpdate(meal, present);
+            setStudents((prev) =>
+              prev.map((s) =>
+                targetIds.includes(s.student_uid)
+                  ? {
+                      ...s,
+                      ...(meal === "day" ? { day_present: present } : {}),
+                      ...(meal === "noon" ? { noon_present: present } : {}),
+                      ...(meal === "night" ? { night_present: present } : {}),
+                    }
+                  : s
+              )
+            );
           } catch (err: any) {
-            Alert.alert("Bulk Failed", err.message || "Could not update attendance.");
+            Alert.alert(
+              "Bulk Failed",
+              err.message || "Could not update attendance."
+            );
           } finally {
             setBulkLoading(false);
           }
@@ -553,26 +528,40 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
           setBulkLoading(true);
 
           try {
-            let query = supabase.from("kitchen_students").update({
-              day_present: present,
-              noon_present: present,
-              night_present: present,
-            });
+            const targetIds = getBulkTargetIds();
 
-            if (profile?.role === "class") {
-              const teacherBatch = getTeacherClassValue(profile).value;
-              if (!teacherBatch) {
-                throw new Error("Batch not found for class user.");
-              }
-              query = query.eq("batch", teacherBatch);
+            if (targetIds.length === 0) {
+              throw new Error("No students found for bulk update.");
             }
 
-            const { error } = await query;
+            const { error } = await supabase
+              .from("kitchen_students")
+              .update({
+                day_present: present,
+                noon_present: present,
+                night_present: present,
+              })
+              .in("student_uid", targetIds);
+
             if (error) throw error;
 
-            applyLocalWholeDayBulkUpdate(present);
+            setStudents((prev) =>
+              prev.map((s) =>
+                targetIds.includes(s.student_uid)
+                  ? {
+                      ...s,
+                      day_present: present,
+                      noon_present: present,
+                      night_present: present,
+                    }
+                  : s
+              )
+            );
           } catch (err: any) {
-            Alert.alert("Bulk Failed", err.message || "Could not update attendance.");
+            Alert.alert(
+              "Bulk Failed",
+              err.message || "Could not update attendance."
+            );
           } finally {
             setBulkLoading(false);
           }
