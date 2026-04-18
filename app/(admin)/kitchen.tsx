@@ -419,94 +419,168 @@ export default function KitchenAttendancePage() {
     }
   };
 
-  const handleClassMealBulk = async (
-    classId: string,
-    meal: "day" | "noon" | "night",
-    present: boolean
-  ) => {
-    Alert.alert(
-      "Bulk Update",
-      `Mark ${meal} as ${present ? "Present" : "Absent"} for ALL students in ${classId}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Confirm",
-          style: present ? "default" : "destructive",
-          onPress: async () => {
-            setBulkLoading(true);
-            try {
-              const { error } = await supabase.rpc("set_class_meal_attendance", {
-                p_class_id: classId,
-                p_meal: meal,
-                p_present: present,
+  const getBulkScopeLabel = () => {
+  if (profile?.role === "officer") return "all students in the college";
+  if (profile?.role === "class") {
+    const teacherBatch = getTeacherClassValue(profile).value;
+    return teacherBatch ? `all students in ${teacherBatch}` : "your class students";
+  }
+  return "the selected students";
+};
+
+const applyLocalBulkMealUpdate = (
+  meal: "day" | "noon" | "night",
+  present: boolean
+) => {
+  setStudents((prev) => {
+    if (profile?.role === "officer") {
+      return prev.map((s) => ({
+        ...s,
+        ...(meal === "day" ? { day_present: present } : {}),
+        ...(meal === "noon" ? { noon_present: present } : {}),
+        ...(meal === "night" ? { night_present: present } : {}),
+      }));
+    }
+
+    if (profile?.role === "class") {
+      const teacherBatch = getTeacherClassValue(profile).value;
+      return prev.map((s) =>
+        s.batch === teacherBatch
+          ? {
+              ...s,
+              ...(meal === "day" ? { day_present: present } : {}),
+              ...(meal === "noon" ? { noon_present: present } : {}),
+              ...(meal === "night" ? { night_present: present } : {}),
+            }
+          : s
+      );
+    }
+
+    return prev;
+  });
+};
+
+const applyLocalWholeDayBulkUpdate = (present: boolean) => {
+  setStudents((prev) => {
+    if (profile?.role === "officer") {
+      return prev.map((s) => ({
+        ...s,
+        day_present: present,
+        noon_present: present,
+        night_present: present,
+      }));
+    }
+
+    if (profile?.role === "class") {
+      const teacherBatch = getTeacherClassValue(profile).value;
+      return prev.map((s) =>
+        s.batch === teacherBatch
+          ? {
+              ...s,
+              day_present: present,
+              noon_present: present,
+              night_present: present,
+            }
+          : s
+      );
+    }
+
+    return prev;
+  });
+};
+
+const handleBulkMealUpdate = async (
+  meal: "day" | "noon" | "night",
+  present: boolean
+) => {
+  const scopeLabel = getBulkScopeLabel();
+
+  Alert.alert(
+    "Bulk Update",
+    `Mark ${meal} as ${present ? "Present" : "Absent"} for ${scopeLabel}?`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Confirm",
+        style: present ? "default" : "destructive",
+        onPress: async () => {
+          setBulkLoading(true);
+
+          try {
+            let query = supabase
+              .from("kitchen_students")
+              .update({
+                ...(meal === "day" ? { day_present: present } : {}),
+                ...(meal === "noon" ? { noon_present: present } : {}),
+                ...(meal === "night" ? { night_present: present } : {}),
               });
 
-              if (error) throw error;
-
-              setStudents((prev) =>
-                prev.map((s) =>
-                  s.class_id === classId
-                    ? {
-                        ...s,
-                        ...(meal === "day" ? { day_present: present } : {}),
-                        ...(meal === "noon" ? { noon_present: present } : {}),
-                        ...(meal === "night" ? { night_present: present } : {}),
-                      }
-                    : s
-                )
-              );
-            } catch (err: any) {
-              Alert.alert("Bulk Failed", err.message);
-            } finally {
-              setBulkLoading(false);
+            if (profile?.role === "class") {
+              const teacherBatch = getTeacherClassValue(profile).value;
+              if (!teacherBatch) {
+                throw new Error("Batch not found for class user.");
+              }
+              query = query.eq("batch", teacherBatch);
             }
-          },
+
+            const { error } = await query;
+            if (error) throw error;
+
+            applyLocalBulkMealUpdate(meal, present);
+          } catch (err: any) {
+            Alert.alert("Bulk Failed", err.message || "Could not update attendance.");
+          } finally {
+            setBulkLoading(false);
+          }
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
 
-  const handleClassWholeDayBulk = async (classId: string, present: boolean) => {
-    Alert.alert(
-      "Bulk Update",
-      `Mark ALL students in ${classId} as Full ${present ? "Present" : "Absent"}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Confirm",
-          style: present ? "default" : "destructive",
-          onPress: async () => {
-            setBulkLoading(true);
-            try {
-              const { error } = await supabase.rpc("set_class_whole_day_attendance", {
-                p_class_id: classId,
-                p_present: present,
-              });
+const handleBulkWholeDayUpdate = async (present: boolean) => {
+  const scopeLabel = getBulkScopeLabel();
 
-              if (error) throw error;
+  Alert.alert(
+    "Bulk Update",
+    `Mark ${scopeLabel} as Full ${present ? "Present" : "Absent"}?`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Confirm",
+        style: present ? "default" : "destructive",
+        onPress: async () => {
+          setBulkLoading(true);
 
-              setStudents((prev) =>
-                prev.map((s) =>
-                  s.class_id === classId
-                    ? {
-                        ...s,
-                        day_present: present,
-                        noon_present: present,
-                        night_present: present,
-                      }
-                    : s
-                )
-              );
-            } catch (err: any) {
-              Alert.alert("Bulk Failed", err.message);
-            } finally {
-              setBulkLoading(false);
+          try {
+            let query = supabase.from("kitchen_students").update({
+              day_present: present,
+              noon_present: present,
+              night_present: present,
+            });
+
+            if (profile?.role === "class") {
+              const teacherBatch = getTeacherClassValue(profile).value;
+              if (!teacherBatch) {
+                throw new Error("Batch not found for class user.");
+              }
+              query = query.eq("batch", teacherBatch);
             }
-          },
+
+            const { error } = await query;
+            if (error) throw error;
+
+            applyLocalWholeDayBulkUpdate(present);
+          } catch (err: any) {
+            Alert.alert("Bulk Failed", err.message || "Could not update attendance.");
+          } finally {
+            setBulkLoading(false);
+          }
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
 
   const renderClassSection = (classId: string, classStudents: KitchenStudent[]) => {
     const classSummary = {
@@ -531,7 +605,7 @@ export default function KitchenAttendancePage() {
           <View style={styles.bulkRow}>
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleClassWholeDayBulk(classId, true)}
+              onPress={() => handleBulkWholeDayUpdate(true)}
               style={[styles.bulkBtn, styles.bulkBtnGreen]}
               activeOpacity={0.84}
             >
@@ -543,7 +617,7 @@ export default function KitchenAttendancePage() {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleClassWholeDayBulk(classId, false)}
+              onPress={() => handleBulkWholeDayUpdate(false)}
               style={[styles.bulkBtn, styles.bulkBtnRed]}
               activeOpacity={0.84}
             >
@@ -557,7 +631,7 @@ export default function KitchenAttendancePage() {
           <View style={styles.bulkMealGrid}>
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleClassMealBulk(classId, "day", true)}
+              onPress={() => handleBulkMealUpdate("day", true)}
               style={styles.bulkMealBtnOutline}
               activeOpacity={0.84}
             >
@@ -567,7 +641,7 @@ export default function KitchenAttendancePage() {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleClassMealBulk(classId, "day", false)}
+              onPress={() => handleBulkMealUpdate("day", false)}
               style={styles.bulkMealBtnDanger}
               activeOpacity={0.84}
             >
@@ -577,7 +651,7 @@ export default function KitchenAttendancePage() {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleClassMealBulk(classId, "noon", true)}
+              onPress={() => handleBulkMealUpdate("noon", true)}
               style={styles.bulkMealBtnOutline}
               activeOpacity={0.84}
             >
@@ -587,7 +661,7 @@ export default function KitchenAttendancePage() {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleClassMealBulk(classId, "noon", false)}
+              onPress={() => handleBulkMealUpdate("noon", false)}
               style={styles.bulkMealBtnDanger}
               activeOpacity={0.84}
             >
@@ -597,7 +671,7 @@ export default function KitchenAttendancePage() {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleClassMealBulk(classId, "night", true)}
+              onPress={() => handleBulkMealUpdate("night", true)}
               style={styles.bulkMealBtnOutline}
               activeOpacity={0.84}
             >
@@ -607,7 +681,7 @@ export default function KitchenAttendancePage() {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleClassMealBulk(classId, "night", false)}
+              onPress={() => handleBulkMealUpdate("night", false)}
               style={styles.bulkMealBtnDanger}
               activeOpacity={0.84}
             >

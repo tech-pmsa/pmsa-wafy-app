@@ -510,7 +510,7 @@ export default function ChefDashboardPage() {
                 color={mealTab === "day" ? theme.colors.textOnDark : theme.colors.textSecondary}
               />
               <Text style={[styles.tabText, mealTab === "day" && styles.tabTextActive]}>
-                Day
+                BreakFast
               </Text>
             </TouchableOpacity>
 
@@ -526,7 +526,7 @@ export default function ChefDashboardPage() {
                 }
               />
               <Text style={[styles.tabText, mealTab === "noon" && styles.tabTextActive]}>
-                Noon
+                Lunch
               </Text>
             </TouchableOpacity>
 
@@ -542,7 +542,7 @@ export default function ChefDashboardPage() {
                 }
               />
               <Text style={[styles.tabText, mealTab === "night" && styles.tabTextActive]}>
-                Night
+                Dinner
               </Text>
             </TouchableOpacity>
           </View>
