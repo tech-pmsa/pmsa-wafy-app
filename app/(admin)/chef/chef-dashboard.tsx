@@ -132,8 +132,17 @@ function getSeatDisplayName(fullName: string | null | undefined) {
     "muhammad",
     "mohamad",
     "mohammad",
+    "muhamet",
     "mohd",
     "md",
+    "syed",
+    "sayyid",
+    "ahammed",
+    "abdul",
+    "abdhul",
+    "al",
+    "mohamed",
+    "ahmad",
   ]);
 
   if (commonFirstReligiousNames.has(first)) {
@@ -249,6 +258,10 @@ function SeatBubble({
     if (seat.isTemporary && seat.present === false) {
       bgColor = "#F59E0B";
       borderColor = "#F59E0B";
+      textColor = "#FFFFFF";
+    } else if (seat.isTemporary && seat.present === true) {
+      bgColor = "#0073cf";
+      borderColor = "#0073cf";
       textColor = "#FFFFFF";
     } else if (seat.present) {
       bgColor = theme.colors.success;
