@@ -12,6 +12,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabaseClient";
 import { useUserData } from "@/hooks/useUserData";
@@ -29,6 +30,7 @@ import {
   Sparkles,
   AlertCircle,
   ClipboardList,
+  Copy,
 } from "lucide-react-native";
 
 interface Profile {
@@ -63,6 +65,12 @@ interface StudentFoodPreference {
   food_item_id: string;
   is_needed: boolean;
 }
+
+type AbsentListMode =
+  | "day_absent"
+  | "noon_absent"
+  | "night_absent"
+  | "full_day_absent";
 
 function StatCard({
   title,
@@ -208,6 +216,28 @@ function CustomPicker({
   );
 }
 
+function AbsentModeTab({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.84}
+      onPress={onPress}
+      style={[styles.absentTab, active && styles.absentTabActive]}
+    >
+      <Text style={[styles.absentTabText, active && styles.absentTabTextActive]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function MainOfficePage() {
   const { user: authUser } = useUserData();
   const scrollRef = useRef<ScrollView>(null);
@@ -218,10 +248,12 @@ export default function MainOfficePage() {
   const [foods, setFoods] = useState<FoodItem[]>([]);
   const [foodPreferences, setFoodPreferences] = useState<StudentFoodPreference[]>([]);
   const [selectedFoodId, setSelectedFoodId] = useState("default");
+  const [absentListMode, setAbsentListMode] = useState<AbsentListMode>("day_absent");
 
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [scrollDirection, setScrollDirection] = useState<"up" | "down">("down");
 
   const fetchProfile = useCallback(async () => {
@@ -320,16 +352,12 @@ export default function MainOfficePage() {
 
     if (selectedFoodId !== "default") {
       const presentDayStudentIds = new Set(
-        kitchenStudents
-          .filter((s) => s.day_present)
-          .map((s) => s.student_uid)
+        kitchenStudents.filter((s) => s.day_present).map((s) => s.student_uid)
       );
 
       const neededStudentIds = new Set(
         foodPreferences
-          .filter(
-            (p) => p.food_item_id === selectedFoodId && p.is_needed === true
-          )
+          .filter((p) => p.food_item_id === selectedFoodId && p.is_needed === true)
           .map((p) => p.student_uid)
       );
 
@@ -356,6 +384,95 @@ export default function MainOfficePage() {
     ],
     [foods]
   );
+
+  const absentStudents = useMemo(() => {
+    return kitchenStudents.filter((student) => {
+      switch (absentListMode) {
+        case "day_absent":
+          return !student.day_present;
+        case "noon_absent":
+          return !student.noon_present;
+        case "night_absent":
+          return !student.night_present;
+        case "full_day_absent":
+          return !student.day_present && !student.noon_present && !student.night_present;
+        default:
+          return false;
+      }
+    });
+  }, [kitchenStudents, absentListMode]);
+
+  const groupedAbsentStudents = useMemo(() => {
+    const grouped: Record<string, KitchenStudent[]> = {};
+
+    [...absentStudents]
+      .sort((a, b) => {
+        const classCompare = a.class_id.localeCompare(b.class_id, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+        if (classCompare !== 0) return classCompare;
+
+        return a.name.localeCompare(b.name, undefined, {
+          sensitivity: "base",
+        });
+      })
+      .forEach((student) => {
+        const classKey = student.class_id || "Unassigned";
+        if (!grouped[classKey]) grouped[classKey] = [];
+        grouped[classKey].push(student);
+      });
+
+    return grouped;
+  }, [absentStudents]);
+
+  const groupedAbsentEntries = useMemo(
+    () => Object.entries(groupedAbsentStudents),
+    [groupedAbsentStudents]
+  );
+
+  const absentListTitle = useMemo(() => {
+    switch (absentListMode) {
+      case "day_absent":
+        return "Breakfast Absent List";
+      case "noon_absent":
+        return "Lunch Absent List";
+      case "night_absent":
+        return "Dinner Absent List";
+      case "full_day_absent":
+        return "Full Day Absent List";
+      default:
+        return "Absent List";
+    }
+  }, [absentListMode]);
+
+  const copyText = useMemo(() => {
+    if (groupedAbsentEntries.length === 0) return "";
+
+    return groupedAbsentEntries
+      .map(([classId, studentList]) => {
+        const lines = studentList.map((student, index) => `${index + 1}. ${student.name}`);
+        return `${classId}\n${lines.join("\n")}`;
+      })
+      .join("\n\n");
+  }, [groupedAbsentEntries]);
+
+  const handleCopyList = useCallback(async () => {
+    try {
+      if (!copyText.trim()) {
+        Alert.alert("No Data", "There are no students to copy for this list.");
+        return;
+      }
+
+      setCopying(true);
+      await Clipboard.setStringAsync(copyText);
+      Alert.alert("Copied", `${absentListTitle} copied successfully.`);
+    } catch (err: any) {
+      Alert.alert("Copy Failed", err.message || "Could not copy the list.");
+    } finally {
+      setCopying(false);
+    }
+  }, [copyText, absentListTitle]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
@@ -507,6 +624,95 @@ export default function MainOfficePage() {
               tone="warning"
               fullWidth
             />
+          </View>
+
+          <View style={styles.absentSectionCard}>
+            <View style={styles.absentSectionTopRow}>
+              <View style={styles.absentSectionHeadingWrap}>
+                <View style={styles.absentSectionIconWrap}>
+                  <ClipboardList size={18} color={theme.colors.primary} />
+                </View>
+
+                <View style={styles.absentSectionTextWrap}>
+                  <Text style={styles.absentSectionTitle}>{absentListTitle}</Text>
+                  <Text style={styles.absentSectionSubtitle}>
+                    Grouped by class for quick copying and messaging.
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleCopyList}
+                style={styles.copyButton}
+                activeOpacity={0.84}
+                disabled={copying || groupedAbsentEntries.length === 0}
+              >
+                {copying ? (
+                  <ActivityIndicator size="small" color={theme.colors.textOnDark} />
+                ) : (
+                  <Copy size={16} color={theme.colors.textOnDark} />
+                )}
+                <Text style={styles.copyButtonText}>
+                  {copying ? "Copying..." : "Copy List"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.absentTabsRow}>
+              <AbsentModeTab
+                label="Breakfast Absent"
+                active={absentListMode === "day_absent"}
+                onPress={() => setAbsentListMode("day_absent")}
+              />
+              <AbsentModeTab
+                label="Lunch Absent"
+                active={absentListMode === "noon_absent"}
+                onPress={() => setAbsentListMode("noon_absent")}
+              />
+              <AbsentModeTab
+                label="Dinner Absent"
+                active={absentListMode === "night_absent"}
+                onPress={() => setAbsentListMode("night_absent")}
+              />
+              <AbsentModeTab
+                label="Full Day Absent"
+                active={absentListMode === "full_day_absent"}
+                onPress={() => setAbsentListMode("full_day_absent")}
+              />
+            </View>
+
+            {groupedAbsentEntries.length === 0 ? (
+              <View style={styles.emptyListCard}>
+                <Text style={styles.emptyListTitle}>No students found</Text>
+                <Text style={styles.emptyListText}>
+                  There are no students in this absent list right now.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.classListStack}>
+                {groupedAbsentEntries.map(([classId, studentList]) => (
+                  <View key={classId} style={styles.classGroupCard}>
+                    <View style={styles.classGroupHeader}>
+                      <Text style={styles.classGroupTitle}>{classId}</Text>
+                      <View style={styles.classCountPill}>
+                        <Text style={styles.classCountPillText}>
+                          {studentList.length}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.studentNameList}>
+                      {studentList.map((student, index) => (
+                        <View key={student.student_uid} style={styles.studentNameRow}>
+                          <Text style={styles.studentNameIndex}>{index + 1}.</Text>
+                          <Text style={styles.studentNameText}>{student.name}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         </ScrollView>
 
@@ -720,6 +926,183 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
+  },
+
+  absentSectionCard: {
+    marginTop: 20,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    ...theme.shadows.medium,
+  },
+  absentSectionTopRow: {
+    marginBottom: 14,
+  },
+  absentSectionHeadingWrap: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  absentSectionIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    marginRight: 12,
+  },
+  absentSectionTextWrap: {
+    flex: 1,
+  },
+  absentSectionTitle: {
+    color: theme.colors.text,
+    fontSize: 18,
+    lineHeight: 23,
+    fontFamily: "MullerBold",
+  },
+  absentSectionSubtitle: {
+    marginTop: 4,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  copyButton: {
+    marginTop: 14,
+    minHeight: 46,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  copyButtonText: {
+    color: theme.colors.textOnDark,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+
+  absentTabsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  absentTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+  },
+  absentTabActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  absentTabText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  absentTabTextActive: {
+    color: theme.colors.textOnDark,
+  },
+
+  classListStack: {
+    gap: 12,
+  },
+  classGroupCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+  },
+  classGroupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  classGroupTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  classCountPill: {
+    minWidth: 34,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  classCountPillText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+  },
+  studentNameList: {
+    gap: 8,
+  },
+  studentNameRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  studentNameIndex: {
+    width: 24,
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  studentNameText: {
+    flex: 1,
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: "MullerMedium",
+  },
+
+  emptyListCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.border,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  emptyListTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  emptyListText: {
+    marginTop: 6,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    fontFamily: "MullerMedium",
   },
 
   pickerBtn: {
