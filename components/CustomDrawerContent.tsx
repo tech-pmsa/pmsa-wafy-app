@@ -26,6 +26,9 @@ import {
   Book,
   CookingPot,
   LogOut,
+  ClipboardList,
+  AlertTriangle,
+  ScrollText,
 } from "lucide-react-native";
 import { theme } from "@/theme/theme";
 
@@ -101,6 +104,30 @@ const allNavItems = [
     label: "Dashboard",
     icon: LayoutDashboard,
     roles: ["main"],
+  },
+  {
+    href: "/(admin)/leader/clg-dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ["clg-leader"],
+  },
+  {
+    href: "/(admin)/leader/clg-attendance",
+    label: "Attendance",
+    icon: ClipboardList,
+    roles: ["clg-leader"],
+  },
+  {
+    href: "/(admin)/leader/clg-punishment",
+    label: "Punishment",
+    icon: AlertTriangle,
+    roles: ["clg-leader"],
+  },
+  {
+    href: "/(admin)/leader/clg-logs",
+    label: "Logs",
+    icon: ScrollText,
+    roles: ["clg-leader"],
   },
   {
     href: "/(admin)/chef/chef-settings",

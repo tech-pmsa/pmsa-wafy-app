@@ -62,37 +62,43 @@ export default function LoginScreen() {
   };
 
   useEffect(() => {
-    const prevEmail = previousEmailRef.current;
-    const prevPassword = previousPasswordRef.current;
+  const prevEmail = previousEmailRef.current;
+  const prevPassword = previousPasswordRef.current;
 
-    const emailJustFilled = !prevEmail && !!email.trim();
-    const passwordJustFilled = !prevPassword && !!password;
+  const emailJustFilled = !prevEmail && !!email.trim();
+  const passwordJustFilled = !prevPassword && !!password;
 
-    const autofillLikelyHappened =
-      focusedField !== null &&
-      !!email.trim() &&
-      !!password &&
-      (emailJustFilled || passwordJustFilled) &&
-      !didAutoDismissRef.current;
+  const passwordLooksAutofilled =
+    passwordJustFilled && password.length >= 4;
 
-    if (autofillLikelyHappened) {
-      const timeout = setTimeout(() => {
-        Keyboard.dismiss();
-        emailRef.current?.blur();
-        passwordRef.current?.blur();
-        didAutoDismissRef.current = true;
-        setFocusedField(null);
-      }, 180);
+  const emailLooksAutofilled =
+    emailJustFilled && !!password && password.length >= 4;
 
-      previousEmailRef.current = email;
-      previousPasswordRef.current = password;
+  const autofillLikelyHappened =
+    focusedField !== null &&
+    !!email.trim() &&
+    !!password &&
+    !didAutoDismissRef.current &&
+    (emailLooksAutofilled || passwordLooksAutofilled);
 
-      return () => clearTimeout(timeout);
-    }
+  if (autofillLikelyHappened) {
+    const timeout = setTimeout(() => {
+      Keyboard.dismiss();
+      emailRef.current?.blur();
+      passwordRef.current?.blur();
+      didAutoDismissRef.current = true;
+      setFocusedField(null);
+    }, 220);
 
     previousEmailRef.current = email;
     previousPasswordRef.current = password;
-  }, [email, password, focusedField]);
+
+    return () => clearTimeout(timeout);
+  }
+
+  previousEmailRef.current = email;
+  previousPasswordRef.current = password;
+}, [email, password, focusedField]);
 
   return (
     <ImageBackground

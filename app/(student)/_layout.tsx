@@ -37,7 +37,7 @@ export default function StudentLayout() {
       }}
       backBehavior="history"
     >
-      <Drawer.Screen name="student-dashboard" options={{ title: "Dashboard" }} />
+      <Drawer.Screen name="student-dashboard" options={{ title: "Your Dashboard" }} />
       <Drawer.Screen name="settings" options={{ title: "Settings" }} />
     </Drawer>
   );
