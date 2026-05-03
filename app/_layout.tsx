@@ -14,6 +14,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { theme } from "@/theme/theme";
 import { AlertCircle, RefreshCcw, LogOut } from "lucide-react-native";
+import AppLoadingScreen from "@/components/ui/AppLoadingScreen";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -271,14 +272,7 @@ export default function RootLayout() {
   const fontsAreReady = fontsLoaded || fontError;
 
   if (!fontsAreReady || !isInitialized || isFetchingRole) {
-    return (
-      <View style={styles.loadingScreen}>
-        <View style={styles.loadingCard}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Checking your account...</Text>
-        </View>
-      </View>
-    );
+    return <AppLoadingScreen />
   }
 
   if (session && roleError) {

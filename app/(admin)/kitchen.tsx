@@ -201,6 +201,32 @@ function CustomPicker({
   );
 }
 
+function StatAbsentCard({
+  title,
+  value,
+  icon: Icon,
+  description,
+}: {
+  title: string;
+  value: number;
+  icon: React.ComponentType<any>;
+  description: string;
+}) {
+  return (
+    <View style={styles.statAbsentCard}>
+      <View style={styles.statCardHeader}>
+        <View style={styles.statCardTextWrap}>
+          <Text style={styles.statCardTitle}>{title}</Text>
+          <Text style={styles.statCardValue}>{value}</Text>
+          <Text style={styles.statCardDesc}>{description}</Text>
+        </View>
+        <View style={styles.statCardIconWrap}>
+          <Icon size={18} color={theme.colors.primary} />
+        </View>
+      </View>
+    </View>
+  );
+}
 function StatCard({
   title,
   value,
@@ -935,19 +961,19 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
               description="Filtered students"
               icon={Users}
             />
-            <StatCard
+            <StatAbsentCard
               title="Day Absent"
               value={summary.dayAbsent}
               description="Breakfast absent"
               icon={Sun}
             />
-            <StatCard
+            <StatAbsentCard
               title="Noon Absent"
               value={summary.noonAbsent}
               description="Lunch absent"
               icon={UtensilsCrossed}
             />
-            <StatCard
+            <StatAbsentCard
               title="Night Absent"
               value={summary.nightAbsent}
               description="Dinner absent"
@@ -1175,6 +1201,17 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     ...theme.shadows.soft,
   },
+
+  statAbsentCard: {
+    width: 156,
+    backgroundColor: theme.colors.errorSoft,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+    ...theme.shadows.soft,
+  },
+
   statCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",

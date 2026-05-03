@@ -91,6 +91,12 @@ interface TempOverride {
   expiresAt: number;
 }
 
+interface StudentFoodPreference {
+  student_uid: string;
+  food_item_id: string;
+  is_needed: boolean;
+}
+
 const TEMP_OVERRIDE_STORAGE_KEY = "chef_dashboard_temp_presence_overrides_v1";
 const TEMP_OVERRIDE_DURATION_MS = 2 * 60 * 60 * 1000;
 
@@ -241,12 +247,39 @@ function StatCard({
   );
 }
 
+function isFoodNeeded(
+  studentUid: string,
+  selectedFood: string | null,
+  preferences: StudentFoodPreference[],
+  mealTab: "day" | "noon" | "night"
+) {
+  if (!selectedFood) return true;
+
+  const pref = preferences.find(
+    (p) =>
+      p.student_uid === studentUid &&
+      p.food_item_id === selectedFood
+  );
+
+  return pref ? pref.is_needed : true;
+}
+
 function SeatBubble({
   seat,
   onMobileClick,
+  selectedFood,
+  foodPreferences,
+  mealTab,
 }: {
   seat: TableSeatView;
   onMobileClick: (seat: TableSeatView) => void;
+  selectedFood: string | null;
+  mealTab: "day" | "noon" | "night";
+  foodPreferences: {
+    student_uid: string;
+    food_item_id: string;
+    is_needed: boolean;
+  }[];
 }) {
   const hasStudent = !!seat.student;
 
@@ -255,7 +288,20 @@ function SeatBubble({
   let textColor = theme.colors.textMuted;
 
   if (hasStudent) {
-    if (seat.isTemporary && seat.present === false) {
+    const needed = seat.student
+      ? isFoodNeeded(
+        seat.student.student_uid,
+        selectedFood,
+        foodPreferences,
+        mealTab
+      )
+      : true;
+
+    if (mealTab === "day" && !needed && seat.present === true) {
+      bgColor = "#FACC15"; // yellow
+      borderColor = "#FACC15";
+      textColor = "#000";
+    } else if (seat.isTemporary && seat.present === false) {
       bgColor = "#F59E0B";
       borderColor = "#F59E0B";
       textColor = "#FFFFFF";
@@ -320,9 +366,19 @@ function TableCenter({ tableData }: { tableData: TableViewData }) {
 function TableLayout({
   tableData,
   onMobileSeatClick,
+  selectedFood,
+  foodPreferences,
+  mealTab,
 }: {
   tableData: TableViewData;
   onMobileSeatClick: (seat: TableSeatView) => void;
+  selectedFood: string | null;
+  foodPreferences: {
+    student_uid: string;
+    food_item_id: string;
+    is_needed: boolean;
+  }[];
+  mealTab: "day" | "noon" | "night";
 }) {
   const isVertical = tableData.table.orientation === "vertical";
   const seatMap = new Map<number, TableSeatView>(
@@ -374,6 +430,9 @@ function TableLayout({
             key={n}
             seat={seatMap.get(n)!}
             onMobileClick={onMobileSeatClick}
+            selectedFood={selectedFood}
+            foodPreferences={foodPreferences}
+            mealTab={mealTab}
           />
         ))}
     </View>
@@ -425,6 +484,11 @@ export default function ChefDashboardPage() {
     {}
   );
   const [overrideLoaded, setOverrideLoaded] = useState(false);
+  const [selectedFood, setSelectedFood] = useState<string | null>(null);
+  const [foodItems, setFoodItems] = useState<any[]>([]);
+  const [foodPreferences, setFoodPreferences] = useState<
+    { student_uid: string; food_item_id: string; is_needed: boolean }[]
+  >([]);
 
   const fetchProfile = useCallback(async () => {
     if (!authUser?.id) return;
@@ -454,31 +518,53 @@ export default function ChefDashboardPage() {
     setLoading(true);
 
     try {
-      const [{ data: tablesData }, { data: assignmentsData }, { data: studentsData }] =
-        await Promise.all([
-          supabase
-            .from("kitchen_tables")
-            .select("*")
-            .eq("is_active", true)
-            .order("row_number")
-            .order("display_order"),
-          supabase.from("kitchen_seat_assignments").select("*"),
-          supabase
-            .from("kitchen_students")
-            .select(
-              "student_uid, name, cic, class_id, day_present, noon_present, night_present"
-            ),
-        ]);
+      const [
+        { data: tablesData },
+        { data: assignmentsData },
+        { data: studentsData },
+        { data: foodItemsData },
+        { data: preferencesData },
+      ] = await Promise.all([
+        supabase
+          .from("kitchen_tables")
+          .select("*")
+          .eq("is_active", true)
+          .order("row_number")
+          .order("display_order"),
+
+        supabase.from("kitchen_seat_assignments").select("*"),
+
+        supabase
+          .from("kitchen_students")
+          .select(
+            "student_uid, name, cic, class_id, day_present, noon_present, night_present"
+          ),
+
+        // ✅ NEW
+        supabase.from("food_items").select("*"),
+
+        // ✅ NEW
+        supabase.from("student_food_preferences").select("*"),
+      ]);
 
       setTables((tablesData || []) as KitchenTable[]);
       setAssignments((assignmentsData || []) as KitchenSeatAssignment[]);
       setStudents((studentsData || []) as KitchenStudentLite[]);
+
+      // ✅ NEW
+      setFoodItems(foodItemsData || []);
+      setFoodPreferences(preferencesData || []);
+
+      // ✅ default select first food
+      if (foodItemsData?.length && !selectedFood) {
+        setSelectedFood(foodItemsData[0].id);
+      }
     } catch (err: any) {
       Alert.alert("Data Error", err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedFood]);
 
   const loadTempOverrides = useCallback(async () => {
     try {
@@ -533,6 +619,7 @@ export default function ChefDashboardPage() {
     [mealTab, tempOverrides, saveTempOverrides]
   );
 
+
   useEffect(() => {
     if (authUser?.id) fetchProfile();
   }, [authUser?.id, fetchProfile]);
@@ -568,6 +655,29 @@ export default function ChefDashboardPage() {
     [students]
   );
 
+  function isFoodNeeded(
+    studentUid: string,
+    selectedFood: string | null,
+    preferences: {
+      student_uid: string;
+      food_item_id: string;
+      is_needed: boolean;
+    }[],
+    meal: "day" | "noon" | "night"
+  ) {
+    if (meal !== "day") return true; // food preferences only apply to day meal for now
+    if (!selectedFood) return true;
+
+    const pref = preferences.find(
+      (p) =>
+        p.student_uid === studentUid &&
+        p.food_item_id === selectedFood
+    );
+
+    // default = needed
+    return pref ? pref.is_needed : true;
+  }
+
   const tableDataList = useMemo<TableViewData[]>(() => {
     return tables.map((table) => {
       const seatNumbers = Array.from(
@@ -597,15 +707,26 @@ export default function ChefDashboardPage() {
       });
 
       const assignedSeats = seats.filter((s) => s.student);
-      const presentCount = assignedSeats.filter((s) => s.present === true).length;
+
+      const presentSeats = assignedSeats.filter((s) => s.present === true);
+
+      const notNeededCount = presentSeats.filter(
+        (s) =>
+          s.student &&
+          !isFoodNeeded(s.student.student_uid, selectedFood, foodPreferences, mealTab)
+      ).length;
+
+      const presentCount = presentSeats.length;
       const absentCount = assignedSeats.filter((s) => s.present === false).length;
+
+      const totalNeededPlates = presentSeats.length - notNeededCount;
 
       return {
         table,
         seats,
         presentCount,
         absentCount,
-        totalNeededPlates: presentCount,
+        totalNeededPlates,
       };
     });
   }, [tables, assignments, studentMap, mealTab, tempOverrides]);
@@ -638,9 +759,19 @@ export default function ChefDashboardPage() {
 
     return {
       totalMembers: uniqueStudents.length,
-      presentMembers: uniqueStudents.filter(
-        (s) => getEffectiveSeatPresence(s, mealTab, tempOverrides).present === true
-      ).length,
+      presentMembers: uniqueStudents.filter((s) => {
+        const present =
+          getEffectiveSeatPresence(s, mealTab, tempOverrides).present === true;
+
+        const needed = isFoodNeeded(
+          s.student_uid,
+          selectedFood,
+          foodPreferences,
+            mealTab
+        );
+
+        return present && needed;
+      }).length,
       absentMembers: uniqueStudents.filter(
         (s) => getEffectiveSeatPresence(s, mealTab, tempOverrides).present === false
       ).length,
@@ -738,6 +869,41 @@ export default function ChefDashboardPage() {
           </TouchableOpacity>
         </View>
 
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ fontFamily: "MullerBold", marginBottom: 6 }}>
+            Select Food
+          </Text>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {foodItems.map((food) => (
+              <TouchableOpacity
+                key={food.id}
+                onPress={() => setSelectedFood(food.id)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 12,
+                  marginRight: 8,
+                  backgroundColor:
+                    selectedFood === food.id
+                      ? theme.colors.primary
+                      : theme.colors.surfaceSoft,
+                }}
+              >
+                <Text
+                  style={{
+                    color:
+                      selectedFood === food.id ? "#fff" : theme.colors.text,
+                    fontFamily: "MullerMedium",
+                  }}
+                >
+                  {food.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         <View style={styles.statsGrid}>
           <StatCard
             title="Total Members"
@@ -786,6 +952,9 @@ export default function ChefDashboardPage() {
                         seatNumber: seat.seatNumber,
                       })
                     }
+                    selectedFood={selectedFood}
+                    foodPreferences={foodPreferences}
+                    mealTab={mealTab}
                   />
                 </View>
               ))}
@@ -841,8 +1010,8 @@ export default function ChefDashboardPage() {
                         selectedSeatData.isTemporary && selectedSeatData.present === false
                           ? "#F59E0B"
                           : selectedSeatData.present
-                          ? theme.colors.success
-                          : theme.colors.error,
+                            ? theme.colors.success
+                            : theme.colors.error,
                       fontFamily: "MullerBold",
                     }}
                   >
@@ -851,8 +1020,8 @@ export default function ChefDashboardPage() {
                         ? "Temporary Present"
                         : "Temporary Absent"
                       : selectedSeatData.present
-                      ? "Present"
-                      : "Absent"}
+                        ? "Present"
+                        : "Absent"}
                   </Text>
                 </Text>
 
