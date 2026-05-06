@@ -19,6 +19,13 @@ import { useUserData } from "@/hooks/useUserData";
 import { theme } from "@/theme/theme";
 import FloatingScrollToggle from "@/components/ui/FloatingScrollToggle";
 import {
+  fetchKitchenAttendanceForDate,
+  formatKitchenDateLabel,
+  getIstTodayDateValue,
+  getKitchenDateOptions,
+  KitchenAttendanceStudent,
+} from "@/lib/kitchenAttendance";
+import {
   Building2,
   RefreshCcw,
   Users,
@@ -43,14 +50,10 @@ interface StudentRow {
   uid: string;
 }
 
-interface KitchenStudent {
-  student_uid: string;
-  name: string;
-  class_id: string;
-  day_present: boolean;
-  noon_present: boolean;
-  night_present: boolean;
-}
+type KitchenStudent = Pick<
+  KitchenAttendanceStudent,
+  "student_uid" | "name" | "class_id" | "day_present" | "noon_present" | "night_present"
+>;
 
 interface FoodItem {
   id: string;
@@ -249,6 +252,7 @@ export default function MainOfficePage() {
   const [foodPreferences, setFoodPreferences] = useState<StudentFoodPreference[]>([]);
   const [selectedFoodId, setSelectedFoodId] = useState("default");
   const [absentListMode, setAbsentListMode] = useState<AbsentListMode>("day_absent");
+  const [selectedDate, setSelectedDate] = useState(getIstTodayDateValue());
 
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -284,14 +288,11 @@ export default function MainOfficePage() {
 
       const [
         { data: studentsData, error: studentsError },
-        { data: kitchenData, error: kitchenError },
         { data: foodsData, error: foodsError },
         { data: prefsData, error: prefsError },
+        kitchenData,
       ] = await Promise.all([
         supabase.from("students").select("uid"),
-        supabase
-          .from("kitchen_students")
-          .select("student_uid, name, class_id, day_present, noon_present, night_present"),
         supabase
           .from("food_items")
           .select("id, name, is_active, display_order")
@@ -300,15 +301,15 @@ export default function MainOfficePage() {
         supabase
           .from("student_food_preferences")
           .select("id, student_uid, food_item_id, is_needed"),
+        fetchKitchenAttendanceForDate(selectedDate),
       ]);
 
       if (studentsError) throw studentsError;
-      if (kitchenError) throw kitchenError;
       if (foodsError) throw foodsError;
       if (prefsError) throw prefsError;
 
       setStudents((studentsData || []) as StudentRow[]);
-      setKitchenStudents((kitchenData || []) as KitchenStudent[]);
+      setKitchenStudents(kitchenData as KitchenStudent[]);
       setFoods((foodsData || []) as FoodItem[]);
       setFoodPreferences((prefsData || []) as StudentFoodPreference[]);
     } catch (err: any) {
@@ -316,7 +317,7 @@ export default function MainOfficePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   const handleRefresh = useCallback(async () => {
     try {
@@ -334,6 +335,13 @@ export default function MainOfficePage() {
   useEffect(() => {
     if (profile) fetchData();
   }, [profile, fetchData]);
+
+  const dateOptions = useMemo(() => getKitchenDateOptions(), []);
+
+  const selectedDateLabel = useMemo(
+    () => formatKitchenDateLabel(selectedDate),
+    [selectedDate]
+  );
 
   const summary = useMemo(() => {
     const totalPresent = kitchenStudents.filter(
@@ -543,8 +551,21 @@ export default function MainOfficePage() {
 
             <Text style={styles.heroTitle}>Main Office Dashboard</Text>
             <Text style={styles.heroSubtitle}>
-              Live kitchen attendance and food requirement summary.
+              Kitchen attendance and food requirement summary for {selectedDateLabel}.
             </Text>
+          </View>
+
+          <View style={styles.dateCard}>
+            <Text style={styles.dateCardTitle}>Attendance Date</Text>
+            <Text style={styles.dateCardSubtitle}>
+              Select today or an upcoming day to prepare kitchen counts.
+            </Text>
+            <CustomPicker
+              value={selectedDate}
+              placeholder="Attendance Date"
+              options={dateOptions}
+              onSelect={setSelectedDate}
+            />
           </View>
 
           <View style={styles.filterCard}>
@@ -829,6 +850,30 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
+    fontFamily: "MullerMedium",
+  },
+
+  dateCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    marginBottom: 20,
+    ...theme.shadows.soft,
+  },
+  dateCardTitle: {
+    color: theme.colors.text,
+    fontSize: 16,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  dateCardSubtitle: {
+    marginTop: 4,
+    marginBottom: 12,
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
     fontFamily: "MullerMedium",
   },
 

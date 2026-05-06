@@ -18,8 +18,16 @@ import { supabase } from "@/lib/supabaseClient";
 import { useUserData } from "@/hooks/useUserData";
 import { theme } from "@/theme/theme";
 import {
+  fetchKitchenAttendanceForDate,
+  formatKitchenDateLabel,
+  getIstTodayDateValue,
+  getKitchenDateOptions,
+  KitchenAttendanceStudent,
+  KitchenMeal,
+  setKitchenAttendanceRange,
+} from "@/lib/kitchenAttendance";
+import {
   Search,
-  AlertCircle,
   Users,
   Sun,
   UtensilsCrossed,
@@ -52,23 +60,7 @@ interface AdminProfile {
   designation: string | null;
 }
 
-interface KitchenStudent {
-  id: string;
-  student_uid: string;
-  name: string;
-  cic: string | null;
-  class_id: string;
-  batch: string | null;
-  council: string | null;
-  phone: string | null;
-  guardian: string | null;
-  g_phone: string | null;
-  address: string | null;
-  img_url: string | null;
-  day_present: boolean;
-  noon_present: boolean;
-  night_present: boolean;
-}
+type KitchenStudent = KitchenAttendanceStudent;
 
 const FILTER_OPTIONS: { value: AttendanceFilter; label: string }[] = [
   { value: "all", label: "All Students" },
@@ -267,6 +259,9 @@ export default function KitchenAttendancePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<AttendanceFilter>("all");
   const [activeTab, setActiveTab] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState(getIstTodayDateValue());
+  const [rangeFromDate, setRangeFromDate] = useState(getIstTodayDateValue());
+  const [rangeToDate, setRangeToDate] = useState(getIstTodayDateValue());
 
   const [rowLoadingMap, setRowLoadingMap] = useState<Record<string, boolean>>({});
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -292,33 +287,29 @@ export default function KitchenAttendancePage() {
   }, [authUser?.id]);
 
   const fetchKitchenStudents = useCallback(
-    async (currentProfile?: AdminProfile | null) => {
+    async (currentProfile?: AdminProfile | null, dateValue = selectedDate) => {
       const activeProfile = currentProfile ?? profile;
       if (!activeProfile) return;
 
       setLoading(true);
       try {
-        let query = supabase
-          .from("kitchen_students")
-          .select("*")
-          .order("name", { ascending: true });
+        let data = await fetchKitchenAttendanceForDate(dateValue);
 
         if (activeProfile.role === "class") {
           const teacherClass = getTeacherClassValue(activeProfile);
-          if (teacherClass.value) query = query.eq(teacherClass.key, teacherClass.value);
+          if (teacherClass.value) {
+            data = data.filter((student) => student.batch === teacherClass.value);
+          }
         }
 
-        const { data, error } = await query;
-        if (error) throw error;
-
-        setStudents((data || []) as KitchenStudent[]);
+        setStudents(data);
       } catch (err: any) {
         Alert.alert("Error", err.message);
       } finally {
         setLoading(false);
       }
     },
-    [profile]
+    [profile, selectedDate]
   );
 
   useEffect(() => {
@@ -326,8 +317,27 @@ export default function KitchenAttendancePage() {
   }, [authUser?.id, fetchProfile]);
 
   useEffect(() => {
-    if (profile) fetchKitchenStudents(profile);
-  }, [profile, fetchKitchenStudents]);
+    if (profile) fetchKitchenStudents(profile, selectedDate);
+  }, [profile, selectedDate, fetchKitchenStudents]);
+
+  useEffect(() => {
+    setRangeFromDate(selectedDate);
+    setRangeToDate(selectedDate);
+  }, [selectedDate]);
+
+  const dateOptions = useMemo(() => getKitchenDateOptions(), []);
+
+  const selectedDateLabel = useMemo(
+    () => formatKitchenDateLabel(selectedDate),
+    [selectedDate]
+  );
+
+  const rangeLabel = useMemo(() => {
+    if (rangeFromDate === rangeToDate) return formatKitchenDateLabel(rangeFromDate);
+    return `${formatKitchenDateLabel(rangeFromDate)} to ${formatKitchenDateLabel(
+      rangeToDate
+    )}`;
+  }, [rangeFromDate, rangeToDate]);
 
   const filteredStudents = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -394,14 +404,17 @@ export default function KitchenAttendancePage() {
   ) => {
     setRowLoadingMap((prev) => ({ ...prev, [student.student_uid]: true }));
     const nextValue = !student[meal];
+    const mealName: KitchenMeal =
+      meal === "day_present" ? "day" : meal === "noon_present" ? "noon" : "night";
 
     try {
-      const { error } = await supabase
-        .from("kitchen_students")
-        .update({ [meal]: nextValue })
-        .eq("student_uid", student.student_uid);
-
-      if (error) throw error;
+      await setKitchenAttendanceRange({
+        studentUids: [student.student_uid],
+        fromDate: selectedDate,
+        toDate: selectedDate,
+        meals: [mealName],
+        present: nextValue,
+      });
 
       setStudents((prev) =>
         prev.map((s) =>
@@ -419,12 +432,13 @@ export default function KitchenAttendancePage() {
     setRowLoadingMap((prev) => ({ ...prev, [student.student_uid]: true }));
 
     try {
-      const { error } = await supabase.rpc("set_student_whole_day_attendance", {
-        p_student_uid: student.student_uid,
-        p_present: present,
+      await setKitchenAttendanceRange({
+        studentUids: [student.student_uid],
+        fromDate: selectedDate,
+        toDate: selectedDate,
+        meals: ["day", "noon", "night"],
+        present,
       });
-
-      if (error) throw error;
 
       setStudents((prev) =>
         prev.map((s) =>
@@ -445,9 +459,9 @@ export default function KitchenAttendancePage() {
     }
   };
 
-const getBulkTargetStudents = () => {
+const getBulkTargetStudents = (classId?: string) => {
   if (profile?.role === "officer") {
-    return students;
+    return classId ? students.filter((s) => s.class_id === classId) : [];
   }
 
   if (profile?.role === "class") {
@@ -458,14 +472,16 @@ const getBulkTargetStudents = () => {
   return [];
 };
 
-const getBulkTargetIds = () => {
-  return getBulkTargetStudents()
+const getBulkTargetIds = (classId?: string) => {
+  return getBulkTargetStudents(classId)
     .map((s) => s.student_uid)
     .filter(Boolean);
 };
 
-const getBulkScopeLabel = () => {
-  if (profile?.role === "officer") return "all students in the college";
+const getBulkScopeLabel = (classId?: string) => {
+  if (profile?.role === "officer") {
+    return classId ? `students in ${classId}` : "students in this class";
+  }
 
   if (profile?.role === "class") {
     const teacherBatch = getTeacherClassValue(profile).value;
@@ -475,15 +491,27 @@ const getBulkScopeLabel = () => {
   return "selected students";
 };
 
+const validateBulkDateRange = () => {
+  if (rangeFromDate > rangeToDate) {
+    Alert.alert("Invalid Range", "The from date must be before or equal to the to date.");
+    return false;
+  }
+
+  return true;
+};
+
 const handleBulkMealUpdate = async (
-  meal: "day" | "noon" | "night",
-  present: boolean
+  meal: KitchenMeal,
+  present: boolean,
+  classId?: string
 ) => {
-  const scopeLabel = getBulkScopeLabel();
+  if (!validateBulkDateRange()) return;
+
+  const scopeLabel = getBulkScopeLabel(classId);
 
   Alert.alert(
     "Bulk Update",
-    `Mark ${meal} as ${present ? "Present" : "Absent"} for ${scopeLabel}?`,
+    `Mark ${meal} as ${present ? "Present" : "Absent"} for ${scopeLabel} from ${rangeLabel}?`,
     [
       { text: "Cancel", style: "cancel" },
       {
@@ -493,38 +521,34 @@ const handleBulkMealUpdate = async (
           setBulkLoading(true);
 
           try {
-            const targetIds = getBulkTargetIds();
+            const targetIds = getBulkTargetIds(classId);
 
             if (targetIds.length === 0) {
               throw new Error("No students found for bulk update.");
             }
 
-            const updatePayload =
-              meal === "day"
-                ? { day_present: present }
-                : meal === "noon"
-                ? { noon_present: present }
-                : { night_present: present };
+            await setKitchenAttendanceRange({
+              studentUids: targetIds,
+              fromDate: rangeFromDate,
+              toDate: rangeToDate,
+              meals: [meal],
+              present,
+            });
 
-            const { error } = await supabase
-              .from("kitchen_students")
-              .update(updatePayload)
-              .in("student_uid", targetIds);
-
-            if (error) throw error;
-
-            setStudents((prev) =>
-              prev.map((s) =>
-                targetIds.includes(s.student_uid)
-                  ? {
-                      ...s,
-                      ...(meal === "day" ? { day_present: present } : {}),
-                      ...(meal === "noon" ? { noon_present: present } : {}),
-                      ...(meal === "night" ? { night_present: present } : {}),
-                    }
-                  : s
-              )
-            );
+            if (selectedDate >= rangeFromDate && selectedDate <= rangeToDate) {
+              setStudents((prev) =>
+                prev.map((s) =>
+                  targetIds.includes(s.student_uid)
+                    ? {
+                        ...s,
+                        ...(meal === "day" ? { day_present: present } : {}),
+                        ...(meal === "noon" ? { noon_present: present } : {}),
+                        ...(meal === "night" ? { night_present: present } : {}),
+                      }
+                    : s
+                )
+              );
+            }
           } catch (err: any) {
             Alert.alert(
               "Bulk Failed",
@@ -539,12 +563,17 @@ const handleBulkMealUpdate = async (
   );
 };
 
-const handleBulkWholeDayUpdate = async (present: boolean) => {
-  const scopeLabel = getBulkScopeLabel();
+const handleBulkWholeDayUpdate = async (
+  present: boolean,
+  classId?: string
+) => {
+  if (!validateBulkDateRange()) return;
+
+  const scopeLabel = getBulkScopeLabel(classId);
 
   Alert.alert(
     "Bulk Update",
-    `Mark ${scopeLabel} as Full ${present ? "Present" : "Absent"}?`,
+    `Mark ${scopeLabel} as Full ${present ? "Present" : "Absent"} from ${rangeLabel}?`,
     [
       { text: "Cancel", style: "cancel" },
       {
@@ -554,35 +583,34 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
           setBulkLoading(true);
 
           try {
-            const targetIds = getBulkTargetIds();
+            const targetIds = getBulkTargetIds(classId);
 
             if (targetIds.length === 0) {
               throw new Error("No students found for bulk update.");
             }
 
-            const { error } = await supabase
-              .from("kitchen_students")
-              .update({
-                day_present: present,
-                noon_present: present,
-                night_present: present,
-              })
-              .in("student_uid", targetIds);
+            await setKitchenAttendanceRange({
+              studentUids: targetIds,
+              fromDate: rangeFromDate,
+              toDate: rangeToDate,
+              meals: ["day", "noon", "night"],
+              present,
+            });
 
-            if (error) throw error;
-
-            setStudents((prev) =>
-              prev.map((s) =>
-                targetIds.includes(s.student_uid)
-                  ? {
-                      ...s,
-                      day_present: present,
-                      noon_present: present,
-                      night_present: present,
-                    }
-                  : s
-              )
-            );
+            if (selectedDate >= rangeFromDate && selectedDate <= rangeToDate) {
+              setStudents((prev) =>
+                prev.map((s) =>
+                  targetIds.includes(s.student_uid)
+                    ? {
+                        ...s,
+                        day_present: present,
+                        noon_present: present,
+                        night_present: present,
+                      }
+                    : s
+                )
+              );
+            }
           } catch (err: any) {
             Alert.alert(
               "Bulk Failed",
@@ -617,10 +645,35 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
             Absent: {classSummary.noonAbsent} • Night Absent: {classSummary.nightAbsent}
           </Text>
 
+          <View style={styles.rangeCard}>
+            <Text style={styles.rangeTitle}>Bulk Date Range</Text>
+            <Text style={styles.rangeSubtitle}>
+              Bulk buttons below update every date in this range.
+            </Text>
+            <View style={styles.rangePickerRow}>
+              <View style={styles.rangePicker}>
+                <CustomPicker
+                  value={rangeFromDate}
+                  placeholder="From Date"
+                  options={dateOptions}
+                  onSelect={setRangeFromDate}
+                />
+              </View>
+              <View style={styles.rangePicker}>
+                <CustomPicker
+                  value={rangeToDate}
+                  placeholder="To Date"
+                  options={dateOptions}
+                  onSelect={setRangeToDate}
+                />
+              </View>
+            </View>
+          </View>
+
           <View style={styles.bulkRow}>
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleBulkWholeDayUpdate(true)}
+              onPress={() => handleBulkWholeDayUpdate(true, classId)}
               style={[styles.bulkBtn, styles.bulkBtnGreen]}
               activeOpacity={0.84}
             >
@@ -632,7 +685,7 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleBulkWholeDayUpdate(false)}
+              onPress={() => handleBulkWholeDayUpdate(false, classId)}
               style={[styles.bulkBtn, styles.bulkBtnRed]}
               activeOpacity={0.84}
             >
@@ -646,7 +699,7 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
           <View style={styles.bulkMealGrid}>
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleBulkMealUpdate("day", true)}
+              onPress={() => handleBulkMealUpdate("day", true, classId)}
               style={styles.bulkMealBtnOutline}
               activeOpacity={0.84}
             >
@@ -656,7 +709,7 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleBulkMealUpdate("day", false)}
+              onPress={() => handleBulkMealUpdate("day", false, classId)}
               style={styles.bulkMealBtnDanger}
               activeOpacity={0.84}
             >
@@ -666,7 +719,7 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleBulkMealUpdate("noon", true)}
+              onPress={() => handleBulkMealUpdate("noon", true, classId)}
               style={styles.bulkMealBtnOutline}
               activeOpacity={0.84}
             >
@@ -676,7 +729,7 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleBulkMealUpdate("noon", false)}
+              onPress={() => handleBulkMealUpdate("noon", false, classId)}
               style={styles.bulkMealBtnDanger}
               activeOpacity={0.84}
             >
@@ -686,7 +739,7 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleBulkMealUpdate("night", true)}
+              onPress={() => handleBulkMealUpdate("night", true, classId)}
               style={styles.bulkMealBtnOutline}
               activeOpacity={0.84}
             >
@@ -696,7 +749,7 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
 
             <TouchableOpacity
               disabled={bulkLoading}
-              onPress={() => handleBulkMealUpdate("night", false)}
+              onPress={() => handleBulkMealUpdate("night", false, classId)}
               style={styles.bulkMealBtnDanger}
               activeOpacity={0.84}
             >
@@ -907,7 +960,7 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
               </View>
 
               <TouchableOpacity
-                onPress={() => fetchKitchenStudents()}
+                onPress={() => fetchKitchenStudents(undefined, selectedDate)}
                 style={styles.refreshBtn}
                 activeOpacity={0.84}
               >
@@ -923,9 +976,24 @@ const handleBulkWholeDayUpdate = async (present: boolean) => {
             <Text style={styles.heroTitle}>Kitchen Attendance</Text>
             <Text style={styles.heroSubtitle}>
               {profile?.role === "class"
-                ? `Manage attendance for ${teacherClassValue.value || "your class"}.`
-                : "Manage kitchen attendance for all classes."}
+                ? `Manage attendance for ${
+                    teacherClassValue.value || "your class"
+                  } on ${selectedDateLabel}.`
+                : `Manage kitchen attendance for all classes on ${selectedDateLabel}.`}
             </Text>
+          </View>
+
+          <View style={styles.dateCard}>
+            <Text style={styles.dateCardTitle}>Attendance Date</Text>
+            <Text style={styles.dateCardSubtitle}>
+              Students are present by default. Mark absences or special changes.
+            </Text>
+            <CustomPicker
+              value={selectedDate}
+              placeholder="Attendance Date"
+              options={dateOptions}
+              onSelect={setSelectedDate}
+            />
           </View>
 
           <View style={styles.controlsRow}>
@@ -1159,6 +1227,30 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
+  dateCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    marginBottom: 20,
+    ...theme.shadows.soft,
+  },
+  dateCardTitle: {
+    color: theme.colors.text,
+    fontSize: 16,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  dateCardSubtitle: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    marginTop: 4,
+    marginBottom: 12,
+  },
+
   controlsRow: {
     flexDirection: "row",
     gap: 12,
@@ -1326,6 +1418,36 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 4,
     marginBottom: 16,
+  },
+
+  rangeCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+    marginBottom: 16,
+  },
+  rangeTitle: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  rangeSubtitle: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerMedium",
+    marginTop: 3,
+    marginBottom: 10,
+  },
+  rangePickerRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  rangePicker: {
+    flex: 1,
   },
 
   bulkRow: {

@@ -15,6 +15,11 @@ import { supabase } from "@/lib/supabaseClient";
 import { useUserData } from "@/hooks/useUserData";
 import { theme } from "@/theme/theme";
 import {
+  fetchKitchenAttendanceForDate,
+  formatKitchenDateLabel,
+  getIstTodayDateValue,
+} from "@/lib/kitchenAttendance";
+import {
   AlertCircle,
   ChefHat,
   RefreshCcw,
@@ -521,9 +526,9 @@ export default function ChefDashboardPage() {
       const [
         { data: tablesData },
         { data: assignmentsData },
-        { data: studentsData },
         { data: foodItemsData },
         { data: preferencesData },
+        studentsData,
       ] = await Promise.all([
         supabase
           .from("kitchen_tables")
@@ -534,17 +539,13 @@ export default function ChefDashboardPage() {
 
         supabase.from("kitchen_seat_assignments").select("*"),
 
-        supabase
-          .from("kitchen_students")
-          .select(
-            "student_uid, name, cic, class_id, day_present, noon_present, night_present"
-          ),
-
         // ✅ NEW
         supabase.from("food_items").select("*"),
 
         // ✅ NEW
         supabase.from("student_food_preferences").select("*"),
+
+        fetchKitchenAttendanceForDate(getIstTodayDateValue()),
       ]);
 
       setTables((tablesData || []) as KitchenTable[]);
@@ -729,7 +730,15 @@ export default function ChefDashboardPage() {
         totalNeededPlates,
       };
     });
-  }, [tables, assignments, studentMap, mealTab, tempOverrides]);
+  }, [
+    tables,
+    assignments,
+    studentMap,
+    mealTab,
+    tempOverrides,
+    selectedFood,
+    foodPreferences,
+  ]);
 
   const groupedRows = useMemo(() => {
     const rows = new Map<number, TableViewData[]>();
@@ -776,7 +785,14 @@ export default function ChefDashboardPage() {
         (s) => getEffectiveSeatPresence(s, mealTab, tempOverrides).present === false
       ).length,
     };
-  }, [assignments, studentMap, mealTab, tempOverrides]);
+  }, [
+    assignments,
+    studentMap,
+    mealTab,
+    tempOverrides,
+    selectedFood,
+    foodPreferences,
+  ]);
 
   const selectedSeatData = useMemo(() => {
     if (!selectedSeat) return null;
@@ -792,6 +808,11 @@ export default function ChefDashboardPage() {
     const key = getOverrideKey(selectedSeatData.student.student_uid, mealTab);
     return tempOverrides[key] || null;
   }, [selectedSeatData, tempOverrides, mealTab]);
+
+  const todayLabel = useMemo(
+    () => formatKitchenDateLabel(getIstTodayDateValue()),
+    []
+  );
 
   if (profileLoading || loading || !overrideLoaded) {
     return (
@@ -813,7 +834,8 @@ export default function ChefDashboardPage() {
             </View>
             <Text style={styles.heroSubtitle}>
               Live plate count for{" "}
-              {mealTab === "day" ? "Day" : mealTab === "noon" ? "Noon" : "Night"}
+              {mealTab === "day" ? "Day" : mealTab === "noon" ? "Noon" : "Night"} on{" "}
+              {todayLabel}
             </Text>
           </View>
 
