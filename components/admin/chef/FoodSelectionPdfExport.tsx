@@ -39,12 +39,21 @@ interface Props {
   foods: FoodItem[];
   students: KitchenStudent[];
   preferences: StudentFoodPreference[];
+  drafts?: Record<string, boolean>;
+  selectedFoodId?: string;
+}
+
+function truncateText(text: string, maxLength: number) {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3)}...`;
 }
 
 export function FoodSelectionPdfExport({
   foods,
   students,
   preferences,
+  drafts = {},
+  selectedFoodId,
 }: Props) {
   const [exporting, setExporting] = useState(false);
 
@@ -55,26 +64,35 @@ export function FoodSelectionPdfExport({
       setExporting(true);
 
       const activeFoods = [...foods]
-        .filter((f) => f.is_active)
+        .filter((food) => food.is_active)
+        .filter((food) => !selectedFoodId || food.id === selectedFoodId)
         .sort(
           (a, b) =>
             a.display_order - b.display_order || a.name.localeCompare(b.name)
         );
 
-      const studentMap = new Map(
-        students.map((s) => [s.student_uid, s] as const)
-      );
+      if (activeFoods.length === 0) {
+        Alert.alert("Notice", "Select an active food to export.");
+        return;
+      }
 
       const foodSections = activeFoods
         .map((food) => {
-          const excludedStudents = preferences
-            .filter((p) => p.food_item_id === food.id && p.is_needed === false)
-            .map((p) => studentMap.get(p.student_uid))
-            .filter(Boolean)
-            .map((s) => ({
-              name: s!.name,
-              class_id: s!.class_id,
-              cic: s!.cic || "",
+          const rows = [...students]
+            .filter((student) => {
+              const key = `${student.student_uid}-${food.id}`;
+              const savedValue = preferences.find(
+                (pref) =>
+                  pref.student_uid === student.student_uid &&
+                  pref.food_item_id === food.id
+              )?.is_needed;
+
+              return (drafts[key] ?? savedValue ?? true) === false;
+            })
+            .map((student) => ({
+              name: student.name,
+              class_id: student.class_id || "Unassigned",
+              cic: student.cic || "",
             }))
             .sort((a, b) => {
               const classCmp = a.class_id.localeCompare(b.class_id, undefined, {
@@ -83,21 +101,24 @@ export function FoodSelectionPdfExport({
               });
               if (classCmp !== 0) return classCmp;
 
-              return a.cic.localeCompare(b.cic, undefined, {
+              const cicCmp = a.cic.localeCompare(b.cic, undefined, {
+                numeric: true,
+                sensitivity: "base",
+              });
+              if (cicCmp !== 0) return cicCmp;
+
+              return a.name.localeCompare(b.name, undefined, {
                 numeric: true,
                 sensitivity: "base",
               });
             });
 
-          return {
-            foodName: food.name,
-            rows: excludedStudents,
-          };
+          return { foodName: food.name, rows };
         })
         .filter((section) => section.rows.length > 0);
 
       if (foodSections.length === 0) {
-        Alert.alert("Notice", "No food preference exclusions found to export.");
+        Alert.alert("Notice", "No students found for this food export.");
         return;
       }
 
@@ -109,10 +130,7 @@ export function FoodSelectionPdfExport({
       const pageHeight = 841.89;
       const margin = 28;
       const bottomLimit = 28;
-
       const contentWidth = pageWidth - margin * 2;
-      const columnGap = 10;
-      const columnWidth = (contentWidth - columnGap * 2) / 3;
 
       const colors = {
         text: rgb(0.08, 0.13, 0.2),
@@ -125,27 +143,22 @@ export function FoodSelectionPdfExport({
 
       let page = pdfDoc.addPage([pageWidth, pageHeight]);
       let pageNumber = 1;
-
-      const headerStartY = pageHeight - margin;
-      const usableTop = pageHeight - 78;
-
-      let currentColumn = 0;
-      let yPositions = [usableTop, usableTop, usableTop];
+      let y = pageHeight - margin;
 
       const drawText = (
         text: string,
         x: number,
-        y: number,
+        yPos: number,
         size = 10,
         font = fontRegular,
         color = colors.text
       ) => {
-        page.drawText(text, { x, y, size, font, color });
+        page.drawText(text, { x, y: yPos, size, font, color });
       };
 
       const drawRect = (
         x: number,
-        y: number,
+        yPos: number,
         width: number,
         height: number,
         fillColor?: ReturnType<typeof rgb>,
@@ -154,7 +167,7 @@ export function FoodSelectionPdfExport({
       ) => {
         page.drawRectangle({
           x,
-          y,
+          y: yPos,
           width,
           height,
           color: fillColor,
@@ -164,125 +177,69 @@ export function FoodSelectionPdfExport({
       };
 
       const drawPageHeader = () => {
-        drawText(
-          "Students Not Needing Foods",
-          margin,
-          headerStartY,
-          18,
-          fontBold,
-          colors.text
-        );
-        drawText(
-          "Grouped by food item • Class-wise readable summary",
-          margin,
-          headerStartY - 16,
-          9,
-          fontRegular,
-          colors.muted
-        );
+        drawText("Students Not Needing Food", margin, y, 18, fontBold);
+        y -= 16;
+        drawText("Class-wise food preference report", margin, y, 9, fontRegular, colors.muted);
+        y -= 24;
       };
 
       const drawPageFooter = () => {
-        drawText(
-          `Page ${pageNumber}`,
-          pageWidth - margin - 35,
-          14,
-          8,
-          fontRegular,
-          colors.muted
-        );
+        drawText(`Page ${pageNumber}`, pageWidth - margin - 35, 14, 8, fontRegular, colors.muted);
       };
 
       const addNewPage = () => {
         drawPageFooter();
         page = pdfDoc.addPage([pageWidth, pageHeight]);
         pageNumber += 1;
-        currentColumn = 0;
-        yPositions = [usableTop, usableTop, usableTop];
+        y = pageHeight - margin;
         drawPageHeader();
       };
 
-      const getColumnX = (index: number) =>
-        margin + index * (columnWidth + columnGap);
-
-      const ensureColumnSpace = (neededHeight: number) => {
-        while (yPositions[currentColumn] - neededHeight < bottomLimit) {
-          if (currentColumn < 2) {
-            currentColumn += 1;
-          } else {
-            addNewPage();
-          }
-        }
+      const ensureSpace = (neededHeight: number) => {
+        if (y - neededHeight < bottomLimit) addNewPage();
       };
 
       drawPageHeader();
 
       foodSections.forEach((section) => {
-        ensureColumnSpace(26);
+        ensureSpace(34);
+        drawRect(margin, y - 24, contentWidth, 24, colors.softFill, colors.borderStrong, 1);
+        drawText(section.foodName, margin + 8, y - 16, 12, fontBold);
+        drawText(`${section.rows.length} students`, pageWidth - margin - 82, y - 16, 9, fontRegular, colors.muted);
+        y -= 32;
 
-        let x = getColumnX(currentColumn);
-        let y = yPositions[currentColumn];
-
-        drawRect(
-          x,
-          y - 20,
-          columnWidth,
-          20,
-          colors.softFill,
-          colors.borderStrong,
-          1
-        );
-        drawText(section.foodName, x + 8, y - 13, 10, fontBold, colors.text);
-
-        y -= 26;
         let currentClass = "";
+        let classIndex = 0;
 
         section.rows.forEach((row) => {
           const isNewClass = row.class_id !== currentClass;
-          const neededHeight = isNewClass ? 20 : 12;
-
-          ensureColumnSpace(neededHeight);
-
-          x = getColumnX(currentColumn);
-          y = yPositions[currentColumn];
+          ensureSpace(isNewClass ? 40 : 18);
 
           if (isNewClass) {
             currentClass = row.class_id;
-
-            drawRect(
-              x,
-              y - 14,
-              columnWidth,
-              14,
-              colors.headerFill,
-              colors.border,
-              1
-            );
-            drawText(currentClass, x + 6, y - 9, 8.5, fontBold, colors.text);
-            y -= 18;
+            classIndex = 0;
+            drawRect(margin, y - 18, contentWidth, 18, colors.headerFill, colors.border, 1);
+            drawText(currentClass, margin + 8, y - 12, 9.5, fontBold);
+            y -= 22;
           }
 
+          classIndex += 1;
           const studentLine = row.cic
-            ? `• ${row.name} (${row.cic})`
-            : `• ${row.name}`;
+            ? `${classIndex}. ${row.name} (${row.cic})`
+            : `${classIndex}. ${row.name}`;
 
-          drawText(studentLine, x + 8, y - 7, 7.5, fontRegular, colors.text);
-          y -= 12;
-
-          yPositions[currentColumn] = y;
+          drawText(truncateText(studentLine, 82), margin + 12, y - 11, 8.5);
+          y -= 17;
         });
 
-        yPositions[currentColumn] -= 8;
+        y -= 10;
       });
 
       drawPageFooter();
 
       const sharingAvailable = await Sharing.isAvailableAsync();
       if (!sharingAvailable) {
-        Alert.alert(
-          "Sharing Unavailable",
-          "Sharing is not available on this device."
-        );
+        Alert.alert("Sharing Unavailable", "Sharing is not available on this device.");
         return;
       }
 
@@ -292,9 +249,7 @@ export function FoodSelectionPdfExport({
       await FileSystem.writeAsStringAsync(
         fileUri,
         Buffer.from(pdfBytes).toString("base64"),
-        {
-          encoding: FileSystem.EncodingType.Base64,
-        }
+        { encoding: FileSystem.EncodingType.Base64 }
       );
 
       await Sharing.shareAsync(fileUri, {

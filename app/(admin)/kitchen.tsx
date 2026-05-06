@@ -64,9 +64,9 @@ type KitchenStudent = KitchenAttendanceStudent;
 
 const FILTER_OPTIONS: { value: AttendanceFilter; label: string }[] = [
   { value: "all", label: "All Students" },
-  { value: "day_absent", label: "Day Absent" },
-  { value: "noon_absent", label: "Noon Absent" },
-  { value: "night_absent", label: "Night Absent" },
+  { value: "day_absent", label: "Breakfast Absent" },
+  { value: "noon_absent", label: "Lunch Absent" },
+  { value: "night_absent", label: "Dinner Absent" },
   { value: "whole_day_absent", label: "Whole Day Absent" },
   { value: "full_present", label: "Full Present" },
 ];
@@ -402,6 +402,8 @@ export default function KitchenAttendancePage() {
     student: KitchenStudent,
     meal: "day_present" | "noon_present" | "night_present"
   ) => {
+    if (!validateAttendanceDateRange()) return;
+
     setRowLoadingMap((prev) => ({ ...prev, [student.student_uid]: true }));
     const nextValue = !student[meal];
     const mealName: KitchenMeal =
@@ -410,17 +412,19 @@ export default function KitchenAttendancePage() {
     try {
       await setKitchenAttendanceRange({
         studentUids: [student.student_uid],
-        fromDate: selectedDate,
-        toDate: selectedDate,
+        fromDate: rangeFromDate,
+        toDate: rangeToDate,
         meals: [mealName],
         present: nextValue,
       });
 
-      setStudents((prev) =>
-        prev.map((s) =>
-          s.student_uid === student.student_uid ? { ...s, [meal]: nextValue } : s
-        )
-      );
+      if (selectedDate >= rangeFromDate && selectedDate <= rangeToDate) {
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.student_uid === student.student_uid ? { ...s, [meal]: nextValue } : s
+          )
+        );
+      }
     } catch (err: any) {
       Alert.alert("Update Failed", err.message);
     } finally {
@@ -429,29 +433,33 @@ export default function KitchenAttendancePage() {
   };
 
   const handleSetWholeDay = async (student: KitchenStudent, present: boolean) => {
+    if (!validateAttendanceDateRange()) return;
+
     setRowLoadingMap((prev) => ({ ...prev, [student.student_uid]: true }));
 
     try {
       await setKitchenAttendanceRange({
         studentUids: [student.student_uid],
-        fromDate: selectedDate,
-        toDate: selectedDate,
+        fromDate: rangeFromDate,
+        toDate: rangeToDate,
         meals: ["day", "noon", "night"],
         present,
       });
 
-      setStudents((prev) =>
-        prev.map((s) =>
-          s.student_uid === student.student_uid
-            ? {
-                ...s,
-                day_present: present,
-                noon_present: present,
-                night_present: present,
-              }
-            : s
-        )
-      );
+      if (selectedDate >= rangeFromDate && selectedDate <= rangeToDate) {
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.student_uid === student.student_uid
+              ? {
+                  ...s,
+                  day_present: present,
+                  noon_present: present,
+                  night_present: present,
+                }
+              : s
+          )
+        );
+      }
     } catch (err: any) {
       Alert.alert("Update Failed", err.message);
     } finally {
@@ -491,7 +499,7 @@ const getBulkScopeLabel = (classId?: string) => {
   return "selected students";
 };
 
-const validateBulkDateRange = () => {
+const validateAttendanceDateRange = () => {
   if (rangeFromDate > rangeToDate) {
     Alert.alert("Invalid Range", "The from date must be before or equal to the to date.");
     return false;
@@ -505,7 +513,7 @@ const handleBulkMealUpdate = async (
   present: boolean,
   classId?: string
 ) => {
-  if (!validateBulkDateRange()) return;
+  if (!validateAttendanceDateRange()) return;
 
   const scopeLabel = getBulkScopeLabel(classId);
 
@@ -567,7 +575,7 @@ const handleBulkWholeDayUpdate = async (
   present: boolean,
   classId?: string
 ) => {
-  if (!validateBulkDateRange()) return;
+  if (!validateAttendanceDateRange()) return;
 
   const scopeLabel = getBulkScopeLabel(classId);
 
@@ -641,14 +649,14 @@ const handleBulkWholeDayUpdate = async (
         <View style={styles.classHeaderCard}>
           <Text style={styles.classTitle}>{classId}</Text>
           <Text style={styles.classSubtitle}>
-            {classSummary.total} students • Day Absent: {classSummary.dayAbsent} • Noon
-            Absent: {classSummary.noonAbsent} • Night Absent: {classSummary.nightAbsent}
+            {classSummary.total} students • Breakfast Absent: {classSummary.dayAbsent} • Lunch
+            Absent: {classSummary.noonAbsent} • Dinner Absent: {classSummary.nightAbsent}
           </Text>
 
           <View style={styles.rangeCard}>
-            <Text style={styles.rangeTitle}>Bulk Date Range</Text>
+            <Text style={styles.rangeTitle}>Attendance Update Range</Text>
             <Text style={styles.rangeSubtitle}>
-              Bulk buttons below update every date in this range.
+              Student and bulk buttons below update every date in this range.
             </Text>
             <View style={styles.rangePickerRow}>
               <View style={styles.rangePicker}>
@@ -1030,19 +1038,19 @@ const handleBulkWholeDayUpdate = async (
               icon={Users}
             />
             <StatAbsentCard
-              title="Day Absent"
+              title="Breakfast Absent"
               value={summary.dayAbsent}
               description="Breakfast absent"
               icon={Sun}
             />
             <StatAbsentCard
-              title="Noon Absent"
+              title="Lunch Absent"
               value={summary.noonAbsent}
               description="Lunch absent"
               icon={UtensilsCrossed}
             />
             <StatAbsentCard
-              title="Night Absent"
+              title="Dinner Absent"
               value={summary.nightAbsent}
               description="Dinner absent"
               icon={MoonStar}

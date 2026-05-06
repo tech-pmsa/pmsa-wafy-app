@@ -27,6 +27,7 @@ import {
   Check,
   X,
   ChevronDown,
+  Search,
   Sparkles,
   Soup,
   ClipboardList,
@@ -288,6 +289,8 @@ export default function FoodSelection({
   const [editingFoodId, setEditingFoodId] = useState("");
   const [editingFoodName, setEditingFoodName] = useState("");
   const [selectedDeleteFoodId, setSelectedDeleteFoodId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedReportFoodId, setSelectedReportFoodId] = useState("");
   const [savingAll, setSavingAll] = useState(false);
   const [workingAction, setWorkingAction] = useState<
     "add" | "edit" | "delete" | null
@@ -304,10 +307,28 @@ export default function FoodSelection({
     [foods]
   );
 
+  useEffect(() => {
+    if (!selectedReportFoodId && foodsSorted.length > 0) {
+      setSelectedReportFoodId(foodsSorted[0].id);
+    }
+  }, [foodsSorted, selectedReportFoodId]);
+
+  const filteredStudents = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return students;
+
+    return students.filter(
+      (student) =>
+        student.name.toLowerCase().includes(query) ||
+        student.cic?.toLowerCase().includes(query) ||
+        student.class_id.toLowerCase().includes(query)
+    );
+  }, [students, searchQuery]);
+
   const groupedStudents = useMemo(() => {
     const grouped: Record<string, KitchenStudent[]> = {};
 
-    [...students]
+    [...filteredStudents]
       .sort((a, b) => {
         const classCmp = a.class_id.localeCompare(b.class_id, undefined, {
           numeric: true,
@@ -326,7 +347,7 @@ export default function FoodSelection({
       });
 
     return grouped;
-  }, [students]);
+  }, [filteredStudents]);
 
   const prefMap = useMemo(() => {
     const map = new Map<string, StudentFoodPreference>();
@@ -481,12 +502,22 @@ export default function FoodSelection({
     try {
       for (const key of changedKeys) {
         const pref = prefMap.get(key);
-        if (!pref) continue;
+        const food = foodsSorted.find((item) => key.endsWith(`-${item.id}`));
+        const studentUid = food ? key.slice(0, -(food.id.length + 1)) : "";
+        const nextValue = drafts[key] ?? true;
 
-        const { error } = await supabase
-          .from("student_food_preferences")
-          .update({ is_needed: drafts[key] })
-          .eq("id", pref.id);
+        if (!food || !studentUid) continue;
+
+        const { error } = pref
+          ? await supabase
+              .from("student_food_preferences")
+              .update({ is_needed: nextValue })
+              .eq("id", pref.id)
+          : await supabase.from("student_food_preferences").insert({
+              student_uid: studentUid,
+              food_item_id: food.id,
+              is_needed: nextValue,
+            });
 
         if (error) throw error;
       }
@@ -503,6 +534,62 @@ export default function FoodSelection({
   const foodOptions = useMemo(
     () => foodsSorted.map((f) => ({ label: f.name, value: f.id })),
     [foodsSorted]
+  );
+
+  const selectedReportFood = useMemo(
+    () => foodsSorted.find((food) => food.id === selectedReportFoodId) || null,
+    [foodsSorted, selectedReportFoodId]
+  );
+
+  const notNeededStudentsByClass = useMemo(() => {
+    if (!selectedReportFoodId) return {};
+
+    const grouped: Record<string, KitchenStudent[]> = {};
+
+    [...filteredStudents]
+      .filter((student) => {
+        const key = `${student.student_uid}-${selectedReportFoodId}`;
+        return (drafts[key] ?? true) === false;
+      })
+      .sort((a, b) => {
+        const classCmp = a.class_id.localeCompare(b.class_id, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+        if (classCmp !== 0) return classCmp;
+
+        const cicCmp = (a.cic || "").localeCompare(b.cic || "", undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+        if (cicCmp !== 0) return cicCmp;
+
+        return a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+      })
+      .forEach((student) => {
+        const classKey = student.class_id || "Unassigned";
+        if (!grouped[classKey]) grouped[classKey] = [];
+        grouped[classKey].push(student);
+      });
+
+    return grouped;
+  }, [filteredStudents, selectedReportFoodId, drafts]);
+
+  const notNeededClassEntries = useMemo(
+    () => Object.entries(notNeededStudentsByClass),
+    [notNeededStudentsByClass]
+  );
+
+  const notNeededCount = useMemo(
+    () =>
+      notNeededClassEntries.reduce(
+        (total, [, classStudents]) => total + classStudents.length,
+        0
+      ),
+    [notNeededClassEntries]
   );
 
   const summary = useMemo(() => {
@@ -668,8 +755,82 @@ export default function FoodSelection({
             foods={foodsSorted}
             students={students}
             preferences={preferences}
+            drafts={drafts}
+            selectedFoodId={selectedReportFoodId}
           />
         </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Food Preference Filter</Text>
+        <Text style={styles.cardDesc}>
+          Search students and review who does not need the selected food.
+        </Text>
+
+        <View style={styles.controlGroup}>
+          <Text style={styles.label}>Search Student</Text>
+          <View style={styles.searchBox}>
+            <Search size={18} color={theme.colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search name, CIC, class..."
+              placeholderTextColor={theme.colors.textMuted}
+            />
+          </View>
+        </View>
+
+        <View style={styles.controlGroup}>
+          <Text style={styles.label}>Food Filter</Text>
+          <NativePicker
+            value={selectedReportFoodId}
+            options={foodOptions}
+            placeholder="Select food"
+            onSelect={setSelectedReportFoodId}
+          />
+        </View>
+
+        <View style={styles.filterSummaryCard}>
+          <Text style={styles.filterSummaryValue}>{notNeededCount}</Text>
+          <Text style={styles.filterSummaryText}>
+            students do not need {selectedReportFood?.name || "selected food"}
+          </Text>
+        </View>
+
+        {notNeededClassEntries.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No students found</Text>
+            <Text style={styles.emptyText}>
+              No matching students are marked as not needing this food.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.notNeededStack}>
+            {notNeededClassEntries.map(([classId, classStudents]) => (
+              <View key={classId} style={styles.notNeededClassCard}>
+                <View style={styles.notNeededClassHeader}>
+                  <Text style={styles.notNeededClassTitle}>{classId}</Text>
+                  <Text style={styles.notNeededClassCount}>
+                    {classStudents.length}
+                  </Text>
+                </View>
+
+                {classStudents.map((student, index) => (
+                  <View key={student.student_uid} style={styles.notNeededStudentRow}>
+                    <Text style={styles.notNeededStudentIndex}>{index + 1}.</Text>
+                    <View style={styles.notNeededStudentTextWrap}>
+                      <Text style={styles.notNeededStudentName}>{student.name}</Text>
+                      <Text style={styles.notNeededStudentMeta}>
+                        CIC: {student.cic || "-"}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       {Object.keys(groupedStudents).map((classId) => (
@@ -832,6 +993,24 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: theme.colors.text,
   },
+  searchBox: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontFamily: "MullerMedium",
+    fontSize: 14,
+    lineHeight: 18,
+    color: theme.colors.text,
+  },
 
   btnSecondary: {
     height: 48,
@@ -906,6 +1085,118 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   exportWrap: { marginTop: 12 },
+
+  filterSummaryCard: {
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryTint,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 14,
+  },
+  filterSummaryValue: {
+    color: theme.colors.primary,
+    fontSize: 24,
+    lineHeight: 30,
+    fontFamily: "MullerBold",
+  },
+  filterSummaryText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    marginTop: 2,
+  },
+  emptyCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.border,
+    padding: 22,
+    alignItems: "center",
+  },
+  emptyTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  emptyText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    textAlign: "center",
+    marginTop: 6,
+  },
+  notNeededStack: {
+    gap: 12,
+  },
+  notNeededClassCard: {
+    backgroundColor: theme.colors.surfaceSoft,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+  },
+  notNeededClassHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    paddingBottom: 10,
+    marginBottom: 10,
+  },
+  notNeededClassTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: "MullerBold",
+  },
+  notNeededClassCount: {
+    minWidth: 32,
+    textAlign: "center",
+    color: theme.colors.primary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "MullerBold",
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  notNeededStudentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 6,
+  },
+  notNeededStudentIndex: {
+    width: 26,
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
+  },
+  notNeededStudentTextWrap: {
+    flex: 1,
+  },
+  notNeededStudentName: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: "MullerMedium",
+  },
+  notNeededStudentMeta: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 15,
+    fontFamily: "MullerMedium",
+    marginTop: 2,
+  },
 
   classHeader: {
     marginBottom: 16,
