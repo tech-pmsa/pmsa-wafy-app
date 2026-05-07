@@ -10,7 +10,6 @@ export type AppRole =
   | 'chef'
   | 'main'
   | 'staff'
-  | 'clg-leader';
 
 interface UserData {
   loading: boolean;
@@ -32,7 +31,6 @@ function normalizeRole(role: string | null | undefined): AppRole | null {
     'chef',
     'main',
     'staff',
-    'clg-leader',
   ];
 
   return validRoles.includes(normalized as AppRole)

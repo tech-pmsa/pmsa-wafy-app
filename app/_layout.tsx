@@ -220,7 +220,6 @@ export default function RootLayout() {
       student: "/(student)/student-dashboard",
       chef: "/(admin)/chef/chef-dashboard",
       main: "/(admin)/main/main-dashboard",
-      "clg-leader": "/(admin)/leader/clg-dashboard",
     };
 
     if (!session) {

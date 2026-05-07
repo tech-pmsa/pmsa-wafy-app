@@ -88,22 +88,6 @@ export default function AdminLayout() {
         name="students-detail"
         options={{ title: "Students Detail" }}
       />
-      <Drawer.Screen
-        name="leader/clg-dashboard"
-        options={{ title: "College Leader Dashboard" }}
-      />
-      <Drawer.Screen
-        name="leader/clg-attendance"
-        options={{ title: "College Attendance" }}
-      />
-      <Drawer.Screen
-        name="leader/clg-punishment"
-        options={{ title: "College Punishment" }}
-      />
-      <Drawer.Screen
-        name="leader/clg-logs"
-        options={{ title: "Logs" }}
-      />
       <Drawer.Screen name="manage-staff" options={{ title: "Manage Staff" }} />
       <Drawer.Screen name="settings" options={{ title: "Settings" }} />
       <Drawer.Screen name="kitchen" options={{ title: "Kitchen Attendance" }} />
