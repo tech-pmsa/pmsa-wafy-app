@@ -6,7 +6,7 @@ import {
   useRootNavigationState,
   usePathname,
 } from "expo-router";
-import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { supabase } from "@/lib/supabaseClient";
 import { StatusBar } from "expo-status-bar";
