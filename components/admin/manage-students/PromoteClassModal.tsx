@@ -13,17 +13,9 @@ import { supabase } from "@/lib/supabaseClient";
 import { ChevronsRight, X } from "lucide-react-native";
 import { theme } from "@/theme/theme";
 
-const allClasses = [
-  "TH-1",
-  "TH-2",
-  "AL-1",
-  "AL-2",
-  "AL-3",
-  "AL-4",
-  "Foundation A",
-  "Foundation B",
-  "Graduated",
-];
+function classNameFromDesignation(value: any) {
+  return String(value || "").trim().replace(/\s+Class$/i, "");
+}
 
 export function PromoteClassModal({
   isOpen,
@@ -32,10 +24,44 @@ export function PromoteClassModal({
   onSave,
 }: any) {
   const [toClass, setToClass] = useState("");
+  const [classes, setClasses] = useState<string[]>([]);
+  const [classesLoading, setClassesLoading] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen) setToClass("");
+    const loadClasses = async () => {
+      setClassesLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("designation")
+          .eq("role", "class")
+          .not("designation", "is", null)
+          .order("designation", { ascending: true });
+
+        if (error) throw error;
+
+        const designations = Array.from(
+          new Set(
+            (data || [])
+              .map((row: any) => classNameFromDesignation(row.designation))
+              .filter(Boolean)
+          )
+        ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+
+        setClasses(designations);
+      } catch (err: any) {
+        NativeAlert.alert("Error", err.message || "Failed to load class list.");
+        setClasses([]);
+      } finally {
+        setClassesLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      setToClass("");
+      loadClasses();
+    }
   }, [isOpen]);
 
   const handlePromote = async () => {
@@ -99,27 +125,40 @@ export function PromoteClassModal({
           </Text>
 
           <View style={styles.pickerWrap}>
-            <Picker
-              selectedValue={toClass}
-              onValueChange={setToClass}
-              style={{ color: theme.colors.text }}
-            >
-              <Picker.Item label="Select destination" value="" color={theme.colors.textMuted} />
-              {allClasses
-                .filter((c) => c !== currentClass)
-                .map((cls) => (
-                  <Picker.Item key={cls} label={cls} value={cls} color={theme.colors.text} />
-                ))}
-            </Picker>
+            {classesLoading ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={styles.loadingText}>Loading classes...</Text>
+              </View>
+            ) : (
+              <Picker
+                selectedValue={toClass}
+                onValueChange={setToClass}
+                style={{ color: theme.colors.text }}
+              >
+                <Picker.Item label="Select destination" value="" color={theme.colors.textMuted} />
+                {classes
+                  .filter((c) => c !== currentClass)
+                  .map((cls) => (
+                    <Picker.Item key={cls} label={cls} value={cls} color={theme.colors.text} />
+                  ))}
+              </Picker>
+            )}
           </View>
+
+          {!classesLoading && classes.filter((c) => c !== currentClass).length === 0 ? (
+            <Text style={styles.emptyText}>
+              No class teacher designations found in profiles.
+            </Text>
+          ) : null}
 
           <TouchableOpacity
             activeOpacity={0.86}
             onPress={handlePromote}
-            disabled={loading || !toClass}
+            disabled={loading || classesLoading || !toClass}
             style={[
               styles.primaryButton,
-              !toClass && styles.primaryButtonDisabled,
+              (!toClass || classesLoading) && styles.primaryButtonDisabled,
             ]}
           >
             {loading ? (
@@ -128,7 +167,7 @@ export function PromoteClassModal({
             <Text
               style={[
                 styles.primaryButtonText,
-                !toClass && styles.primaryButtonTextDisabled,
+                (!toClass || classesLoading) && styles.primaryButtonTextDisabled,
               ]}
             >
               Confirm Promotion
@@ -206,7 +245,29 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: 18,
     overflow: "hidden",
-    marginBottom: 20,
+    marginBottom: 12,
+  },
+  loadingRow: {
+    minHeight: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+  },
+  loadingText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+  },
+  emptyText: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "MullerMedium",
+    textAlign: "center",
+    marginBottom: 14,
   },
   primaryButton: {
     minHeight: 52,
