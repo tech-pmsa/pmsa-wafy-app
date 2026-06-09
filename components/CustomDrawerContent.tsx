@@ -27,8 +27,9 @@ import {
   CookingPot,
   LogOut,
   ClipboardList,
-  AlertTriangle,
-  ScrollText,
+  NotebookPen,
+  BarChart3,
+  FileCheck2,
 } from "lucide-react-native";
 import { theme } from "@/theme/theme";
 
@@ -49,6 +50,18 @@ const allNavItems = [
     href: "/(admin)/classleader/class-leader-dashboard",
     label: "Dashboard",
     icon: BookUser,
+    roles: ["class-leader"],
+  },
+  {
+    href: "/(admin)/classleader/portions",
+    label: "Portions",
+    icon: BarChart3,
+    roles: ["class-leader"],
+  },
+  {
+    href: "/(admin)/classleader/ce-work",
+    label: "CE Work",
+    icon: FileCheck2,
     roles: ["class-leader"],
   },
   {
@@ -94,6 +107,32 @@ const allNavItems = [
     roles: ["class"],
   },
   {
+    href: "/(admin)/classroom/internal-marks",
+    label: "Internal Marks",
+    icon: ClipboardList,
+    roles: ["class"],
+    minBatch: 17,
+  },
+  {
+    href: "/(admin)/classroom/homework",
+    label: "Homework",
+    icon: NotebookPen,
+    roles: ["class"],
+    minBatch: 17,
+  },
+  {
+    href: "/(admin)/classroom/portions-statistics",
+    label: "Portions",
+    icon: BarChart3,
+    roles: ["class"],
+  },
+  {
+    href: "/(admin)/classroom/ce-work-statistics",
+    label: "CE Work Statistics",
+    icon: FileCheck2,
+    roles: ["class"],
+  },
+  {
     href: "/(admin)/chef/chef-dashboard",
     label: "Dashboard",
     icon: CookingPot,
@@ -123,6 +162,11 @@ function stripGroupSegments(path: string) {
   return path.replace(/\/\([^)]+\)/g, "");
 }
 
+function getBatchNumber(batch?: string | null) {
+  const match = batch?.match(/Batch\s+(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
+
 export default function CustomDrawerContent(
   props: DrawerContentComponentProps
 ) {
@@ -132,8 +176,16 @@ export default function CustomDrawerContent(
   const normalizedPathname = stripGroupSegments(pathname);
 
   const accessibleNavItems = useMemo(
-    () => allNavItems.filter((item) => item.roles.includes(role || "")),
-    [role]
+    () =>
+      allNavItems.filter((item) => {
+        if (!item.roles.includes(role || "")) return false;
+        const minBatch = "minBatch" in item ? item.minBatch : undefined;
+        if (!minBatch) return true;
+
+        const batchNumber = getBatchNumber(details?.batch);
+        return !!batchNumber && batchNumber >= minBatch;
+      }),
+    [role, details?.batch]
   );
 
   const settingsRoute =

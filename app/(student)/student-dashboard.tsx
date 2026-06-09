@@ -15,9 +15,12 @@ import StudentAttendanceCard from "@/components/student/StudentAttendanceCard";
 import StudentFeeDashboard from "@/components/student/StudentFeeDashboard";
 import AchievementsForm from "@/components/student/AchievementsForm";
 import ApprovedAchievements from "@/components/student/ApprovedAchievements";
+import InternalMarksViewer, {
+  isInternalMarksBatch,
+} from "@/components/student/InternalMarksViewer";
 
 export default function StudentDashboardPage() {
-  const { details, loading } = useUserData();
+  const { user, details, loading } = useUserData();
 
   if (loading) {
     return (
@@ -58,7 +61,7 @@ export default function StudentDashboardPage() {
             <Text style={styles.heroSubtitleStrong}>
               {details?.name || "Student"}
             </Text>
-            . Here's a modern overview of your attendance, fees, and
+            . Here is a modern overview of your attendance, fees, and
             achievements.
           </Text>
         </View>
@@ -66,6 +69,9 @@ export default function StudentDashboardPage() {
         <View style={styles.sectionStack}>
           <StudentAttendanceCard />
           <StudentFeeDashboard />
+          {user?.id && isInternalMarksBatch(details?.batch) && (
+            <InternalMarksViewer studentUid={user.id} dashboard />
+          )}
           <AchievementsForm />
           <ApprovedAchievements />
         </View>

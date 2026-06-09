@@ -12,6 +12,7 @@ import {
   Switch,
   StyleSheet,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { decode } from "base64-arraybuffer";
@@ -32,6 +33,7 @@ import {
   X,
   PlusCircle,
   Trash2,
+  CalendarDays,
 } from "lucide-react-native";
 import { theme } from "@/theme/theme";
 
@@ -89,6 +91,42 @@ function InputField({
       />
     </View>
   );
+}
+
+function toDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDob(value?: string | null) {
+  if (!value) return "";
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year.slice(-2)}`;
+}
+
+function calculateAge(value?: string | null) {
+  if (!value) return null;
+  const dob = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(dob.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
+function dobDisplay(value?: string | null) {
+  const formatted = formatDob(value);
+  if (!formatted) return "";
+  const age = calculateAge(value);
+  return age === null ? formatted : `${formatted} (${age} years)`;
 }
 
 function SiblingCard({
@@ -220,6 +258,7 @@ export default function ProfileSection() {
   const [selectedAcademicEntry, setSelectedAcademicEntry] = useState<any | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [showDobPicker, setShowDobPicker] = useState(false);
 
   const [personalForm, setPersonalForm] = useState<any>({});
   const [familyData, setFamilyData] = useState<any>({});
@@ -329,12 +368,13 @@ export default function ProfileSection() {
         guardian,
         g_phone,
         address,
+        dob,
         designation,
         batch,
       } = personalForm;
 
       const updatedData = isStudent
-        ? { name, phone, guardian, g_phone, address }
+        ? { name, phone, guardian, g_phone, address, dob: dob || null }
         : { name, designation, batch };
 
       const { error: updateError } = await supabase
@@ -480,6 +520,11 @@ export default function ProfileSection() {
             {isStudent ? (
               <>
                 <ProfileInfoLine icon={UserCheck} label="CIC Number" value={details.cic} />
+                <ProfileInfoLine
+                  icon={CalendarDays}
+                  label="DOB"
+                  value={dobDisplay(details.dob)}
+                />
                 <ProfileInfoLine icon={Building} label="Class" value={details.class_id} />
                 <ProfileInfoLine icon={Shield} label="Council" value={details.council} />
                 <ProfileInfoLine icon={Phone} label="Phone" value={details.phone} />
@@ -572,6 +617,41 @@ export default function ProfileSection() {
                       onChangeText={(t) => setPersonalForm({ ...personalForm, phone: t })}
                     />
 
+                    <View style={styles.inputFieldWrap}>
+                      <Text style={styles.fieldLabel}>DOB</Text>
+                      <TouchableOpacity
+                        activeOpacity={0.84}
+                        onPress={() => setShowDobPicker(true)}
+                        style={styles.dateInput}
+                      >
+                        <CalendarDays size={18} color={theme.colors.textSecondary} />
+                        <Text style={styles.dateInputText}>
+                          {dobDisplay(personalForm.dob) || "Select date of birth"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {showDobPicker && (
+                      <DateTimePicker
+                        value={
+                          personalForm.dob
+                            ? new Date(`${personalForm.dob}T00:00:00`)
+                            : new Date(2005, 0, 1)
+                        }
+                        mode="date"
+                        maximumDate={new Date()}
+                        onChange={(_event, date) => {
+                          setShowDobPicker(false);
+                          if (date) {
+                            setPersonalForm({
+                              ...personalForm,
+                              dob: toDateValue(date),
+                            });
+                          }
+                        }}
+                      />
+                    )}
+
                     <InputField
                       label="Guardian Name"
                       value={personalForm.guardian || ""}
@@ -593,11 +673,19 @@ export default function ProfileSection() {
                     />
                   </>
                 ) : (
-                  <InputField
-                    label="Designation"
-                    value={personalForm.designation || ""}
-                    onChangeText={(t) => setPersonalForm({ ...personalForm, designation: t })}
-                  />
+                  <>
+                    <InputField
+                      label="Designation"
+                      value={personalForm.designation || ""}
+                      onChangeText={(t) => setPersonalForm({ ...personalForm, designation: t })}
+                    />
+
+                    <InputField
+                      label="Related Batch / Class"
+                      value={personalForm.batch || ""}
+                      onChangeText={(t) => setPersonalForm({ ...personalForm, batch: t })}
+                    />
+                  </>
                 )}
               </View>
             )}
@@ -966,6 +1054,24 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: 14,
     paddingBottom: 14,
+  },
+  dateInput: {
+    minHeight: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  dateInputText: {
+    flex: 1,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerMedium",
   },
   switchFieldWrap: {
     marginBottom: 14,

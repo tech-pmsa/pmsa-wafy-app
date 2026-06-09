@@ -52,7 +52,7 @@ export default function AppLoadingScreen() {
     <View style={styles.screen}>
       <Animated.View style={[styles.logoWrap, logoStyle]}>
         <Image
-          source={require("@/assets/images/logo.png")}
+          source={require("@/assets/images/icon.png")}
           style={styles.logo}
           resizeMode="contain"
         />

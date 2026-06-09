@@ -43,13 +43,28 @@ export function PromoteClassModal({
 
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke("admin-actions", {
+      const { data, error } = await supabase.functions.invoke("admin-actions", {
         body: { action: "promote_class", from_class: currentClass, to_class: toClass },
       });
 
-      if (error) throw error;
+      if (error) {
+        let message = error.message;
 
-      NativeAlert.alert("Success", `Promoted to ${toClass}`);
+        try {
+          const response = (error as any).context as Response | undefined;
+          const body = response ? await response.clone().json() : null;
+          if (body?.error) message = body.error;
+        } catch {
+          // Keep the SDK error message when the response body is unavailable.
+        }
+
+        throw new Error(message);
+      }
+
+      NativeAlert.alert(
+        "Success",
+        data?.message || `Promoted all students from ${currentClass} to ${toClass}.`
+      );
       onSave();
       setIsOpen(false);
     } catch (e: any) {
