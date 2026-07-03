@@ -18,6 +18,10 @@ import {
 } from "lucide-react-native";
 import { theme } from "@/theme/theme";
 
+function isOfferedHeader(header: string) {
+  return header.trim().toLowerCase() === "offered";
+}
+
 function PaymentRow({
   month,
   status,
@@ -94,9 +98,9 @@ export default function StudentFeeDashboard() {
     if (!feeData) return null;
 
     const { headers, studentRow } = feeData;
-    const monthHeaders = headers.slice(3);
+    const feeHeaders = headers.slice(3);
 
-    const payments = monthHeaders.map((month: string, i: number) => {
+    const payments = feeHeaders.map((month: string, i: number) => {
       const rawValue = (studentRow[3 + i] || "").trim().toLowerCase();
       const amount = parseFloat(rawValue);
       let status: "paid" | "unpaid" | "not_applicable" = "unpaid";
@@ -108,12 +112,18 @@ export default function StudentFeeDashboard() {
         month,
         status,
         amount: status === "paid" ? amount : 0,
+        countsInTotal: !isOfferedHeader(month),
       };
     });
 
-    const applicable = payments.filter((p: any) => p.status !== "not_applicable");
+    const applicable = payments.filter(
+      (p: any) => p.countsInTotal && p.status !== "not_applicable"
+    );
     const paidCount = applicable.filter((p: any) => p.status === "paid").length;
-    const totalPaid = payments.reduce((sum: number, p: any) => sum + p.amount, 0);
+    const totalPaid = payments.reduce(
+      (sum: number, p: any) => sum + (p.countsInTotal ? p.amount : 0),
+      0
+    );
 
     return { payments, paidCount, total: applicable.length, totalPaid };
   }, [feeData]);

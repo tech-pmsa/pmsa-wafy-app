@@ -30,6 +30,15 @@ const screenWidth = Dimensions.get("window").width;
 
 type SheetData = Record<string, { headers: string[]; rows: string[][] }>;
 
+function isOfferedHeader(header: string) {
+  return header.trim().toLowerCase() === "offered";
+}
+
+function parseFeeAmount(value: string | undefined) {
+  const amount = parseFloat((value || "").trim().toLowerCase());
+  return Number.isNaN(amount) ? 0 : amount;
+}
+
 function StatCard({
   title,
   value,
@@ -147,10 +156,14 @@ function StudentFeeList({
             month: header,
             status,
             amount: status === "paid" ? amount : 0,
+            countsInTotal: !isOfferedHeader(header),
           };
         });
 
-        const totalAmountPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+        const totalAmountPaid = payments.reduce(
+          (sum, p) => sum + (p.countsInTotal ? p.amount : 0),
+          0
+        );
         const isExpanded = expandedId === idx;
 
         return (
@@ -215,6 +228,15 @@ function FeeSheetContent({
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const { headers, rows } = sheetData;
+  const feeHeaders = useMemo(() => headers.slice(3), [headers]);
+  const monthlyColumnIndexes = useMemo(
+    () =>
+      feeHeaders
+        .map((header, index) => ({ header, columnIndex: index + 3 }))
+        .filter(({ header }) => !isOfferedHeader(header))
+        .map(({ columnIndex }) => columnIndex),
+    [feeHeaders]
+  );
 
   const filteredRows = useMemo(() => {
     let baseRows = rows;
@@ -237,10 +259,10 @@ function FeeSheetContent({
     let totalCollected = 0;
 
     rows.forEach((row) => {
-      totalCollected += row.slice(3).reduce((sum, cell) => {
-        const val = parseFloat(cell || "0");
-        return sum + (isNaN(val) ? 0 : val);
-      }, 0);
+      totalCollected += monthlyColumnIndexes.reduce(
+        (sum, columnIndex) => sum + parseFeeAmount(row[columnIndex]),
+        0
+      );
     });
 
     const averagePaid = rows.length > 0 ? totalCollected / rows.length : 0;
@@ -252,20 +274,20 @@ function FeeSheetContent({
         maximumFractionDigits: 0,
       })}`,
     };
-  }, [rows]);
+  }, [rows, monthlyColumnIndexes]);
 
   const chartData = useMemo(() => {
     const allStudentsData = rows.map((row) => {
-      const totalPaid = row.slice(3).reduce((sum, cell) => {
-        const val = parseFloat(cell || "0");
-        return sum + (isNaN(val) ? 0 : val);
-      }, 0);
+      const totalPaid = monthlyColumnIndexes.reduce(
+        (sum, columnIndex) => sum + parseFeeAmount(row[columnIndex]),
+        0
+      );
 
       return { cic: String(row[1] || "N/A"), total: totalPaid };
     });
 
     return allStudentsData.sort((a, b) => b.total - a.total).slice(0, 10);
-  }, [rows]);
+  }, [rows, monthlyColumnIndexes]);
 
   return (
     <View style={styles.sheetWrap}>
@@ -349,7 +371,7 @@ function FeeSheetContent({
         />
       </View>
 
-      <StudentFeeList rows={filteredRows} monthHeaders={headers.slice(3)} />
+      <StudentFeeList rows={filteredRows} monthHeaders={feeHeaders} />
     </View>
   );
 }
