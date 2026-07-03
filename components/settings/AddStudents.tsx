@@ -8,15 +8,14 @@ import {
   Alert as NativeAlert,
   ScrollView,
   StyleSheet,
+  Modal,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import {
   User,
-  GraduationCap,
-  Phone,
   CheckCircle2,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Sparkles,
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabaseClient";
@@ -25,7 +24,7 @@ import { theme } from "@/theme/theme";
 const initialFormData = {
   name: "",
   cic: "",
-  class_id: "TH-1",
+  class_id: "Foundation 8",
   council: "",
   batch: "",
   phone: "",
@@ -38,14 +37,15 @@ const initialFormData = {
 };
 
 const classOptions = [
+  "Foundation 8",
+  "Foundation 9",
+  "Foundation 10",
   "TH-1",
   "TH-2",
   "AL-1",
   "AL-2",
   "AL-3",
   "AL-4",
-  "Foundation A",
-  "Foundation B",
 ];
 
 function SectionTitle({
@@ -122,6 +122,7 @@ export default function AddStudents() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState(initialFormData);
   const [loading, setLoading] = useState(false);
+  const [classPickerOpen, setClassPickerOpen] = useState(false);
 
   const nextStep = () => setStep((prev) => (prev < 4 ? prev + 1 : prev));
   const prevStep = () => setStep((prev) => (prev > 1 ? prev - 1 : prev));
@@ -249,22 +250,14 @@ export default function AddStudents() {
 
             <View style={styles.fieldWrap}>
               <Text style={styles.fieldLabel}>Class ID</Text>
-              <View style={styles.pickerWrap}>
-                <Picker
-                  selectedValue={formData.class_id}
-                  onValueChange={(v) => setFormData({ ...formData, class_id: v })}
-                  style={{ color: theme.colors.text }}
-                >
-                  {classOptions.map((opt) => (
-                    <Picker.Item
-                      key={opt}
-                      label={opt}
-                      value={opt}
-                      color={theme.colors.text}
-                    />
-                  ))}
-                </Picker>
-              </View>
+              <TouchableOpacity
+                activeOpacity={0.84}
+                onPress={() => setClassPickerOpen(true)}
+                style={styles.classSelectButton}
+              >
+                <Text style={styles.classSelectText}>{formData.class_id}</Text>
+                <ChevronDown size={18} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
             </View>
 
             <InputField
@@ -364,6 +357,57 @@ export default function AddStudents() {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={classPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setClassPickerOpen(false)}
+      >
+        <View style={styles.classPickerOverlay}>
+          <View style={styles.classPickerCard}>
+            <Text style={styles.classPickerTitle}>Select Class ID</Text>
+
+            <View style={styles.classPickerList}>
+              {classOptions.map((opt) => {
+                const selected = formData.class_id === opt;
+
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    activeOpacity={0.82}
+                    onPress={() => {
+                      setFormData({ ...formData, class_id: opt });
+                      setClassPickerOpen(false);
+                    }}
+                    style={[
+                      styles.classPickerItem,
+                      selected && styles.classPickerItemActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.classPickerItemText,
+                        selected && styles.classPickerItemTextActive,
+                      ]}
+                    >
+                      {opt}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.84}
+              onPress={() => setClassPickerOpen(false)}
+              style={styles.classPickerCancel}
+            >
+              <Text style={styles.classPickerCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <View style={styles.footerRow}>
         {step > 1 ? (
@@ -542,12 +586,83 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 14,
   },
-  pickerWrap: {
+  classSelectButton: {
+    minHeight: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  classSelectText: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerMedium",
+  },
+  classPickerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15,23,42,0.35)",
+    justifyContent: "center",
+    paddingHorizontal: 22,
+  },
+  classPickerCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    ...theme.shadows.floating,
+  },
+  classPickerTitle: {
+    color: theme.colors.text,
+    fontSize: 17,
+    lineHeight: 22,
+    fontFamily: "MullerBold",
+    marginBottom: 12,
+  },
+  classPickerList: {
+    gap: 8,
+  },
+  classPickerItem: {
+    minHeight: 46,
+    borderRadius: 14,
     backgroundColor: theme.colors.surfaceSoft,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 18,
-    overflow: "hidden",
+    paddingHorizontal: 14,
+    justifyContent: "center",
+  },
+  classPickerItemActive: {
+    backgroundColor: theme.colors.primarySoft,
+    borderColor: theme.colors.primaryTint,
+  },
+  classPickerItemText: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: "MullerMedium",
+  },
+  classPickerItemTextActive: {
+    color: theme.colors.primary,
+    fontFamily: "MullerBold",
+  },
+  classPickerCancel: {
+    minHeight: 46,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+  classPickerCancelText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: "MullerBold",
   },
   reviewStackMain: {
     gap: 12,
