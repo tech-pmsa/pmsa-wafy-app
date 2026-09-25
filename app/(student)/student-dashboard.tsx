@@ -15,12 +15,9 @@ import StudentAttendanceCard from "@/components/student/StudentAttendanceCard";
 import StudentFeeDashboard from "@/components/student/StudentFeeDashboard";
 import AchievementsForm from "@/components/student/AchievementsForm";
 import ApprovedAchievements from "@/components/student/ApprovedAchievements";
-import InternalMarksViewer, {
-  isInternalMarksBatch,
-} from "@/components/student/InternalMarksViewer";
 
 export default function StudentDashboardPage() {
-  const { user, details, loading } = useUserData();
+  const { details, loading } = useUserData();
 
   if (loading) {
     return (
@@ -69,9 +66,6 @@ export default function StudentDashboardPage() {
         <View style={styles.sectionStack}>
           <StudentAttendanceCard />
           <StudentFeeDashboard />
-          {user?.id && isInternalMarksBatch(details?.batch) && (
-            <InternalMarksViewer studentUid={user.id} dashboard />
-          )}
           <AchievementsForm />
           <ApprovedAchievements />
         </View>

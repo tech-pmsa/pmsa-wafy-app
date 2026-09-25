@@ -61,14 +61,6 @@ export default function AdminLayout() {
         options={{ title: "Notifications" }}
       />
       <Drawer.Screen
-        name="classroom/internal-marks"
-        options={{ title: "Internal Marks" }}
-      />
-      <Drawer.Screen
-        name="classroom/homework"
-        options={{ title: "Homework" }}
-      />
-      <Drawer.Screen
         name="classleader/class-leader-dashboard"
         options={{ title: "Class Leader Dashboard" }}
       />
@@ -86,7 +78,7 @@ export default function AdminLayout() {
       />
       <Drawer.Screen
         name="classroom/ce-work-statistics"
-        options={{ title: "CE Work Statistics" }}
+        options={{ title: "CE Work" }}
       />
       <Drawer.Screen
         name="chef/chef-dashboard"

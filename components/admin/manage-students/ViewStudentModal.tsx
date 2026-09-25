@@ -27,9 +27,6 @@ import {
   UserCheck,
 } from "lucide-react-native";
 import { ProfileInfoLine } from "@/components/settings/profile/ProfileInfoLine";
-import InternalMarksViewer, {
-  isInternalMarksBatch,
-} from "@/components/student/InternalMarksViewer";
 import { theme } from "@/theme/theme";
 
 function TabButton({
@@ -71,7 +68,7 @@ function SectionCard({
 
 export function ViewStudentModal({ isOpen, setIsOpen, student }: any) {
   const [activeTab, setActiveTab] = useState<
-    "personal" | "internal" | "academics" | "family"
+    "personal" | "academics" | "family"
   >("personal");
   const [familyData, setFamilyData] = useState<any | null>(null);
   const [academicEntries, setAcademicEntries] = useState<any[]>([]);
@@ -119,7 +116,7 @@ export function ViewStudentModal({ isOpen, setIsOpen, student }: any) {
     ],
     [student]
   );
-  const showInternal = isInternalMarksBatch(student?.batch);
+
 
   if (!student) return null;
 
@@ -167,13 +164,7 @@ export function ViewStudentModal({ isOpen, setIsOpen, student }: any) {
               active={activeTab === "personal"}
               onPress={() => setActiveTab("personal")}
             />
-            {showInternal && (
-              <TabButton
-                label="Internal"
-                active={activeTab === "internal"}
-                onPress={() => setActiveTab("internal")}
-              />
-            )}
+
             <TabButton
               label="Academics"
               active={activeTab === "academics"}
@@ -205,11 +196,7 @@ export function ViewStudentModal({ isOpen, setIsOpen, student }: any) {
                 </SectionCard>
               )}
 
-              {activeTab === "internal" && showInternal && (
-                <SectionCard title="Internal Marks">
-                  <InternalMarksViewer studentUid={student.uid} />
-                </SectionCard>
-              )}
+
 
               {activeTab === "academics" && (
                 <SectionCard title="Academic Records">

@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabaseClient";
+
 export type Semester = "SEM-1" | "SEM-2";
 
 export type WeekBlock = {
@@ -124,3 +126,103 @@ export function n(value: any) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
+
+export type ClassOption = {
+  id: string;
+  label: string;
+  queryKeys: string[];
+};
+
+export async function fetchClassOptions(
+  sourceTable?: "portion_subjects" | "ce_work_items"
+): Promise<ClassOption[]> {
+  try {
+    const { data: students, error: studentsError } = await supabase
+      .from("students")
+      .select("class_id, batch");
+
+    if (studentsError) throw studentsError;
+
+    const classMap: Record<string, Set<string>> = {};
+
+    (students || []).forEach((s: any) => {
+      const classId = s.class_id?.trim();
+      const batch = s.batch?.trim();
+      if (!classId && !batch) return;
+
+      const primaryKey = classId || batch;
+      if (!classMap[primaryKey]) {
+        classMap[primaryKey] = new Set<string>();
+      }
+      if (classId) {
+        classMap[primaryKey].add(classId);
+        classMap[primaryKey].add(`${classId} Class`);
+      }
+      if (batch) {
+        classMap[primaryKey].add(batch);
+        classMap[primaryKey].add(`${batch} Class`);
+      }
+    });
+
+    if (sourceTable) {
+      const { data: sourceRows } = await supabase
+        .from(sourceTable)
+        .select("batch");
+
+      (sourceRows || []).forEach((row: any) => {
+        const batch = row.batch?.trim();
+        if (!batch) return;
+
+        const alreadyCovered = Object.values(classMap).some((keys) =>
+          keys.has(batch)
+        );
+        if (!alreadyCovered) {
+          if (!classMap[batch]) {
+            classMap[batch] = new Set<string>();
+          }
+          classMap[batch].add(batch);
+        }
+      });
+    }
+
+    const options: ClassOption[] = Object.keys(classMap)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }))
+      .map((key) => ({
+        id: key,
+        label: key,
+        queryKeys: Array.from(classMap[key]),
+      }));
+
+    return options;
+  } catch (err) {
+    console.error("Failed to fetch class options:", err);
+    return [];
+  }
+}
+
+export function findMatchingClass(
+  classes: ClassOption[],
+  userBatch?: string | null,
+  userDesignation?: string | null
+): string {
+  if (!classes.length) return "";
+  const b = userBatch?.trim() || "";
+  const d = userDesignation?.trim() || "";
+  const cleanD = d.replace(/\s+Class$/i, "").trim();
+
+  const match = classes.find(
+    (c) =>
+      c.id === b ||
+      c.id === d ||
+      c.id === cleanD ||
+      c.label === b ||
+      c.label === d ||
+      c.label === cleanD ||
+      c.queryKeys.includes(b) ||
+      c.queryKeys.includes(d) ||
+      c.queryKeys.includes(cleanD)
+  );
+
+  return match ? match.id : classes[0].id;
+}
+
