@@ -54,7 +54,7 @@ const allNavItems = [
     href: "/(admin)/classleader/portions",
     label: "Portions",
     icon: BarChart3,
-    roles: ["class-leader"],
+    roles: ["class-leader", "class"],
   },
   {
     href: "/(admin)/classleader/ce-work",
@@ -108,7 +108,7 @@ const allNavItems = [
     href: "/(admin)/classroom/portions-statistics",
     label: "Portions",
     icon: BarChart3,
-    roles: ["class", "staff"],
+    roles: ["staff", "officer"],
   },
   {
     href: "/(admin)/classroom/ce-work-statistics",

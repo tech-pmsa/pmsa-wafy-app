@@ -83,18 +83,46 @@ export default function ClassLeaderPortionsPage() {
   const academicYear = getAcademicYearBase();
 
   const loadData = useCallback(async () => {
-    if (!batch) {
+    if (!batch && !details?.batch && !details?.designation) {
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
+      const batchKeys = new Set<string>();
+      if (batch) batchKeys.add(batch);
+      if (details?.batch) batchKeys.add(details.batch);
+      if (details?.designation) {
+        batchKeys.add(details.designation);
+        batchKeys.add(details.designation.replace(/\s+Class$/i, ""));
+      }
+
+      const lookupBatch = details?.batch || batch;
+      if (lookupBatch) {
+        const { data: relatedStudents } = await supabase
+          .from("students")
+          .select("class_id, batch")
+          .or(`batch.eq.${lookupBatch},class_id.eq.${lookupBatch}`);
+
+        (relatedStudents || []).forEach((student: any) => {
+          if (student.class_id) {
+            batchKeys.add(student.class_id);
+            batchKeys.add(`${student.class_id} Class`);
+          }
+          if (student.batch) {
+            batchKeys.add(student.batch);
+          }
+        });
+      }
+
+      const keys = Array.from(batchKeys).filter(Boolean);
+
       const [excludedRes, subjectsRes] = await Promise.all([
         supabase.from("portion_calendar_exclusions").select("*").eq("semester", semester),
         supabase
           .from("portion_subjects")
           .select("*")
-          .eq("batch", batch)
+          .in("batch", keys.length ? keys : [batch])
           .eq("semester", semester)
           .order("subject_name"),
       ]);
@@ -113,7 +141,7 @@ export default function ClassLeaderPortionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [batch, semester, selectedSubjectId]);
+  }, [batch, details?.batch, details?.designation, semester, selectedSubjectId]);
 
   useEffect(() => {
     if (!userLoading) loadData();
@@ -241,9 +269,17 @@ export default function ClassLeaderPortionsPage() {
 
     setSavingSubject(true);
     try {
+      const targetBatch =
+        editingSubject?.batch ||
+        subjects[0]?.batch ||
+        batch ||
+        details?.batch ||
+        details?.designation ||
+        "";
+
       const payload = {
         id: editingSubject?.id,
-        batch,
+        batch: targetBatch,
         semester,
         subject_name: form.subject_name.trim().toUpperCase(),
         teacher_name: form.teacher_name.trim().toUpperCase(),
@@ -339,10 +375,10 @@ export default function ClassLeaderPortionsPage() {
     );
   }
 
-  if (role !== "class-leader") {
+  if (role !== "class-leader" && role !== "class") {
     return (
       <SafeAreaView style={styles.stateScreen} edges={["left", "right", "bottom"]}>
-        <Text style={styles.emptyTitle}>Portions is only for class leaders.</Text>
+        <Text style={styles.emptyTitle}>Portions is only for class teachers and class leaders.</Text>
       </SafeAreaView>
     );
   }
