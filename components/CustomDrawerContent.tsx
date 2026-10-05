@@ -60,7 +60,7 @@ const allNavItems = [
     href: "/(admin)/classleader/ce-work",
     label: "CE Work",
     icon: FileCheck2,
-    roles: ["class-leader"],
+    roles: ["class-leader", "class"],
   },
   {
     href: "/(admin)/staff/staff-dashboard",
@@ -114,7 +114,7 @@ const allNavItems = [
     href: "/(admin)/classroom/ce-work-statistics",
     label: "CE Work",
     icon: FileCheck2,
-    roles: ["class", "staff"],
+    roles: ["staff", "officer"],
   },
   {
     href: "/(admin)/chef/chef-dashboard",

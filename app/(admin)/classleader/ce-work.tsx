@@ -43,13 +43,62 @@ export default function CEWorkPage() {
   const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!batch) return;
+    if (!batch && !details?.batch && !details?.designation) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
+      const batchKeys = new Set<string>();
+      if (batch) {
+        batchKeys.add(batch);
+        batchKeys.add(batch.replace(/\s+Class$/i, ""));
+      }
+      if (details?.batch) {
+        batchKeys.add(details.batch);
+        batchKeys.add(details.batch.replace(/\s+Class$/i, ""));
+      }
+      if (details?.designation) {
+        batchKeys.add(details.designation);
+        batchKeys.add(details.designation.replace(/\s+Class$/i, ""));
+      }
+
+      const lookupBatch = details?.batch || batch;
+      if (lookupBatch) {
+        const { data: relatedStudents } = await supabase
+          .from("students")
+          .select("class_id, batch")
+          .or(`batch.eq.${lookupBatch},class_id.eq.${lookupBatch}`);
+
+        (relatedStudents || []).forEach((student: any) => {
+          if (student.class_id) {
+            batchKeys.add(student.class_id);
+            batchKeys.add(`${student.class_id} Class`);
+          }
+          if (student.batch) {
+            batchKeys.add(student.batch);
+          }
+        });
+      }
+
+      const keys = Array.from(batchKeys).filter(Boolean);
+
       const [worksRes, batchStudentsRes, classStudentsRes] = await Promise.all([
-        supabase.from("ce_work_items").select("*").eq("batch", batch).order("submission_date", { ascending: false }),
-        supabase.from("students").select("uid, name, cic").eq("batch", batch).order("name"),
-        supabase.from("students").select("uid, name, cic").eq("class_id", classId).order("name"),
+        supabase
+          .from("ce_work_items")
+          .select("*")
+          .in("batch", keys.length ? keys : [batch])
+          .order("submission_date", { ascending: false }),
+        supabase
+          .from("students")
+          .select("uid, name, cic")
+          .in("batch", keys.length ? keys : [batch])
+          .order("name"),
+        supabase
+          .from("students")
+          .select("uid, name, cic")
+          .in("class_id", keys.length ? keys : [classId])
+          .order("name"),
       ]);
       if (worksRes.error) throw worksRes.error;
       if (batchStudentsRes.error) throw batchStudentsRes.error;
@@ -104,7 +153,7 @@ export default function CEWorkPage() {
     } finally {
       setLoading(false);
     }
-  }, [batch, classId]);
+  }, [batch, classId, details?.batch, details?.designation]);
 
   useEffect(() => {
     if (!userLoading) loadData();
@@ -137,16 +186,22 @@ export default function CEWorkPage() {
   };
 
   const saveWork = async () => {
-    if (!batch || !user?.id) return;
+    if (!batch && !details?.batch && !details?.designation) return;
+    if (!user?.id) return;
     if (!form.work_name.trim() || !form.subject_name.trim()) {
       NativeAlert.alert("Required", "Work name and subject are required.");
       return;
     }
     setSaving(true);
     try {
+      const primaryBatch =
+        editingWork?.batch ||
+        details?.designation?.replace(/\s+Class$/i, "") ||
+        details?.batch ||
+        batch;
       const { data, error } = await supabase.from("ce_work_items").upsert({
         id: editingWork?.id,
-        batch,
+        batch: primaryBatch,
         work_name: form.work_name.trim(),
         subject_name: form.subject_name.trim().toUpperCase(),
         started_date: form.started_date,
@@ -216,7 +271,7 @@ export default function CEWorkPage() {
   };
 
   if (userLoading || loading) return <SafeAreaView style={styles.stateScreen}><ActivityIndicator size="large" color={theme.colors.primary} /></SafeAreaView>;
-  if (role !== "class-leader") return <SafeAreaView style={styles.stateScreen}><Text style={styles.emptyTitle}>CE Work is only for class leaders.</Text></SafeAreaView>;
+  if (role !== "class-leader" && role !== "class") return <SafeAreaView style={styles.stateScreen}><Text style={styles.emptyTitle}>CE Work is only for class teachers and class leaders.</Text></SafeAreaView>;
 
   return (
     <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
@@ -266,8 +321,20 @@ export default function CEWorkPage() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalTop}><Text style={styles.modalTitle}>{editingWork ? "Edit CE Work" : "Add CE Work"}</Text><TouchableOpacity onPress={() => setModalOpen(false)}><X size={20} color={theme.colors.text} /></TouchableOpacity></View>
-            <TextInput value={form.work_name} onChangeText={(v) => setForm({ ...form, work_name: v })} placeholder="Work name" style={styles.input} />
-            <TextInput value={form.subject_name} onChangeText={(v) => setForm({ ...form, subject_name: v })} placeholder="Sub" style={styles.input} />
+            <TextInput
+              value={form.work_name}
+              onChangeText={(v) => setForm({ ...form, work_name: v })}
+              placeholder="Work name"
+              placeholderTextColor="#000000"
+              style={styles.input}
+            />
+            <TextInput
+              value={form.subject_name}
+              onChangeText={(v) => setForm({ ...form, subject_name: v })}
+              placeholder="Sub"
+              placeholderTextColor="#000000"
+              style={styles.input}
+            />
             <TouchableOpacity onPress={() => setDateField("started_date")} style={styles.dateButton}><CalendarDays size={17} color={theme.colors.primary} /><Text style={styles.dateText}>SD: {displayDate(form.started_date)}</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => setDateField("submission_date")} style={styles.dateButton}><CalendarDays size={17} color={theme.colors.primary} /><Text style={styles.dateText}>SB: {displayDate(form.submission_date)}</Text></TouchableOpacity>
             {dateField && <DateTimePicker value={new Date(`${form[dateField]}T00:00:00`)} mode="date" onChange={(_, date) => { setDateField(null); if (date) setForm({ ...form, [dateField]: toDateValue(date) }); }} />}

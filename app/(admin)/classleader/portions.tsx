@@ -490,8 +490,22 @@ export default function ClassLeaderPortionsPage() {
                       </View>
                       <Text style={styles.subjectLine}>{displayDate(week.dateFrom)} to {displayDate(week.dateTo)}</Text>
                       <View style={styles.inputRow}>
-                        <TextInput value={String(row?.period_taken ?? "")} onChangeText={(v) => updateProgressDraft(week.key, "period_taken", v)} placeholder="Period taken" keyboardType="numeric" style={styles.input} />
-                        <TextInput value={String(row?.pages_taken ?? "")} onChangeText={(v) => updateProgressDraft(week.key, "pages_taken", v)} placeholder="Pages taken" keyboardType="numeric" style={styles.input} />
+                        <TextInput
+                          value={String(row?.period_taken ?? "")}
+                          onChangeText={(v) => updateProgressDraft(week.key, "period_taken", v)}
+                          placeholder="Period taken"
+                          placeholderTextColor="#000000"
+                          keyboardType="numeric"
+                          style={styles.input}
+                        />
+                        <TextInput
+                          value={String(row?.pages_taken ?? "")}
+                          onChangeText={(v) => updateProgressDraft(week.key, "pages_taken", v)}
+                          placeholder="Pages taken"
+                          placeholderTextColor="#000000"
+                          keyboardType="numeric"
+                          style={styles.input}
+                        />
                       </View>
                     </View>
                   );
@@ -513,14 +527,47 @@ export default function ClassLeaderPortionsPage() {
               <Text style={styles.modalTitle}>{editingSubject ? "Edit Subject" : "Add Subject"}</Text>
               <TouchableOpacity onPress={() => setSubjectModalOpen(false)} style={styles.closeButton}><X size={18} color={theme.colors.text} /></TouchableOpacity>
             </View>
-            <TextInput value={form.subject_name} onChangeText={(v) => setForm({ ...form, subject_name: v })} placeholder="Subject shortform" style={styles.modalInput} />
-            <TextInput value={form.teacher_name} onChangeText={(v) => setForm({ ...form, teacher_name: v })} placeholder="Teacher shortform" style={styles.modalInput} />
+            <TextInput
+              value={form.subject_name}
+              onChangeText={(v) => setForm({ ...form, subject_name: v })}
+              placeholder="Subject shortform"
+              placeholderTextColor="#000000"
+              style={styles.modalInput}
+            />
+            <TextInput
+              value={form.teacher_name}
+              onChangeText={(v) => setForm({ ...form, teacher_name: v })}
+              placeholder="Teacher shortform"
+              placeholderTextColor="#000000"
+              style={styles.modalInput}
+            />
             <Text style={styles.hint}>TPgS: count manually from syllabus pages.</Text>
-            <TextInput value={form.total_pages} onChangeText={(v) => setForm({ ...form, total_pages: v })} placeholder="TPgS - total pages" keyboardType="numeric" style={styles.modalInput} />
+            <TextInput
+              value={form.total_pages}
+              onChangeText={(v) => setForm({ ...form, total_pages: v })}
+              placeholder="TPgS - total pages"
+              placeholderTextColor="#000000"
+              keyboardType="numeric"
+              style={styles.modalInput}
+            />
             <Text style={styles.hint}>TLp: get from syllabus PDF.</Text>
-            <TextInput value={form.total_period} onChangeText={(v) => setForm({ ...form, total_period: v })} placeholder="TLp - total period" keyboardType="numeric" style={styles.modalInput} />
+            <TextInput
+              value={form.total_period}
+              onChangeText={(v) => setForm({ ...form, total_period: v })}
+              placeholder="TLp - total period"
+              placeholderTextColor="#000000"
+              keyboardType="numeric"
+              style={styles.modalInput}
+            />
             <Text style={styles.hint}>TLP/W: crosscheck syllabus period/week with college timetable.</Text>
-            <TextInput value={form.period_per_week} onChangeText={(v) => setForm({ ...form, period_per_week: v })} placeholder="TLP/W - period per week" keyboardType="numeric" style={styles.modalInput} />
+            <TextInput
+              value={form.period_per_week}
+              onChangeText={(v) => setForm({ ...form, period_per_week: v })}
+              placeholder="TLP/W - period per week"
+              placeholderTextColor="#000000"
+              keyboardType="numeric"
+              style={styles.modalInput}
+            />
             <TouchableOpacity onPress={saveSubject} style={styles.saveButton} disabled={savingSubject}>
               {savingSubject ? <ActivityIndicator color={theme.colors.textOnDark} /> : <Save size={17} color={theme.colors.textOnDark} />}
               <Text style={styles.saveButtonText}>Save</Text>
