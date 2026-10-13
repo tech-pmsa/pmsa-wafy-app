@@ -15,6 +15,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { theme } from "@/theme/theme";
 import { AlertCircle, RefreshCcw, LogOut } from "lucide-react-native";
 import AppLoadingScreen from "@/components/ui/AppLoadingScreen";
+import { syncCeWorkNotifications } from "@/lib/ceWorkNotificationService";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -131,6 +132,7 @@ export default function RootLayout() {
     if (result.ok) {
       setRole(result.role);
       setRoleError(null);
+      syncCeWorkNotifications(result.role, activeSession.user.id);
     } else {
       setRole(null);
       setRoleError(result.message);

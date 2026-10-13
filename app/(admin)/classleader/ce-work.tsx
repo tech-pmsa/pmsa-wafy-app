@@ -1,23 +1,55 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert as NativeAlert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert as NativeAlert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CalendarDays, ChevronDown, ChevronUp, Edit, Plus, Save, Trash2, X } from "lucide-react-native";
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
+  Edit,
+  Plus,
+  Save,
+  Trash2,
+  X,
+} from "lucide-react-native";
 import { supabase } from "@/lib/supabaseClient";
 import { useUserData } from "@/hooks/useUserData";
 import { theme } from "@/theme/theme";
-import { displayDate, toDateValue } from "@/lib/portionUtils";
+import { Semester, displayDate, toDateValue } from "@/lib/portionUtils";
+import { CE_WORK_OPTIONS } from "@/app/(admin)/classroom/ce-work-statistics";
+import { syncCeWorkNotifications } from "@/lib/ceWorkNotificationService";
 
 type Work = {
   id: string;
   batch: string;
+  semester: Semester;
   work_name: string;
   subject_name: string;
+  teacher_name?: string | null;
   started_date: string;
   submission_date: string;
+  mark?: number | null;
 };
 
-const blank = { work_name: "", subject_name: "", started_date: toDateValue(new Date()), submission_date: toDateValue(new Date()) };
+const blank = {
+  work_name: CE_WORK_OPTIONS[0],
+  custom_work_name: "",
+  subject_name: "",
+  teacher_name: "",
+  started_date: toDateValue(new Date()),
+  submission_date: toDateValue(new Date()),
+  mark: "",
+};
 
 function batchFrom(details: any) {
   return details?.designation || details?.batch || "";
@@ -31,6 +63,8 @@ export default function CEWorkPage() {
   const { user, details, role, loading: userLoading } = useUserData();
   const batch = batchFrom(details);
   const classId = classIdFrom(details);
+
+  const [semester, setSemester] = useState<Semester>("SEM-1");
   const [works, setWorks] = useState<Work[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [workStudents, setWorkStudents] = useState<any[]>([]);
@@ -39,6 +73,7 @@ export default function CEWorkPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingWork, setEditingWork] = useState<Work | null>(null);
   const [form, setForm] = useState(blank);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dateField, setDateField] = useState<"started_date" | "submission_date" | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -88,6 +123,7 @@ export default function CEWorkPage() {
           .from("ce_work_items")
           .select("*")
           .in("batch", keys.length ? keys : [batch])
+          .eq("semester", semester)
           .order("submission_date", { ascending: false }),
         supabase
           .from("students")
@@ -153,7 +189,7 @@ export default function CEWorkPage() {
     } finally {
       setLoading(false);
     }
-  }, [batch, classId, details?.batch, details?.designation]);
+  }, [batch, classId, details?.batch, details?.designation, semester]);
 
   useEffect(() => {
     if (!userLoading) loadData();
@@ -171,24 +207,36 @@ export default function CEWorkPage() {
   const openAdd = () => {
     setEditingWork(null);
     setForm(blank);
+    setDropdownOpen(false);
     setModalOpen(true);
   };
 
   const openEdit = (work: Work) => {
     setEditingWork(work);
+    const isCustom = !CE_WORK_OPTIONS.includes(work.work_name);
     setForm({
-      work_name: work.work_name,
+      work_name: isCustom ? "Other" : work.work_name,
+      custom_work_name: isCustom ? work.work_name : "",
       subject_name: work.subject_name,
+      teacher_name: work.teacher_name || "",
       started_date: work.started_date,
       submission_date: work.submission_date,
+      mark: work.mark !== undefined && work.mark !== null ? String(work.mark) : "",
     });
+    setDropdownOpen(false);
     setModalOpen(true);
   };
 
   const saveWork = async () => {
     if (!batch && !details?.batch && !details?.designation) return;
     if (!user?.id) return;
-    if (!form.work_name.trim() || !form.subject_name.trim()) {
+
+    const chosenName =
+      form.work_name === "Other"
+        ? form.custom_work_name.trim()
+        : form.work_name.trim();
+
+    if (!chosenName || !form.subject_name.trim()) {
       NativeAlert.alert("Required", "Work name and subject are required.");
       return;
     }
@@ -202,10 +250,13 @@ export default function CEWorkPage() {
       const { data, error } = await supabase.from("ce_work_items").upsert({
         id: editingWork?.id,
         batch: primaryBatch,
-        work_name: form.work_name.trim(),
+        semester,
+        work_name: chosenName,
         subject_name: form.subject_name.trim().toUpperCase(),
+        teacher_name: form.teacher_name.trim() || null,
         started_date: form.started_date,
         submission_date: form.submission_date,
+        mark: form.mark ? Number(form.mark) : 0,
         created_by: user.id,
       }).select().single();
       if (error) throw error;
@@ -225,6 +276,8 @@ export default function CEWorkPage() {
         }
       }
 
+      syncCeWorkNotifications("staff", user.id);
+
       setModalOpen(false);
       loadData();
     } catch (err: any) {
@@ -243,7 +296,10 @@ export default function CEWorkPage() {
         onPress: async () => {
           const { error } = await supabase.from("ce_work_items").delete().eq("id", work.id);
           if (error) NativeAlert.alert("Error", error.message);
-          else loadData();
+          else {
+            syncCeWorkNotifications("staff", user?.id);
+            loadData();
+          }
         },
       },
     ]);
@@ -277,10 +333,30 @@ export default function CEWorkPage() {
     <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
       <View style={styles.header}>
         <Text style={styles.title}>CE Work</Text>
-        <Text style={styles.subtitle}>{batch} CE submission tracking.</Text>
+        <Text style={styles.subtitle}>{batch} ({semester}) CE submission tracking.</Text>
       </View>
+
+      {/* Semester Tabs */}
+      <View style={styles.semTabs}>
+        {(["SEM-1", "SEM-2"] as Semester[]).map((sem) => (
+          <TouchableOpacity
+            key={sem}
+            onPress={() => setSemester(sem)}
+            style={[styles.semTab, semester === sem && styles.semTabActive]}
+          >
+            <Text style={[styles.semTabText, semester === sem && styles.semTabTextActive]}>
+              {sem === "SEM-1" ? "SEM 1" : "SEM 2"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <TouchableOpacity onPress={openAdd} style={styles.addButton}><Plus size={17} color={theme.colors.textOnDark} /><Text style={styles.addButtonText}>Add CE Work</Text></TouchableOpacity>
+        <TouchableOpacity onPress={openAdd} style={styles.addButton}>
+          <Plus size={17} color={theme.colors.textOnDark} />
+          <Text style={styles.addButtonText}>Add CE Work ({semester})</Text>
+        </TouchableOpacity>
+
         {works.length ? works.map((work) => {
           const isOpen = expandedId === work.id;
           const rows = (studentsByWork[work.id] || []).filter((row) => !row.is_removed);
@@ -288,8 +364,21 @@ export default function CEWorkPage() {
             <View key={work.id} style={styles.card}>
               <TouchableOpacity onPress={() => setExpandedId(isOpen ? null : work.id)} style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.workTitle}>{work.work_name}</Text>
-                  <Text style={styles.workMeta}>{work.subject_name} | {displayDate(work.started_date)} to {displayDate(work.submission_date)}</Text>
+                  <View style={styles.cardTitleRow}>
+                    <Text style={styles.workTitle}>{work.work_name}</Text>
+                    {work.mark ? (
+                      <View style={styles.markBadge}>
+                        <Text style={styles.markBadgeText}>{work.mark} Marks</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={styles.workMeta}>
+                    {work.subject_name}
+                    {work.teacher_name ? ` | ${work.teacher_name}` : ""}
+                  </Text>
+                  <Text style={styles.dateMeta}>
+                    {displayDate(work.started_date)} to {displayDate(work.submission_date)}
+                  </Text>
                 </View>
                 {isOpen ? <ChevronUp size={20} color={theme.colors.textMuted} /> : <ChevronDown size={20} color={theme.colors.textMuted} />}
               </TouchableOpacity>
@@ -315,30 +404,150 @@ export default function CEWorkPage() {
               )}
             </View>
           );
-        }) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>No CE work added yet.</Text></View>}
+        }) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>No CE work added yet for {semester}.</Text></View>}
       </ScrollView>
+
+      {/* Add / Edit Modal */}
       <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => setModalOpen(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <View style={styles.modalTop}><Text style={styles.modalTitle}>{editingWork ? "Edit CE Work" : "Add CE Work"}</Text><TouchableOpacity onPress={() => setModalOpen(false)}><X size={20} color={theme.colors.text} /></TouchableOpacity></View>
-            <TextInput
-              value={form.work_name}
-              onChangeText={(v) => setForm({ ...form, work_name: v })}
-              placeholder="Work name"
-              placeholderTextColor="#000000"
-              style={styles.input}
-            />
-            <TextInput
-              value={form.subject_name}
-              onChangeText={(v) => setForm({ ...form, subject_name: v })}
-              placeholder="Sub"
-              placeholderTextColor="#000000"
-              style={styles.input}
-            />
-            <TouchableOpacity onPress={() => setDateField("started_date")} style={styles.dateButton}><CalendarDays size={17} color={theme.colors.primary} /><Text style={styles.dateText}>SD: {displayDate(form.started_date)}</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => setDateField("submission_date")} style={styles.dateButton}><CalendarDays size={17} color={theme.colors.primary} /><Text style={styles.dateText}>SB: {displayDate(form.submission_date)}</Text></TouchableOpacity>
-            {dateField && <DateTimePicker value={new Date(`${form[dateField]}T00:00:00`)} mode="date" onChange={(_, date) => { setDateField(null); if (date) setForm({ ...form, [dateField]: toDateValue(date) }); }} />}
-            <TouchableOpacity onPress={saveWork} style={styles.saveButton} disabled={saving}>{saving ? <ActivityIndicator color={theme.colors.textOnDark} /> : <Save size={17} color={theme.colors.textOnDark} />}<Text style={styles.saveText}>Save</Text></TouchableOpacity>
+            <View style={styles.modalTop}>
+              <Text style={styles.modalTitle}>{editingWork ? "Edit CE Work" : "Add CE Work"} ({semester})</Text>
+              <TouchableOpacity onPress={() => setModalOpen(false)}><X size={20} color={theme.colors.text} /></TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
+              {/* Dropdown for CE Work Name */}
+              <Text style={styles.fieldLabel}>CE Work Name</Text>
+              <TouchableOpacity
+                onPress={() => setDropdownOpen(!dropdownOpen)}
+                style={styles.dropdownTrigger}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.dropdownValue}>
+                  {form.work_name === "Other" && form.custom_work_name
+                    ? form.custom_work_name
+                    : form.work_name}
+                </Text>
+                <ChevronDown size={18} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+
+              {dropdownOpen && (
+                <View style={styles.dropdownMenu}>
+                  {CE_WORK_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      onPress={() => {
+                        setForm({ ...form, work_name: opt });
+                        setDropdownOpen(false);
+                      }}
+                      style={[
+                        styles.dropdownItem,
+                        form.work_name === opt && styles.dropdownItemActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          form.work_name === opt && styles.dropdownItemTextActive,
+                        ]}
+                      >
+                        {opt}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity
+                    onPress={() => {
+                      setForm({ ...form, work_name: "Other" });
+                      setDropdownOpen(false);
+                    }}
+                    style={[
+                      styles.dropdownItem,
+                      form.work_name === "Other" && styles.dropdownItemActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownItemText,
+                        form.work_name === "Other" && styles.dropdownItemTextActive,
+                      ]}
+                    >
+                      Other (Custom Name)
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {form.work_name === "Other" && (
+                <TextInput
+                  value={form.custom_work_name}
+                  onChangeText={(v) => setForm({ ...form, custom_work_name: v })}
+                  placeholder="Enter custom CE work name"
+                  placeholderTextColor="#000000"
+                  style={[styles.input, { marginTop: 6 }]}
+                />
+              )}
+
+              {/* Subject Name */}
+              <Text style={styles.fieldLabel}>Subject Name</Text>
+              <TextInput
+                value={form.subject_name}
+                onChangeText={(v) => setForm({ ...form, subject_name: v })}
+                placeholder="Sub"
+                placeholderTextColor="#000000"
+                style={styles.input}
+              />
+
+              {/* Teacher Name */}
+              <Text style={styles.fieldLabel}>Teacher Name</Text>
+              <TextInput
+                value={form.teacher_name}
+                onChangeText={(v) => setForm({ ...form, teacher_name: v })}
+                placeholder="Teacher shortform"
+                placeholderTextColor="#000000"
+                style={styles.input}
+              />
+
+              {/* Mark */}
+              <Text style={styles.fieldLabel}>Mark</Text>
+              <TextInput
+                value={form.mark}
+                onChangeText={(v) => setForm({ ...form, mark: v })}
+                placeholder="Total mark"
+                placeholderTextColor="#000000"
+                keyboardType="numeric"
+                style={styles.input}
+              />
+
+              {/* Dates */}
+              <Text style={styles.fieldLabel}>Dates</Text>
+              <View style={styles.dateRow}>
+                <TouchableOpacity onPress={() => setDateField("started_date")} style={styles.dateButton}>
+                  <CalendarDays size={16} color={theme.colors.primary} />
+                  <Text style={styles.dateText}>SD: {displayDate(form.started_date)}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setDateField("submission_date")} style={styles.dateButton}>
+                  <CalendarDays size={16} color={theme.colors.primary} />
+                  <Text style={styles.dateText}>SB: {displayDate(form.submission_date)}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {dateField && (
+                <DateTimePicker
+                  value={new Date(`${form[dateField]}T00:00:00`)}
+                  mode="date"
+                  onChange={(_, date) => {
+                    setDateField(null);
+                    if (date) setForm({ ...form, [dateField]: toDateValue(date) });
+                  }}
+                />
+              )}
+
+              <TouchableOpacity onPress={saveWork} style={styles.saveButton} disabled={saving}>
+                {saving ? <ActivityIndicator color={theme.colors.textOnDark} /> : <Save size={17} color={theme.colors.textOnDark} />}
+                <Text style={styles.saveText}>Save</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -351,15 +560,51 @@ const styles = StyleSheet.create({
   stateScreen: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.background, padding: 20 },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 10 },
   title: { color: theme.colors.text, fontSize: 30, lineHeight: 36, fontFamily: "MullerBold" },
-  subtitle: { color: theme.colors.textSecondary, fontSize: 14, fontFamily: "MullerMedium", marginTop: 6 },
+  subtitle: { color: theme.colors.textSecondary, fontSize: 14, fontFamily: "MullerMedium", marginTop: 4 },
+  semTabs: {
+    flexDirection: "row",
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    padding: 5,
+    borderRadius: 16,
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  semTab: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  semTabActive: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+    ...theme.shadows.soft,
+  },
+  semTabText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    fontFamily: "MullerBold",
+  },
+  semTabTextActive: {
+    color: theme.colors.primary,
+  },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 40, gap: 12 },
-  addButton: { minHeight: 50, borderRadius: 16, backgroundColor: theme.colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  addButton: { minHeight: 48, borderRadius: 16, backgroundColor: theme.colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   addButtonText: { color: theme.colors.textOnDark, fontSize: 13, fontFamily: "MullerBold", textTransform: "uppercase" },
   card: { borderRadius: 22, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, overflow: "hidden", ...theme.shadows.soft },
   cardHeader: { padding: 14, flexDirection: "row", alignItems: "center" },
+  cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   workTitle: { color: theme.colors.text, fontSize: 16, fontFamily: "MullerBold" },
+  markBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: theme.colors.primarySoft },
+  markBadgeText: { color: theme.colors.primary, fontSize: 11, fontFamily: "MullerBold" },
   workMeta: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 4, fontFamily: "MullerMedium" },
+  dateMeta: { color: theme.colors.primary, fontSize: 11, marginTop: 4, fontFamily: "MullerMedium" },
   actionRow: { flexDirection: "row", borderTopWidth: 1, borderTopColor: theme.colors.border },
   editButton: { flex: 1, minHeight: 42, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
   editText: { color: theme.colors.primary, fontSize: 12, fontFamily: "MullerBold" },
@@ -378,13 +623,40 @@ const styles = StyleSheet.create({
   removeButton: { width: 34, height: 34, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.errorSoft },
   emptyCard: { minHeight: 130, borderRadius: 22, backgroundColor: theme.colors.surface, alignItems: "center", justifyContent: "center" },
   emptyTitle: { color: theme.colors.textSecondary, fontSize: 14, fontFamily: "MullerMedium", textAlign: "center" },
-  modalOverlay: { flex: 1, justifyContent: "center", padding: 18, backgroundColor: theme.colors.overlayStrong ?? "rgba(15,23,42,0.32)" },
-  modalCard: { padding: 18, borderRadius: 24, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, gap: 10, ...theme.shadows.floating },
-  modalTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  modalTitle: { color: theme.colors.text, fontSize: 20, fontFamily: "MullerBold" },
-  input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceSoft, color: theme.colors.text, paddingHorizontal: 12, fontFamily: "MullerMedium" },
-  dateButton: { minHeight: 46, borderRadius: 14, backgroundColor: theme.colors.primarySoft, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12 },
-  dateText: { color: theme.colors.primary, fontSize: 13, fontFamily: "MullerBold" },
-  saveButton: { minHeight: 50, borderRadius: 16, backgroundColor: theme.colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  modalOverlay: { flex: 1, justifyContent: "center", padding: 16, backgroundColor: theme.colors.overlayStrong ?? "rgba(15,23,42,0.32)" },
+  modalCard: { maxHeight: "88%", padding: 18, borderRadius: 24, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, ...theme.shadows.floating },
+  modalTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  modalTitle: { color: theme.colors.text, fontSize: 19, fontFamily: "MullerBold" },
+  modalScroll: { marginVertical: 4 },
+  fieldLabel: { fontSize: 12, fontFamily: "MullerBold", color: theme.colors.textSecondary, marginTop: 10, marginBottom: 4 },
+  dropdownTrigger: {
+    minHeight: 46,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceSoft,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dropdownValue: { color: theme.colors.text, fontSize: 14, fontFamily: "MullerBold" },
+  dropdownMenu: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    marginTop: 4,
+    overflow: "hidden",
+  },
+  dropdownItem: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.borderSoft },
+  dropdownItemActive: { backgroundColor: theme.colors.primarySoft },
+  dropdownItemText: { color: theme.colors.text, fontSize: 13, fontFamily: "MullerMedium" },
+  dropdownItemTextActive: { color: theme.colors.primary, fontFamily: "MullerBold" },
+  input: { minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceSoft, color: theme.colors.text, paddingHorizontal: 12, fontFamily: "MullerMedium" },
+  dateRow: { flexDirection: "row", gap: 8 },
+  dateButton: { flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: theme.colors.primarySoft, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10 },
+  dateText: { color: theme.colors.primary, fontSize: 12, fontFamily: "MullerBold" },
+  saveButton: { minHeight: 50, borderRadius: 16, backgroundColor: theme.colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 18, marginBottom: 8 },
   saveText: { color: theme.colors.textOnDark, fontSize: 13, fontFamily: "MullerBold", textTransform: "uppercase" },
 });
