@@ -704,8 +704,13 @@ export default function CbcssPage() {
                 ) : null}
               </View>
 
-              {/* Student selector list */}
-              <View style={styles.studentSelectList}>
+              {/* Student selector list with nested scrolling */}
+              <ScrollView
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={true}
+                style={styles.studentSelectList}
+                contentContainerStyle={styles.studentSelectListContent}
+              >
                 {filteredStudents.length ? (
                   filteredStudents.map((s) => {
                     const isSelected = selectedStudentUids.has(s.uid);
@@ -719,8 +724,10 @@ export default function CbcssPage() {
                         ]}
                         activeOpacity={0.75}
                       >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.selectItemName}>{s.name}</Text>
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <Text style={styles.selectItemName} numberOfLines={1}>
+                            {s.name}
+                          </Text>
                           <Text style={styles.selectItemMeta}>CIC: {s.cic || "—"}</Text>
                         </View>
                         <View
@@ -741,23 +748,23 @@ export default function CbcssPage() {
                     {students.length ? "No matching students found." : "No students found in this class."}
                   </Text>
                 )}
-              </View>
-
-              {/* Save Button */}
-              <TouchableOpacity
-                onPress={saveRecord}
-                style={styles.modalSaveButton}
-                disabled={saving}
-                activeOpacity={0.88}
-              >
-                {saving ? (
-                  <ActivityIndicator color={theme.colors.textOnDark} />
-                ) : (
-                  <Save size={18} color={theme.colors.textOnDark} />
-                )}
-                <Text style={styles.saveButtonText}>Save CBCSS Course</Text>
-              </TouchableOpacity>
+              </ScrollView>
             </ScrollView>
+
+            {/* Save Button placed cleanly at bottom */}
+            <TouchableOpacity
+              onPress={saveRecord}
+              style={styles.modalSaveButton}
+              disabled={saving}
+              activeOpacity={0.88}
+            >
+              {saving ? (
+                <ActivityIndicator color={theme.colors.textOnDark} />
+              ) : (
+                <Save size={18} color={theme.colors.textOnDark} />
+              )}
+              <Text style={styles.saveButtonText}>Save CBCSS Course</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1130,6 +1137,7 @@ const styles = StyleSheet.create({
   },
   modalScroll: {
     marginVertical: 4,
+    flexShrink: 1,
   },
   fieldLabel: {
     fontSize: 12,
@@ -1231,9 +1239,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 14,
-    padding: 6,
     backgroundColor: theme.colors.surfaceSoft,
-    gap: 4,
+    overflow: "hidden",
+  },
+  studentSelectListContent: {
+    padding: 6,
+    gap: 5,
   },
   studentSelectItem: {
     flexDirection: "row",
@@ -1241,9 +1252,12 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 10,
     backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
   },
   studentSelectItemActive: {
     backgroundColor: theme.colors.primarySoft,
+    borderColor: theme.colors.primaryTint || theme.colors.primary,
   },
   selectItemName: {
     fontSize: 12,
@@ -1285,8 +1299,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginTop: 18,
-    marginBottom: 8,
+    marginTop: 12,
+    marginBottom: 4,
   },
   saveButtonText: {
     color: theme.colors.textOnDark,
