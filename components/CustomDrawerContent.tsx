@@ -117,6 +117,12 @@ const allNavItems = [
     roles: ["staff", "officer"],
   },
   {
+    href: "/(admin)/classroom/cbcss",
+    label: "CBCSS",
+    icon: GraduationCap,
+    roles: ["staff", "class", "officer"],
+  },
+  {
     href: "/(admin)/chef/chef-dashboard",
     label: "Dashboard",
     icon: CookingPot,

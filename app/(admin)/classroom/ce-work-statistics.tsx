@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Download,
   Edit,
   FileCheck2,
   Plus,
@@ -37,6 +38,7 @@ import {
   toDateValue,
 } from "@/lib/portionUtils";
 import { syncCeWorkNotifications } from "@/lib/ceWorkNotificationService";
+import { exportCeWorkPdf } from "@/lib/ceWorkPdfService";
 
 export const CE_WORK_OPTIONS = [
   "المقالة",
@@ -91,6 +93,7 @@ export default function CEWorkStatisticsPage() {
   const [dateField, setDateField] = useState<"started_date" | "submission_date" | null>(null);
   const [saving, setSaving] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   // 1. Fetch available classes and set initial activeClass
   useEffect(() => {
@@ -365,6 +368,27 @@ export default function CEWorkStatisticsPage() {
     }
   };
 
+  // Export modern PDF report
+  const handleExportPdf = async () => {
+    if (!works.length) {
+      NativeAlert.alert("No Data", `No CE works recorded for ${activeClass} in ${semester}.`);
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      await exportCeWorkPdf({
+        className: activeClass,
+        semester,
+        works,
+        workStudents: rows,
+      });
+    } catch (err: any) {
+      NativeAlert.alert("Export Failed", err.message || "Failed to generate CE work PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   if (userLoading || classesLoading || (loading && !works.length)) {
     return (
       <SafeAreaView style={styles.stateScreen}>
@@ -425,11 +449,29 @@ export default function CEWorkStatisticsPage() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {/* Add CE Work button for staff & officer */}
-        <TouchableOpacity onPress={openAdd} style={styles.addButton} activeOpacity={0.88}>
-          <Plus size={18} color={theme.colors.textOnDark} />
-          <Text style={styles.addButtonText}>Add CE Work ({semester})</Text>
-        </TouchableOpacity>
+        {/* Actions row: Add CE Work & Download Modern PDF */}
+        <View style={styles.topActionsRow}>
+          <TouchableOpacity onPress={openAdd} style={styles.addButton} activeOpacity={0.88}>
+            <Plus size={17} color={theme.colors.textOnDark} />
+            <Text style={styles.addButtonText}>Add CE Work ({semester})</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleExportPdf}
+            style={styles.pdfButton}
+            disabled={exportingPdf}
+            activeOpacity={0.88}
+          >
+            {exportingPdf ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            ) : (
+              <Download size={17} color={theme.colors.primary} />
+            )}
+            <Text style={styles.pdfButtonText}>
+              {exportingPdf ? "Exporting..." : "Download PDF"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Summary metrics strip */}
         {works.length > 0 ? (
@@ -836,21 +878,46 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 40, gap: 12 },
+  topActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
   addButton: {
+    flex: 1.25,
     minHeight: 48,
     borderRadius: 16,
     backgroundColor: theme.colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 6,
+    paddingHorizontal: 8,
     ...theme.shadows.soft,
   },
   addButtonText: {
     color: theme.colors.textOnDark,
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "MullerBold",
     textTransform: "uppercase",
+  },
+  pdfButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: "rgba(10,37,64,0.15)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    ...theme.shadows.soft,
+  },
+  pdfButtonText: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontFamily: "MullerBold",
   },
   summaryRow: {
     flexDirection: "row",

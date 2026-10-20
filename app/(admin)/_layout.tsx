@@ -81,6 +81,10 @@ export default function AdminLayout() {
         options={{ title: "CE Work" }}
       />
       <Drawer.Screen
+        name="classroom/cbcss"
+        options={{ title: "CBCSS" }}
+      />
+      <Drawer.Screen
         name="chef/chef-dashboard"
         options={{ title: "Kitchen Dashboard" }}
       />

@@ -16,6 +16,7 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronUp,
+  Download,
   Edit,
   Plus,
   Save,
@@ -28,6 +29,7 @@ import { theme } from "@/theme/theme";
 import { Semester, displayDate, toDateValue } from "@/lib/portionUtils";
 import { CE_WORK_OPTIONS } from "@/app/(admin)/classroom/ce-work-statistics";
 import { syncCeWorkNotifications } from "@/lib/ceWorkNotificationService";
+import { exportCeWorkPdf } from "@/lib/ceWorkPdfService";
 
 type Work = {
   id: string;
@@ -76,6 +78,7 @@ export default function CEWorkPage() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dateField, setDateField] = useState<"started_date" | "submission_date" | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!batch && !details?.batch && !details?.designation) {
@@ -326,6 +329,26 @@ export default function CEWorkPage() {
     ]);
   };
 
+  const handleExportPdf = async () => {
+    if (!works.length) {
+      NativeAlert.alert("No Data", `No CE works recorded for ${batch || "this class"} in ${semester}.`);
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      await exportCeWorkPdf({
+        className: batch || "Class",
+        semester,
+        works,
+        workStudents,
+      });
+    } catch (err: any) {
+      NativeAlert.alert("Export Failed", err.message || "Failed to generate CE work PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   if (userLoading || loading) return <SafeAreaView style={styles.stateScreen}><ActivityIndicator size="large" color={theme.colors.primary} /></SafeAreaView>;
   if (role !== "class-leader" && role !== "class") return <SafeAreaView style={styles.stateScreen}><Text style={styles.emptyTitle}>CE Work is only for class teachers and class leaders.</Text></SafeAreaView>;
 
@@ -352,10 +375,28 @@ export default function CEWorkPage() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <TouchableOpacity onPress={openAdd} style={styles.addButton}>
-          <Plus size={17} color={theme.colors.textOnDark} />
-          <Text style={styles.addButtonText}>Add CE Work ({semester})</Text>
-        </TouchableOpacity>
+        <View style={styles.topActionsRow}>
+          <TouchableOpacity onPress={openAdd} style={styles.addButton}>
+            <Plus size={17} color={theme.colors.textOnDark} />
+            <Text style={styles.addButtonText}>Add CE Work ({semester})</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleExportPdf}
+            style={styles.pdfButton}
+            disabled={exportingPdf}
+            activeOpacity={0.88}
+          >
+            {exportingPdf ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            ) : (
+              <Download size={17} color={theme.colors.primary} />
+            )}
+            <Text style={styles.pdfButtonText}>
+              {exportingPdf ? "Exporting..." : "Download PDF"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {works.length ? works.map((work) => {
           const isOpen = expandedId === work.id;
@@ -595,8 +636,46 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, paddingBottom: 40, gap: 12 },
-  addButton: { minHeight: 48, borderRadius: 16, backgroundColor: theme.colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  addButtonText: { color: theme.colors.textOnDark, fontSize: 13, fontFamily: "MullerBold", textTransform: "uppercase" },
+  topActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  addButton: {
+    flex: 1.25,
+    minHeight: 48,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+  },
+  addButtonText: {
+    color: theme.colors.textOnDark,
+    fontSize: 12,
+    fontFamily: "MullerBold",
+    textTransform: "uppercase",
+  },
+  pdfButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: "rgba(10,37,64,0.15)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    ...theme.shadows.soft,
+  },
+  pdfButtonText: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontFamily: "MullerBold",
+  },
   card: { borderRadius: 22, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, overflow: "hidden", ...theme.shadows.soft },
   cardHeader: { padding: 14, flexDirection: "row", alignItems: "center" },
   cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },

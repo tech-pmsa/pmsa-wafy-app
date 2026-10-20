@@ -134,7 +134,7 @@ export type ClassOption = {
 };
 
 export async function fetchClassOptions(
-  sourceTable?: "portion_subjects" | "ce_work_items"
+  sourceTable?: "portion_subjects" | "ce_work_items" | "cbcss_records"
 ): Promise<ClassOption[]> {
   try {
     const { data: students, error: studentsError } = await supabase
