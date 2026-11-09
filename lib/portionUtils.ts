@@ -80,29 +80,41 @@ export function buildWorkingWeeks(
   semester: Semester,
   excludedDates: Set<string>,
   academicYear = getAcademicYearBase()
-) {
-  const workingDates = getSemesterDates(semester, academicYear).filter(
-    (date) => !excludedDates.has(date.value)
-  );
+): WeekBlock[] {
+  const allDates = getSemesterDates(semester, academicYear);
   const weeks: WeekBlock[] = [];
-  const monthWeekCounts: Record<string, number> = {};
 
-  for (let index = 0; index < workingDates.length; index += 6) {
-    const slice = workingDates.slice(index, index + 6);
-    if (!slice.length) continue;
-    const monthKey = slice[0].monthKey;
-    monthWeekCounts[monthKey] = (monthWeekCounts[monthKey] || 0) + 1;
-    const weekNo = monthWeekCounts[monthKey];
+  for (const monthConfig of SEMESTER_MONTHS[semester]) {
+    const monthDates = allDates.filter(
+      (d) => d.monthLabel === monthConfig.label
+    );
+    if (!monthDates.length) continue;
 
-    weeks.push({
-      key: `${monthKey}-W${weekNo}`,
-      monthKey,
-      monthLabel: slice[0].monthLabel,
-      weekNo,
-      dateFrom: slice[0].value,
-      dateTo: slice[slice.length - 1].value,
-      workingDates: slice.map((date) => date.value),
-    });
+    const monthKey = monthDates[0].monthKey;
+    const monthLabel = monthConfig.label;
+
+    const workingMonthDates = monthDates.filter(
+      (d) => !excludedDates.has(d.value)
+    );
+
+    if (workingMonthDates.length > 0) {
+      let weekNo = 1;
+      for (let i = 0; i < workingMonthDates.length; i += 6) {
+        const slice = workingMonthDates.slice(i, i + 6);
+        if (!slice.length) continue;
+
+        weeks.push({
+          key: `${monthKey}-W${weekNo}`,
+          monthKey,
+          monthLabel,
+          weekNo,
+          dateFrom: slice[0].value,
+          dateTo: slice[slice.length - 1].value,
+          workingDates: slice.map((d) => d.value),
+        });
+        weekNo += 1;
+      }
+    }
   }
 
   return weeks;

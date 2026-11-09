@@ -100,7 +100,7 @@ export default function PortionsStatisticsPage() {
           details?.batch,
           details?.designation
         );
-        setActiveClass(defaultClass);
+        setActiveClass((prev) => prev || defaultClass || (classList[0]?.id ?? ""));
       } catch (err: any) {
         console.error("Failed to load classes:", err);
       } finally {
@@ -124,7 +124,15 @@ export default function PortionsStatisticsPage() {
     setLoading(true);
     try {
       const activeOption = classes.find((c) => c.id === activeClass);
-      const keys = activeOption ? activeOption.queryKeys : [activeClass];
+      const baseKeys = activeOption ? activeOption.queryKeys : [activeClass];
+      const expandedKeys = new Set<string>();
+      baseKeys.forEach((k) => {
+        if (!k) return;
+        expandedKeys.add(k);
+        expandedKeys.add(`${k} Class`);
+        expandedKeys.add(k.replace(/\s+Class$/i, ""));
+      });
+      const keys = Array.from(expandedKeys).filter(Boolean);
 
       const [excludedRes, subjectsRes] = await Promise.all([
         supabase
@@ -134,7 +142,7 @@ export default function PortionsStatisticsPage() {
         supabase
           .from("portion_subjects")
           .select("*")
-          .in("batch", keys)
+          .in("batch", keys.length ? keys : [activeClass])
           .eq("semester", semester)
           .order("subject_name"),
       ]);
@@ -187,13 +195,18 @@ export default function PortionsStatisticsPage() {
 
   const subjectRows = (subject: Subject) => {
     const rows: any[] = [];
+    const semWorkingDays = weeks.reduce((sum, w) => sum + w.workingDates.length, 0);
+    const pagesPerDay = semWorkingDays > 0 ? n(subject.total_pages) / semWorkingDays : 0;
+    const periodPerDay = semWorkingDays > 0 ? n(subject.total_period) / semWorkingDays : 0;
+
     const sem = { expP: 0, actP: 0, expPg: 0, actPg: 0 };
     const monthKeys = Array.from(new Set(weeks.map((week) => week.monthKey)));
     monthKeys.forEach((monthKey) => {
       const monthWeeks = weeks.filter((week) => week.monthKey === monthKey);
       const month = monthWeeks[0]?.monthLabel || monthKey;
-      const expP = monthWeeks.length * n(subject.period_per_week);
-      const expPg = monthWeeks.length * n(subject.pages_per_week);
+      const monthWorkingDays = monthWeeks.reduce((sum, w) => sum + w.workingDates.length, 0);
+      const expP = monthWorkingDays * periodPerDay;
+      const expPg = monthWorkingDays * pagesPerDay;
       const actP = monthWeeks.reduce(
         (sum, week) => sum + n(progressMap[subject.id]?.[week.key]?.period_taken),
         0
@@ -206,7 +219,18 @@ export default function PortionsStatisticsPage() {
       sem.actP += actP;
       sem.expPg += expPg;
       sem.actPg += actPg;
-      rows.push({ month, monthWeeks, expP, expPg, actP, actPg, sem: { ...sem } });
+      rows.push({
+        month,
+        monthWeeks,
+        monthWorkingDays,
+        expP,
+        expPg,
+        actP,
+        actPg,
+        sem: { ...sem },
+        pagesPerDay,
+        periodPerDay,
+      });
     });
     return rows;
   };
@@ -233,7 +257,7 @@ export default function PortionsStatisticsPage() {
         });
         y -= 24;
         page.drawText(
-          `Class: ${activeClass} | Teacher: ${subject.teacher_name} | TPgS: ${subject.total_pages} | TLP/W: ${subject.period_per_week} | TPg/W: ${Number(subject.pages_per_week).toFixed(2)}`,
+          `Class: ${activeClass} | Teacher: ${subject.teacher_name} | Total Pages: ${subject.total_pages} | Total Period: ${subject.total_period}`,
           { x: 36, y, size: 9, font }
         );
         y -= 24;
@@ -242,7 +266,7 @@ export default function PortionsStatisticsPage() {
           const pageStatus = getPortionStatus(row.actPg, row.expPg);
           page.drawText(`${row.month}`, { x: 36, y, size: 11, font: bold });
           page.drawText(
-            `Weeks: ${row.monthWeeks.length} | Period M ${row.actP}/${row.expP} SEM ${row.sem.actP}/${row.sem.expP}`,
+            `Weeks: ${row.monthWeeks.length} | Period M ${row.actP}/${row.expP.toFixed(1)} SEM ${row.sem.actP}/${row.sem.expP.toFixed(1)}`,
             { x: 92, y, size: 8.5, font }
           );
           page.drawText(
@@ -252,8 +276,9 @@ export default function PortionsStatisticsPage() {
           y -= 18;
           row.monthWeeks.forEach((week: any) => {
             const rec = progressMap[subject.id]?.[week.key];
+            const expWkPg = (week.workingDates.length * row.pagesPerDay).toFixed(1);
             page.drawText(
-              `WK-${week.weekNo}: ${displayDate(week.dateFrom)}-${displayDate(week.dateTo)} P.STS ${n(rec?.period_taken)} Pg.STS ${n(rec?.pages_taken)}`,
+              `WK-${week.weekNo} (${week.workingDates.length}d): ${displayDate(week.dateFrom)}-${displayDate(week.dateTo)} P.STS ${n(rec?.period_taken)} Pg.STS ${n(rec?.pages_taken)} / ${expWkPg}`,
               { x: 54, y, size: 8, font }
             );
             y -= 13;
@@ -388,8 +413,8 @@ export default function PortionsStatisticsPage() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.subjectTitle}>{subject.subject_name}</Text>
                     <Text style={styles.subjectMeta}>
-                      TR {subject.teacher_name} | TPgS {subject.total_pages} | TPg/W{" "}
-                      {Number(subject.pages_per_week).toFixed(2)}
+                      TR {subject.teacher_name} | TPgS {subject.total_pages} | TLP{" "}
+                      {subject.total_period}
                     </Text>
                   </View>
                   {isOpen ? (
@@ -409,19 +434,20 @@ export default function PortionsStatisticsPage() {
                             <StatusBadge status={pageStatus} />
                           </View>
                           <Text style={styles.line}>
-                            Month Period TL/STS: {row.expP}/{row.actP} | Page TL/STS:{" "}
+                            Month Period TL/STS: {row.expP.toFixed(1)}/{row.actP} | Page TL/STS:{" "}
                             {row.expPg.toFixed(2)}/{row.actPg}
                           </Text>
                           <Text style={styles.line}>
-                            Sem Period TL/STS: {row.sem.expP}/{row.sem.actP} | Sem Page TL/STS:{" "}
+                            Sem Period TL/STS: {row.sem.expP.toFixed(1)}/{row.sem.actP} | Sem Page TL/STS:{" "}
                             {row.sem.expPg.toFixed(2)}/{row.sem.actPg}
                           </Text>
                           {row.monthWeeks.map((week: any) => {
                             const rec = progressMap[subject.id]?.[week.key];
+                            const expWkPg = (week.workingDates.length * row.pagesPerDay).toFixed(1);
                             return (
                               <Text key={week.key} style={styles.weekLine}>
-                                WK-{week.weekNo}: P.STS {n(rec?.period_taken)} | Pg.STS{" "}
-                                {n(rec?.pages_taken)}
+                                WK-{week.weekNo} ({week.workingDates.length}d): P.STS {n(rec?.period_taken)} | Pg.STS{" "}
+                                {n(rec?.pages_taken)} / {expWkPg}
                               </Text>
                             );
                           })}

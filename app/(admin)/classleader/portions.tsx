@@ -183,16 +183,27 @@ export default function ClassLeaderPortionsPage() {
 
   const monthSummaries = useMemo(() => {
     if (!selectedSubject) return [];
+    const pagesPerDay = workingDays > 0 ? n(selectedSubject.total_pages) / workingDays : 0;
+    const periodPerDay = workingDays > 0 ? n(selectedSubject.total_period) / workingDays : 0;
+
     return SEMESTER_MONTHS[semester].map((month) => {
-      const monthKey = weeks.find((w) => w.monthLabel === month.label)?.monthKey;
-      const monthWeeks = monthKey ? weeks.filter((week) => week.monthKey === monthKey) : [];
-      const expectedPeriod = monthWeeks.length * n(selectedSubject.period_per_week);
-      const expectedPages = monthWeeks.length * n(selectedSubject.pages_per_week);
+      const monthWeeks = weeks.filter((week) => week.monthLabel === month.label);
+      const monthWorkingDays = monthWeeks.reduce((sum, w) => sum + w.workingDates.length, 0);
+      const expectedPeriod = monthWorkingDays * periodPerDay;
+      const expectedPages = monthWorkingDays * pagesPerDay;
       const actualPeriod = monthWeeks.reduce((sum, week) => sum + n(progressMap[week.key]?.period_taken), 0);
       const actualPages = monthWeeks.reduce((sum, week) => sum + n(progressMap[week.key]?.pages_taken), 0);
-      return { label: month.label, weeks: monthWeeks.length, expectedPeriod, expectedPages, actualPeriod, actualPages };
-    }).filter((row) => row.weeks > 0);
-  }, [semester, weeks, selectedSubject, progressMap]);
+      return {
+        label: month.label,
+        weeks: monthWeeks.length,
+        workingDays: monthWorkingDays,
+        expectedPeriod,
+        expectedPages,
+        actualPeriod,
+        actualPages,
+      };
+    }).filter((row) => row.workingDays > 0 || row.weeks > 0);
+  }, [semester, weeks, selectedSubject, progressMap, workingDays]);
 
   const semSummary = useMemo(() => {
     return monthSummaries.reduce(
@@ -259,8 +270,9 @@ export default function ClassLeaderPortionsPage() {
     const totalPages = n(form.total_pages);
     const totalPeriod = n(form.total_period);
     const periodPerWeek = n(form.period_per_week);
-    const pagesPerDay = totalPeriod > 0 ? totalPages / totalPeriod : 0;
-    const pagesPerWeek = pagesPerDay * periodPerWeek;
+    const semWorkingDays = workingDays > 0 ? workingDays : 1;
+    const pagesPerDay = totalPages / semWorkingDays;
+    const pagesPerWeek = pagesPerDay * (periodPerWeek > 0 ? periodPerWeek : 6);
 
     if (!form.subject_name.trim() || !form.teacher_name.trim()) {
       NativeAlert.alert("Required", "Subject and teacher names are required.");
@@ -438,10 +450,22 @@ export default function ClassLeaderPortionsPage() {
             </TouchableOpacity>
           </View>
           {subjects.length ? subjects.map((subject, index) => {
-            const subjectStatus = getPortionStatus(
-              progressRows.filter((row) => row.subject_id === subject.id).reduce((sum, row) => sum + n(row.pages_taken), 0),
-              weeks.length * n(subject.pages_per_week)
+            const pagesPerDay = workingDays > 0 ? n(subject.total_pages) / workingDays : 0;
+            const periodPerDay = workingDays > 0 ? n(subject.total_period) / workingDays : 0;
+            const totalActualPages = progressRows
+              .filter((row) => row.subject_id === subject.id)
+              .reduce((sum, row) => sum + n(row.pages_taken), 0);
+
+            const recordedWeekKeys = new Set(
+              progressRows
+                .filter((r) => r.subject_id === subject.id && (n(r.pages_taken) > 0 || n(r.period_taken) > 0))
+                .map((r) => r.week_key)
             );
+            const expectedSoFar = recordedWeekKeys.size > 0
+              ? weeks.filter((w) => recordedWeekKeys.has(w.key)).reduce((sum, w) => sum + (w.workingDates.length * pagesPerDay), 0)
+              : 0;
+
+            const subjectStatus = getPortionStatus(totalActualPages, expectedSoFar > 0 ? expectedSoFar : n(subject.total_pages));
             return (
               <View key={subject.id} style={styles.subjectCard}>
                 <View style={styles.subjectTop}>
@@ -449,7 +473,7 @@ export default function ClassLeaderPortionsPage() {
                   <Text style={[styles.statusText, styles[`status_${subjectStatus}` as keyof typeof styles]]}>{statusLabel(subjectStatus)}</Text>
                 </View>
                 <Text style={styles.subjectLine}>TR: {subject.teacher_name} | TPgS: {subject.total_pages} | TLp: {subject.total_period}</Text>
-                <Text style={styles.subjectLine}>TLP/W: {subject.period_per_week} | TPg/W: {subject.pages_per_week.toFixed(2)} | TPg/D: {subject.pages_per_day.toFixed(2)}</Text>
+                <Text style={styles.subjectLine}>TLP/W: {subject.period_per_week} | TPg/D: {pagesPerDay.toFixed(2)} | TLp/D: {periodPerDay.toFixed(2)}</Text>
                 <View style={styles.subjectActions}>
                   <TouchableOpacity onPress={() => openEdit(subject)} style={styles.outlineButton}><Edit size={15} color={theme.colors.primary} /><Text style={styles.outlineText}>Edit</Text></TouchableOpacity>
                   <TouchableOpacity onPress={() => deleteSubject(subject)} style={styles.dangerButton}><Trash2 size={15} color={theme.colors.error} /><Text style={styles.dangerText}>Delete</Text></TouchableOpacity>
@@ -471,24 +495,26 @@ export default function ClassLeaderPortionsPage() {
               <>
                 {monthSummaries.map((month) => (
                   <View key={month.label} style={styles.summaryRow}>
-                    <Text style={styles.summaryTitle}>{month.label}</Text>
-                    <Text style={styles.summaryText}>Period {month.actualPeriod}/{month.expectedPeriod} | Pages {month.actualPages}/{month.expectedPages.toFixed(2)}</Text>
+                    <Text style={styles.summaryTitle}>{month.label} ({month.workingDays} Days)</Text>
+                    <Text style={styles.summaryText}>Period {month.actualPeriod}/{month.expectedPeriod.toFixed(1)} | Pages {month.actualPages}/{month.expectedPages.toFixed(2)}</Text>
                   </View>
                 ))}
                 <View style={styles.semSummary}>
-                  <Text style={styles.summaryTitle}>Semester Total</Text>
-                  <Text style={styles.summaryText}>Period {semSummary.actualPeriod}/{semSummary.expectedPeriod} | Pages {semSummary.actualPages}/{semSummary.expectedPages.toFixed(2)}</Text>
+                  <Text style={styles.summaryTitle}>Semester Total ({workingDays} Working Days)</Text>
+                  <Text style={styles.summaryText}>Period {semSummary.actualPeriod}/{semSummary.expectedPeriod.toFixed(1)} | Pages {semSummary.actualPages}/{semSummary.expectedPages.toFixed(2)}</Text>
                 </View>
                 {weeks.map((week) => {
                   const row = progressMap[week.key];
-                  const pageStatus = getPortionStatus(n(row?.pages_taken), n(selectedSubject.pages_per_week));
+                  const pagesPerDay = workingDays > 0 ? n(selectedSubject.total_pages) / workingDays : 0;
+                  const weekExpectedPages = week.workingDates.length * pagesPerDay;
+                  const pageStatus = getPortionStatus(n(row?.pages_taken), weekExpectedPages);
                   return (
                     <View key={week.key} style={styles.weekCard}>
                       <View style={styles.weekTop}>
-                        <Text style={styles.weekTitle}>{week.monthLabel} WK-{week.weekNo}</Text>
+                        <Text style={styles.weekTitle}>{week.monthLabel} WK-{week.weekNo} ({week.workingDates.length} Days)</Text>
                         <Text style={[styles.statusText, styles[`status_${pageStatus}` as keyof typeof styles]]}>{statusLabel(pageStatus)}</Text>
                       </View>
-                      <Text style={styles.subjectLine}>{displayDate(week.dateFrom)} to {displayDate(week.dateTo)}</Text>
+                      <Text style={styles.subjectLine}>{displayDate(week.dateFrom)} to {displayDate(week.dateTo)} • Exp: {weekExpectedPages.toFixed(1)} Pages</Text>
                       <View style={styles.inputRow}>
                         <TextInput
                           value={String(row?.period_taken ?? "")}
