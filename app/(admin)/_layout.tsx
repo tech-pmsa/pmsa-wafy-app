@@ -73,6 +73,10 @@ export default function AdminLayout() {
         options={{ title: "CE Work" }}
       />
       <Drawer.Screen
+        name="classleader/academic"
+        options={{ title: "Academic" }}
+      />
+      <Drawer.Screen
         name="classroom/portions-statistics"
         options={{ title: "Portions" }}
       />
@@ -83,6 +87,10 @@ export default function AdminLayout() {
       <Drawer.Screen
         name="classroom/cbcss"
         options={{ title: "CBCSS" }}
+      />
+      <Drawer.Screen
+        name="classroom/academic"
+        options={{ title: "Academic" }}
       />
       <Drawer.Screen
         name="chef/chef-dashboard"

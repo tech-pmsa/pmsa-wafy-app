@@ -28,7 +28,9 @@ import {
   LogOut,
   BarChart3,
   FileCheck2,
+  Award,
 } from "lucide-react-native";
+import { isFoundationUser } from "@/lib/academicUtils";
 import { theme } from "@/theme/theme";
 
 const allNavItems = [
@@ -63,6 +65,13 @@ const allNavItems = [
     roles: ["class-leader", "class"],
   },
   {
+    href: "/(admin)/classleader/academic",
+    label: "Academic",
+    icon: Award,
+    roles: ["class-leader"],
+    excludeFoundation: true,
+  },
+  {
     href: "/(admin)/staff/staff-dashboard",
     label: "Dashboard",
     icon: BookUser,
@@ -79,6 +88,13 @@ const allNavItems = [
     label: "Dashboard",
     icon: LayoutDashboard,
     roles: ["student"],
+  },
+  {
+    href: "/(student)/academic",
+    label: "Academic",
+    icon: Award,
+    roles: ["student"],
+    excludeFoundation: true,
   },
   {
     href: "/(admin)/manage-students",
@@ -123,6 +139,12 @@ const allNavItems = [
     roles: ["staff", "class", "officer"],
   },
   {
+    href: "/(admin)/classroom/academic",
+    label: "Academic",
+    icon: Award,
+    roles: ["staff", "class", "officer"],
+  },
+  {
     href: "/(admin)/chef/chef-dashboard",
     label: "Dashboard",
     icon: CookingPot,
@@ -162,9 +184,23 @@ export default function CustomDrawerContent(
   const pathname = usePathname();
   const normalizedPathname = stripGroupSegments(pathname);
 
+  const isFoundation = useMemo(() => isFoundationUser(details), [details]);
+
   const accessibleNavItems = useMemo(
-    () => allNavItems.filter((item) => item.roles.includes(role || "")),
-    [role]
+    () =>
+      allNavItems.filter((item) => {
+        if (!item.roles.includes(role || "")) return false;
+        if ((item as any).excludeFoundation && isFoundation) return false;
+        if (
+          role === "class" &&
+          item.href === "/(admin)/classroom/academic" &&
+          isFoundation
+        ) {
+          return false;
+        }
+        return true;
+      }),
+    [role, isFoundation]
   );
 
   const settingsRoute =
