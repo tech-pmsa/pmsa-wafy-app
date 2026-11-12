@@ -19,6 +19,7 @@ import { theme } from "@/theme/theme";
 import {
   Semester,
   SEMESTER_MONTHS,
+  allocateIntegerTotal,
   buildWorkingWeeks,
   displayDate,
   getAcademicYearBase,
@@ -181,32 +182,72 @@ export default function ClassLeaderPortionsPage() {
     return map;
   }, [progressRows]);
 
-  const monthSummaries = useMemo(() => {
-    if (!selectedSubject) return [];
-    const pagesPerDay = workingDays > 0 ? n(selectedSubject.total_pages) / workingDays : 0;
-    const periodPerDay = workingDays > 0 ? n(selectedSubject.total_period) / workingDays : 0;
+  const { monthSummaries, weekAllocations, semSummary } = useMemo(() => {
+    if (!selectedSubject) {
+      return {
+        monthSummaries: [],
+        weekAllocations: {} as Record<string, { expectedPeriod: number; expectedPages: number }>,
+        semSummary: { expectedPeriod: 0, expectedPages: 0, actualPeriod: 0, actualPages: 0 },
+      };
+    }
 
-    return SEMESTER_MONTHS[semester].map((month) => {
+    const totalPeriod = n(selectedSubject.total_period);
+    const totalPages = n(selectedSubject.total_pages);
+    const pagesPerPeriod = totalPeriod > 0 ? totalPages / totalPeriod : 0;
+
+    const rawMonths = SEMESTER_MONTHS[semester].map((month) => {
       const monthWeeks = weeks.filter((week) => week.monthLabel === month.label);
       const monthWorkingDays = monthWeeks.reduce((sum, w) => sum + w.workingDates.length, 0);
-      const expectedPeriod = monthWorkingDays * periodPerDay;
-      const expectedPages = monthWorkingDays * pagesPerDay;
-      const actualPeriod = monthWeeks.reduce((sum, week) => sum + n(progressMap[week.key]?.period_taken), 0);
-      const actualPages = monthWeeks.reduce((sum, week) => sum + n(progressMap[week.key]?.pages_taken), 0);
       return {
         label: month.label,
-        weeks: monthWeeks.length,
+        monthWeeks,
         workingDays: monthWorkingDays,
+      };
+    }).filter((m) => m.workingDays > 0 || m.monthWeeks.length > 0);
+
+    const monthWorkingDaysList = rawMonths.map((m) => m.workingDays);
+    const allocatedMonthPeriods = allocateIntegerTotal(totalPeriod, monthWorkingDaysList);
+
+    const weekAllocMap: Record<string, { expectedPeriod: number; expectedPages: number }> = {};
+
+    const summaries = rawMonths.map((month, idx) => {
+      const expectedPeriod = allocatedMonthPeriods[idx] || 0; // Pure integer
+      const expectedPages = expectedPeriod * pagesPerPeriod;  // Decimal pages
+
+      // Allocate month's expectedPeriod across month's weeks
+      const weekDays = month.monthWeeks.map((w) => w.workingDates.length);
+      const allocatedWeekPeriods = allocateIntegerTotal(expectedPeriod, weekDays);
+
+      month.monthWeeks.forEach((w, wIdx) => {
+        const wExpPeriod = allocatedWeekPeriods[wIdx] || 0;
+        const wExpPages = wExpPeriod * pagesPerPeriod;
+        weekAllocMap[w.key] = {
+          expectedPeriod: wExpPeriod,
+          expectedPages: wExpPages,
+        };
+      });
+
+      const actualPeriod = month.monthWeeks.reduce(
+        (sum, week) => sum + n(progressMap[week.key]?.period_taken),
+        0
+      );
+      const actualPages = month.monthWeeks.reduce(
+        (sum, week) => sum + n(progressMap[week.key]?.pages_taken),
+        0
+      );
+
+      return {
+        label: month.label,
+        weeks: month.monthWeeks.length,
+        workingDays: month.workingDays,
         expectedPeriod,
         expectedPages,
         actualPeriod,
         actualPages,
       };
-    }).filter((row) => row.workingDays > 0 || row.weeks > 0);
-  }, [semester, weeks, selectedSubject, progressMap, workingDays]);
+    });
 
-  const semSummary = useMemo(() => {
-    return monthSummaries.reduce(
+    const sem = summaries.reduce(
       (acc, row) => ({
         expectedPeriod: acc.expectedPeriod + row.expectedPeriod,
         expectedPages: acc.expectedPages + row.expectedPages,
@@ -215,7 +256,13 @@ export default function ClassLeaderPortionsPage() {
       }),
       { expectedPeriod: 0, expectedPages: 0, actualPeriod: 0, actualPages: 0 }
     );
-  }, [monthSummaries]);
+
+    return {
+      monthSummaries: summaries,
+      weekAllocations: weekAllocMap,
+      semSummary: sem,
+    };
+  }, [semester, weeks, selectedSubject, progressMap]);
 
   const toggleExcludedDate = async (date: string) => {
     const isExcluded = excluded.has(date);
@@ -450,8 +497,9 @@ export default function ClassLeaderPortionsPage() {
             </TouchableOpacity>
           </View>
           {subjects.length ? subjects.map((subject, index) => {
+            const subPagesPerPeriod = n(subject.total_period) > 0 ? n(subject.total_pages) / n(subject.total_period) : 0;
+            const subPagesPerWeek = n(subject.period_per_week) * subPagesPerPeriod;
             const pagesPerDay = workingDays > 0 ? n(subject.total_pages) / workingDays : 0;
-            const periodPerDay = workingDays > 0 ? n(subject.total_period) / workingDays : 0;
             const totalActualPages = progressRows
               .filter((row) => row.subject_id === subject.id)
               .reduce((sum, row) => sum + n(row.pages_taken), 0);
@@ -473,7 +521,7 @@ export default function ClassLeaderPortionsPage() {
                   <Text style={[styles.statusText, styles[`status_${subjectStatus}` as keyof typeof styles]]}>{statusLabel(subjectStatus)}</Text>
                 </View>
                 <Text style={styles.subjectLine}>TR: {subject.teacher_name} | TPgS: {subject.total_pages} | TLp: {subject.total_period}</Text>
-                <Text style={styles.subjectLine}>TLP/W: {subject.period_per_week} | TPg/D: {pagesPerDay.toFixed(2)} | TLp/D: {periodPerDay.toFixed(2)}</Text>
+                <Text style={styles.subjectLine}>TLP/W: {subject.period_per_week} | TPg/W: {subPagesPerWeek.toFixed(2)} | TPg/P: {subPagesPerPeriod.toFixed(2)}</Text>
                 <View style={styles.subjectActions}>
                   <TouchableOpacity onPress={() => openEdit(subject)} style={styles.outlineButton}><Edit size={15} color={theme.colors.primary} /><Text style={styles.outlineText}>Edit</Text></TouchableOpacity>
                   <TouchableOpacity onPress={() => deleteSubject(subject)} style={styles.dangerButton}><Trash2 size={15} color={theme.colors.error} /><Text style={styles.dangerText}>Delete</Text></TouchableOpacity>
@@ -488,7 +536,12 @@ export default function ClassLeaderPortionsPage() {
             <Text style={styles.cardTitle}>Weekly Status</Text>
             <View style={styles.pickerWrap}>
               <Picker selectedValue={selectedSubjectId} onValueChange={setSelectedSubjectId} style={{ color: theme.colors.text }}>
-                {subjects.map((subject) => <Picker.Item key={subject.id} label={subject.subject_name} value={subject.id} />)}
+                {subjects.map((subject) => {
+                  const displayLabel = subject.teacher_name?.trim()
+                    ? `${subject.subject_name} - ${subject.teacher_name.trim()}`
+                    : subject.subject_name;
+                  return <Picker.Item key={subject.id} label={displayLabel} value={subject.id} />;
+                })}
               </Picker>
             </View>
             {selectedSubject && (
@@ -496,25 +549,26 @@ export default function ClassLeaderPortionsPage() {
                 {monthSummaries.map((month) => (
                   <View key={month.label} style={styles.summaryRow}>
                     <Text style={styles.summaryTitle}>{month.label} ({month.workingDays} Days)</Text>
-                    <Text style={styles.summaryText}>Period {month.actualPeriod}/{month.expectedPeriod.toFixed(1)} | Pages {month.actualPages}/{month.expectedPages.toFixed(2)}</Text>
+                    <Text style={styles.summaryText}>Period {month.actualPeriod}/{month.expectedPeriod} | Pages {month.actualPages}/{month.expectedPages.toFixed(2)}</Text>
                   </View>
                 ))}
                 <View style={styles.semSummary}>
                   <Text style={styles.summaryTitle}>Semester Total ({workingDays} Working Days)</Text>
-                  <Text style={styles.summaryText}>Period {semSummary.actualPeriod}/{semSummary.expectedPeriod.toFixed(1)} | Pages {semSummary.actualPages}/{semSummary.expectedPages.toFixed(2)}</Text>
+                  <Text style={styles.summaryText}>Period {semSummary.actualPeriod}/{semSummary.expectedPeriod} | Pages {semSummary.actualPages}/{semSummary.expectedPages.toFixed(2)}</Text>
                 </View>
                 {weeks.map((week) => {
                   const row = progressMap[week.key];
-                  const pagesPerDay = workingDays > 0 ? n(selectedSubject.total_pages) / workingDays : 0;
-                  const weekExpectedPages = week.workingDates.length * pagesPerDay;
-                  const pageStatus = getPortionStatus(n(row?.pages_taken), weekExpectedPages);
+                  const alloc = weekAllocations[week.key] || { expectedPeriod: 0, expectedPages: 0 };
+                  const pageStatus = getPortionStatus(n(row?.pages_taken), alloc.expectedPages);
                   return (
                     <View key={week.key} style={styles.weekCard}>
                       <View style={styles.weekTop}>
                         <Text style={styles.weekTitle}>{week.monthLabel} WK-{week.weekNo} ({week.workingDates.length} Days)</Text>
                         <Text style={[styles.statusText, styles[`status_${pageStatus}` as keyof typeof styles]]}>{statusLabel(pageStatus)}</Text>
                       </View>
-                      <Text style={styles.subjectLine}>{displayDate(week.dateFrom)} to {displayDate(week.dateTo)} • Exp: {weekExpectedPages.toFixed(1)} Pages</Text>
+                      <Text style={styles.subjectLine}>
+                        {displayDate(week.dateFrom)} to {displayDate(week.dateTo)} • Exp: {alloc.expectedPeriod} Periods • {alloc.expectedPages.toFixed(1)} Pages
+                      </Text>
                       <View style={styles.inputRow}>
                         <TextInput
                           value={String(row?.period_taken ?? "")}

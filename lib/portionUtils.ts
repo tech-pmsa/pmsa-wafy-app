@@ -139,6 +139,36 @@ export function n(value: any) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/**
+ * Distributes an integer total (e.g. total_period) across items proportionally to their weights
+ * (e.g. working days) using the largest remainder (Hamilton) method.
+ * Guarantees every item gets an integer and the sum is exactly equal to total.
+ */
+export function allocateIntegerTotal(total: number, weights: number[]): number[] {
+  const sumWeights = weights.reduce((a, b) => a + b, 0);
+  if (sumWeights <= 0 || total <= 0) {
+    return weights.map(() => 0);
+  }
+
+  const exactQuotas = weights.map((w) => (total * w) / sumWeights);
+  const floors = exactQuotas.map((q) => Math.floor(q));
+  const allocated = floors.reduce((a, b) => a + b, 0);
+  const remainderCount = Math.round(total - allocated);
+
+  const remainders = exactQuotas.map((q, idx) => ({
+    idx,
+    rem: q - floors[idx],
+  }));
+
+  remainders.sort((a, b) => b.rem - a.rem);
+
+  for (let i = 0; i < remainderCount && i < remainders.length; i++) {
+    floors[remainders[i].idx] += 1;
+  }
+
+  return floors;
+}
+
 export type ClassOption = {
   id: string;
   label: string;

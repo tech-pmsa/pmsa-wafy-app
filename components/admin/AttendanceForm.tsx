@@ -13,7 +13,6 @@ import {
   Platform,
   Modal,
   Alert as NativeAlert,
-  ScrollView,
   StyleSheet,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -29,7 +28,6 @@ import {
   Lock,
   Save,
   Search,
-  AlertCircle,
   ChevronDown,
   ChevronUp,
 } from "lucide-react-native";
@@ -41,7 +39,13 @@ interface Student {
 }
 interface PeriodDetail {
   status: "Present" | "Absent";
-  reason?: "Home" | "Medical" | "Cic Related" | "Wsf Related" | "Exam Related";
+  reason?:
+    | "Not Attended"
+    | "Home"
+    | "Medical"
+    | "Cic Related"
+    | "Wsf Related"
+    | "Exam Related";
   description?: string;
 }
 interface AttendanceRecord {
@@ -49,7 +53,14 @@ interface AttendanceRecord {
 }
 
 const periods = Array.from({ length: 8 }, (_, i) => `period_${i + 1}`);
-const absenceReasons = ["Home", "Medical", "Cic Related", "Wsf Related", "Exam Related"];
+const absenceReasons = [
+  "Not Attended",
+  "Home",
+  "Medical",
+  "Cic Related",
+  "Wsf Related",
+  "Exam Related",
+];
 const excusedAbsences = ["Cic Related", "Wsf Related", "Exam Related"];
 
 function toneForPeriod(detail?: PeriodDetail) {
